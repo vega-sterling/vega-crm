@@ -1,0 +1,38 @@
+# ============================================================================
+# Caddyfile — Vega CRM Reverse Proxy
+# ============================================================================
+# Automatic HTTPS via Let's Encrypt (ACME)
+# HTTP → HTTPS redirect
+# Security headers
+# Reverse proxy to Next.js app (vega-crm:3000)
+# ============================================================================
+
+earth.servers.onl {
+    # Reverse proxy to the Next.js app
+    reverse_proxy vega-crm:3000
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    }
+
+    # Compression
+    encode gzip zstd
+
+    # Logging
+    log {
+        output file /data/crm-access.log {
+            roll_size 100mb
+            roll_keep 5
+        }
+    }
+}
+
+# HTTP → HTTPS redirect
+http://earth.servers.onl {
+    redir https://earth.servers.onl{uri} permanent
+}

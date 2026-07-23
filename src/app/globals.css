@@ -1,0 +1,94 @@
+/* ============================================================================
+   Vega CRM — Global Styles
+   Dark (default) and Light themes via [data-theme] attribute
+   CSS variables consumed by inline styles throughout the app
+   ============================================================================ */
+
+:root {
+  /* Dark theme (default) */
+  --bg: #0a0b0f;
+  --bg-soft: #12141a;
+  --panel: #1a1d26;
+  --panel-border: #2a2e3a;
+  --panel-border-hot: #3a3e4a;
+  --panel-elevated: #22252f;
+  --fg: #e8e8ec;
+  --fg-dim: #8b8d98;
+  --fg-dimmer: #5a5c68;
+  --gold: #c9a96e;
+  --gold-soft: #d4b883;
+  --emerald: #4ade80;
+  --rust: #e57373;
+  --blue: #60a5fa;
+  --cyan: #22d3ee;
+  --violet: #a78bfa;
+}
+
+[data-theme="light"] {
+  --bg: #f8f9fb;
+  --bg-soft: #f0f1f4;
+  --panel: #ffffff;
+  --panel-border: #e0e1e6;
+  --panel-border-hot: #c0c1c6;
+  --panel-elevated: #f5f6f8;
+  --fg: #1a1d26;
+  --fg-dim: #6a6c78;
+  --fg-dimmer: #9a9ca8;
+  --gold: #8a7440;
+  --gold-soft: #a88c52;
+  --emerald: #16a34a;
+  --rust: #dc2626;
+  --blue: #2563eb;
+  --cyan: #0891b2;
+  --violet: #7c3aed;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--gold);
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+a:hover {
+  opacity: 0.8;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: -1px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--panel-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--panel-border-hot);
+}

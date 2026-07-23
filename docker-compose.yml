@@ -1,0 +1,65 @@
+# ============================================================================
+# Docker Compose — Vega CRM
+# ============================================================================
+# Services:
+#   - postgres: PostgreSQL 16 database
+#   - app: Next.js CRM application (port 3000, internal)
+#   - caddy: Reverse proxy with automatic HTTPS (ports 80, 443)
+# ============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vega-crm-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vega_crm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vega_crm_password}
+      POSTGRES_DB: vega_crm
+    volumes:
+      - vega-crm-db-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"  # Only accessible locally on the host
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vega_crm -d vega_crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: vega-crm
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://vega_crm:${POSTGRES_PASSWORD:-vega_crm_password}@postgres:5432/vega_crm?schema=public"
+      SESSION_SECRET: ${SESSION_SECRET}
+      NEXT_PUBLIC_APP_URL: "https://earth.servers.onl"
+      NEXT_PUBLIC_APP_NAME: "Vega CRM"
+      NODE_ENV: production
+    ports:
+      - "127.0.0.1:3001:3000"  # Only accessible locally, Caddy proxies to this
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: vega-crm-caddy
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      - ACME_AGREE=true
+
+volumes:
+  vega-crm-db-data:
+  caddy-data:
+  caddy-config:

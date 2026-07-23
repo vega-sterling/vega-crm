@@ -1,0 +1,301 @@
+// ============================================================================
+// Prisma Schema — Vega CRM
+// ============================================================================
+// Multi-tenant CRM database schema with:
+// - Tenant isolation (each tenant = a business entity, e.g., MDU, Flying Mushroom)
+// - RBAC: Global roles (super_admin/admin/user) + per-company access list
+// - Activity tracking: phone calls, emails, notes, tasks
+// - 2FA: TOTP secrets stored per-user
+// - Audit log: tracks all data modifications
+// - Integration-ready: source field on activities for future Gmail/VoIP sync
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum GlobalRole {
+  SUPER_ADMIN // Bryan — sees everything, manages all tenants
+  ADMIN       // Tenant admin — manages users within their assigned companies
+  USER         // Standard user — sees only their assigned companies
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  NOTE
+  TASK
+  MEETING
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ActivitySource {
+  MANUAL    // User logged this manually
+  GMAIL     // Synced from Gmail API (future)
+  VOIP      // Synced from VoIP/SIP system (future)
+  IMPORT    // Bulk imported from CSV (future)
+}
+
+// ============================================================================
+// TENANT — top-level isolation boundary
+// ============================================================================
+
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String                         // e.g., "MDU Solutions", "Flying Mushroom"
+  slug        String   @unique               // URL-friendly identifier
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  companies   Company[]
+  userTenants UserTenant[]
+
+  @@map("tenants")
+}
+
+// ============================================================================
+// USER — authentication and global role
+// ============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  passwordHash  String
+  globalRole    GlobalRole @default(USER)
+  isActive      Boolean   @default(true)
+  
+  // TOTP 2FA fields
+  totpSecret    String?                        // Base32-encoded TOTP secret
+  totpEnabled   Boolean   @default(false)       // Whether 2FA is required for this user
+  totpBackupCodes String[] @default([])         // One-time backup codes for 2FA
+  
+  // Session and tracking
+  lastLoginAt   DateTime?
+  lastLoginIp   String?
+  failedLoginAttempts Int   @default(0)         // For rate limiting
+  lockedUntil   DateTime?                       // Account lockout timestamp
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  userTenants   UserTenant[]
+  activities    Activity[]
+  tasks         Task[]     @relation("TaskAssignee")
+  tasksCreated  Task[]     @relation("TaskCreator")
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+// ============================================================================
+// USER_TENANT — join table for user ↔ tenant access
+// ============================================================================
+// Controls which tenants (business entities) a user can see.
+// super_admin bypasses this and sees all tenants.
+// ============================================================================
+
+model UserTenant {
+  id        String   @id @default(cuid())
+  userId    String
+  tenantId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@map("user_tenants")
+}
+
+// ============================================================================
+// COMPANY — business entities within a tenant
+// ============================================================================
+
+model Company {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String                              // Company name
+  industry    String?
+  website     String?
+  phone       String?
+  email       String?
+  address     String?
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contacts    Contact[]
+  activities  Activity[]
+  tasks       Task[]
+
+  @@index([tenantId])
+  @@map("companies")
+}
+
+// ============================================================================
+// CONTACT — people associated with a company
+// ============================================================================
+
+model Contact {
+  id          String   @id @default(cuid())
+  companyId   String
+  tenantId    String                              // Denormalized for tenant filtering
+  firstName   String
+  lastName    String
+  email       String?
+  phone       String?
+  mobile      String?
+  title       String?                             // Job title
+  department  String?
+  notes       String?
+  tags        String[]  @default([])               // Flexible tagging
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  activities  Activity[]
+  tasks       Task[]
+
+  @@index([tenantId])
+  @@index([companyId])
+  @@map("contacts")
+}
+
+// ============================================================================
+// ACTIVITY — phone calls, emails, notes, meetings
+// ============================================================================
+
+model Activity {
+  id          String         @id @default(cuid())
+  type        ActivityType                            // CALL, EMAIL, NOTE, MEETING
+  tenantId    String                                  // Denormalized for tenant filtering
+  companyId   String                                  // Which company this relates to
+  contactId   String?                                 // Optional: specific contact
+  userId      String                                  // Who created/logged this activity
+  subject     String                                  // Title/summary
+  description String?                                 // Detailed notes
+  
+  // Call-specific fields
+  callDirection String?                               // "inbound" | "outbound"
+  callDuration  Int?                                  // Duration in seconds
+  callOutcome   String?                               // e.g., "answered", "voicemail", "missed"
+  
+  // Email-specific fields
+  emailFrom   String?
+  emailTo     String?
+  emailCc     String?
+  emailBody   String?                                 // Full email body (future: encrypted)
+  
+  // Source tracking — for future integrations
+  source      ActivitySource @default(MANUAL)
+  externalId  String?                                 // ID from external system (Gmail msg ID, SIP call ID)
+  
+  // Scheduling (for meetings, scheduled calls)
+  scheduledAt DateTime?
+  completedAt DateTime?
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact     Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([companyId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("activities")
+}
+
+// ============================================================================
+// TASK — actionable items with assignee and due date
+// ============================================================================
+
+model Task {
+  id          String       @id @default(cuid())
+  tenantId    String                                    // Denormalized for tenant filtering
+  companyId   String                                    // Which company this task relates to
+  contactId   String?                                   // Optional: specific contact
+  title       String
+  description String?
+  status      TaskStatus   @default(PENDING)
+  priority    TaskPriority @default(MEDIUM)
+  
+  assignedToId String                                    // Who is responsible
+  createdById  String                                    // Who created the task
+  dueDate     DateTime?
+  completedAt DateTime?
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact     Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  assignee    User        @relation("TaskAssignee", fields: [assignedToId], references: [id])
+  creator     User        @relation("TaskCreator", fields: [createdById], references: [id])
+
+  @@index([tenantId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+// ============================================================================
+// AUDIT LOG — tracks all data modifications for compliance
+// ============================================================================
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String                                 // "create", "update", "delete"
+  entity    String                                 // "company", "contact", "activity", "task", "user"
+  entityId  String
+  changes   Json?                                  // Before/after diff
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([entity])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
