@@ -82,9 +82,9 @@ function TasksContent() {
         apiFetch<{ data: Company[] }>('/api/companies'),
         apiFetch<{ data: User[] }>('/api/admin/users'),
       ])
-      setTasks(tasksRes.data || [])
-      setCompanies(companiesRes.data || [])
-      setUsers(usersRes.data || [])
+      setTasks(Array.isArray(tasksRes) ? tasksRes : tasksRes.data || [])
+      setCompanies(Array.isArray(companiesRes) ? companiesRes : companiesRes.data || [])
+      setUsers(Array.isArray(usersRes) ? usersRes : usersRes.data || [])
     } catch (err: any) {
       setError(err.message || 'Failed to load tasks')
     } finally {

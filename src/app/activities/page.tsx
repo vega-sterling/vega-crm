@@ -88,9 +88,9 @@ function ActivitiesContent() {
         apiFetch<{ data: Company[] }>('/api/companies'),
         apiFetch<{ data: Contact[] }>('/api/contacts'),
       ])
-      setActivities(activitiesRes.data || [])
-      setCompanies(companiesRes.data || [])
-      setContacts(contactsRes.data || [])
+      setActivities(Array.isArray(activitiesRes) ? activitiesRes : activitiesRes.data || [])
+      setCompanies(Array.isArray(companiesRes) ? companiesRes : companiesRes.data || [])
+      setContacts(Array.isArray(contactsRes) ? contactsRes : contactsRes.data || [])
     } catch (err: any) {
       setError(err.message || 'Failed to load activities')
     } finally {

@@ -24,8 +24,7 @@ export default function TenantsPage() {
   const loadData = useCallback(async () => {
     try {
       const data = await apiFetch<{ data?: Tenant[] } | Tenant[]>("/api/admin/tenants");
-      const list = Array.isArray(data) ? data : data.data || [];
-      setTenants(list);
+      setTenants(Array.isArray(data) ? data : data.data || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load tenants");
     } finally {

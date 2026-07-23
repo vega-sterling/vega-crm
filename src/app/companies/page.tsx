@@ -55,8 +55,8 @@ function CompaniesContent() {
         apiFetch<CompanyListResponse>('/api/companies'),
         apiFetch<TenantListResponse>('/api/admin/tenants'),
       ])
-      setCompanies(companiesRes.data || [])
-      setTenants(tenantsRes.data || [])
+      setCompanies(Array.isArray(companiesRes) ? companiesRes : companiesRes.data || [])
+      setTenants(Array.isArray(tenantsRes) ? tenantsRes : tenantsRes.data || [])
     } catch (err: any) {
       setError(err.message || 'Failed to load companies')
     } finally {

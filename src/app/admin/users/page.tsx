@@ -54,8 +54,8 @@ function AdminUsersContent() {
         apiFetch<UserListResponse>('/api/admin/users'),
         apiFetch<TenantListResponse>('/api/admin/tenants'),
       ])
-      setUsers(usersRes.data || [])
-      setTenants(tenantsRes.data || [])
+      setUsers(Array.isArray(usersRes) ? usersRes : usersRes.data || [])
+      setTenants(Array.isArray(tenantsRes) ? tenantsRes : tenantsRes.data || [])
     } catch (err: any) {
       setError(err.message || 'Failed to load users')
     } finally {

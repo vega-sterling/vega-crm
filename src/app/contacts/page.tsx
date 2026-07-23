@@ -59,9 +59,9 @@ function ContactsContent() {
         apiFetch<CompanyListResponse>('/api/companies'),
         apiFetch<TenantListResponse>('/api/admin/tenants'),
       ])
-      setContacts(contactsRes.data || [])
-      setCompanies(companiesRes.data || [])
-      setTenants(tenantsRes.data || [])
+      setContacts(Array.isArray(contactsRes) ? contactsRes : contactsRes.data || [])
+      setCompanies(Array.isArray(companiesRes) ? companiesRes : companiesRes.data || [])
+      setTenants(Array.isArray(tenantsRes) ? tenantsRes : tenantsRes.data || [])
     } catch (err: any) {
       setError(err.message || 'Failed to load contacts')
     } finally {
