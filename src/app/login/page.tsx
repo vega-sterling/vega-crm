@@ -86,7 +86,7 @@ export default function LoginPage() {
           padding: 32,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+        <div style={{ marginBottom: 24 }}>
           <div
             style={{
               width: 36,
@@ -103,7 +103,6 @@ export default function LoginPage() {
           >
             V
           </div>
-          <span style={{ fontSize: 24, fontWeight: 700 }}>Vega CRM</span>
         </div>
 
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px' }}>
@@ -271,7 +270,7 @@ export default function LoginPage() {
           )}
         </form>
         <p style={{ color: 'var(--fg-dim)', fontSize: 12, marginTop: 24, textAlign: 'center' }}>
-          Protected multi-tenant CRM
+          &nbsp;
         </p>
       </div>
     </div>
