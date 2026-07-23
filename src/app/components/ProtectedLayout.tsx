@@ -14,9 +14,9 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     let mounted = true
-    apiFetch<User>('/api/auth/me')
-      .then((u) => {
-        if (mounted) setUser(u)
+    apiFetch<{ user?: User }>('/api/auth/me')
+      .then((res) => {
+        if (mounted && res.user) setUser(res.user)
       })
       .catch(() => {
         if (mounted) setUser(null)

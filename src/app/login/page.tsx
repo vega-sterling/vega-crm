@@ -17,8 +17,10 @@ export default function LoginPage() {
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    apiFetch<User>('/api/auth/me')
-      .then(() => router.replace('/dashboard'))
+    apiFetch<{ user?: User }>('/api/auth/me')
+      .then((res) => {
+        if (res.user) router.replace('/dashboard')
+      })
       .catch(() => {})
       .finally(() => setChecking(false))
   }, [router])
@@ -33,10 +35,11 @@ export default function LoginPage() {
       const result = await apiFetch<{
         success?: boolean
         user?: User
+        requires2FA?: boolean
         totpRequired?: boolean
       }>('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) })
 
-      if (result.totpRequired) {
+      if (result.requires2FA || result.totpRequired) {
         setNeedsTotp(true)
         setLoading(false)
         return
