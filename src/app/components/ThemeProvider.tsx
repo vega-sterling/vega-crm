@@ -60,9 +60,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Hook to access theme and locale context. */
+/** Hook to access theme and locale context. Returns safe defaults if provider not ready. */
 export function useApp(): AppContextValue {
   const ctx = useContext(AppContext);
-  if (!ctx) throw new Error("useApp must be used within AppProvider");
+  if (!ctx) {
+    // Return safe defaults instead of throwing — prevents client-side crashes
+    // on mobile browsers where hydration timing can cause the context to be
+    // momentarily unavailable
+    return {
+      theme: "dark",
+      setTheme: () => {},
+      toggleTheme: () => {},
+      locale: "en",
+      setLocale: () => {},
+      t: (key: string) => key,
+      locales: LOCALES,
+    };
+  }
   return ctx;
 }
