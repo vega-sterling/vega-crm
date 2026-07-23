@@ -29,8 +29,18 @@ const formatDate = (d?: string) => {
   return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+const emptyForm = {
+  companyId: '',
+  tenantId: '',
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  title: '',
+}
+
 /**
- * ContactsPage — list contacts, search client-side, and create new contacts.
+ * ContactsPage — list contacts, search client-side, create, edit, and delete contacts.
  */
 function ContactsContent() {
   const [contacts, setContacts] = useState<ContactListItem[]>([])
@@ -40,17 +50,10 @@ function ContactsContent() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingContact, setEditingContact] = useState<ContactListItem | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const [form, setForm] = useState({
-    companyId: '',
-    tenantId: '',
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    title: '',
-  })
+  const [form, setForm] = useState({ ...emptyForm })
 
   const load = useCallback(async () => {
     try {
@@ -92,6 +95,36 @@ function ContactsContent() {
     )
   }, [contacts, search])
 
+  const openNew = () => {
+    setEditingContact(null)
+    setForm({ ...emptyForm })
+    setModalOpen(true)
+  }
+
+  const openEdit = (contact: ContactListItem) => {
+    setEditingContact(contact)
+    setForm({
+      companyId: contact.companyId,
+      tenantId: contact.tenantId,
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      email: contact.email || '',
+      phone: contact.phone || '',
+      title: contact.title || '',
+    })
+    setModalOpen(true)
+  }
+
+  const handleDelete = async (contact: ContactListItem) => {
+    if (!window.confirm(`Delete contact "${contact.firstName} ${contact.lastName}"?`)) return
+    try {
+      await apiFetch(`/api/contacts/${contact.id}`, { method: 'DELETE' })
+      setContacts((prev) => prev.filter((c) => c.id !== contact.id))
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete contact')
+    }
+  }
+
   const handleCompanyChange = (companyId: string) => {
     const company = companyMap.get(companyId)
     setForm((prev) => ({
@@ -105,15 +138,24 @@ function ContactsContent() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      const created = await apiFetch<Contact>('/api/contacts', {
-        method: 'POST',
-        body: JSON.stringify(form),
-      })
-      setContacts((prev) => [created, ...prev])
+      if (editingContact) {
+        const updated = await apiFetch<ContactListItem>(`/api/contacts/${editingContact.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(form),
+        })
+        setContacts((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
+      } else {
+        const created = await apiFetch<Contact>('/api/contacts', {
+          method: 'POST',
+          body: JSON.stringify(form),
+        })
+        setContacts((prev) => [created, ...prev])
+      }
       setModalOpen(false)
-      setForm({ companyId: '', tenantId: '', firstName: '', lastName: '', email: '', phone: '', title: '' })
+      setEditingContact(null)
+      setForm({ ...emptyForm })
     } catch (err: any) {
-      setError(err.message || 'Failed to create contact')
+      setError(err.message || `Failed to ${editingContact ? 'update' : 'create'} contact`)
     } finally {
       setSubmitting(false)
     }
@@ -131,7 +173,7 @@ function ContactsContent() {
     <div style={layout.page}>
       <div style={layout.header}>
         <h1 style={typeography.title}>Contacts</h1>
-        <button style={buttons.primary} onClick={() => setModalOpen(true)}>New Contact</button>
+        <button style={buttons.primary} onClick={openNew}>New Contact</button>
       </div>
 
       {error && (
@@ -159,12 +201,13 @@ function ContactsContent() {
               <th style={table.th}>Title</th>
               <th style={table.th}>Company</th>
               <th style={table.th}>Created</th>
+              <th style={table.th}></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center' }}>
+                <td colSpan={7} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center' }}>
                   No contacts found.
                 </td>
               </tr>
@@ -189,6 +232,12 @@ function ContactsContent() {
                     )}
                   </td>
                   <td style={{ ...table.td, color: 'var(--fg-dim)', fontSize: 12 }}>{formatDate(c.createdAt)}</td>
+                  <td style={table.td}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button style={buttons.small} onClick={() => openEdit(c)}>Edit</button>
+                      <button style={buttons.danger} onClick={() => handleDelete(c)}>Delete</button>
+                    </div>
+                  </td>
                 </tr>
               ))
             )}
@@ -211,7 +260,7 @@ function ContactsContent() {
           onClick={() => setModalOpen(false)}
         >
           <div style={{ ...panel.container, width: '100%', maxWidth: 520, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>New Contact</h2>
+            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{editingContact ? 'Edit Contact' : 'New Contact'}</h2>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <label style={forms.group}>
                 <span style={forms.label}>Company</span>
@@ -287,7 +336,7 @@ function ContactsContent() {
                   Cancel
                 </button>
                 <button type="submit" style={buttons.primary} disabled={submitting}>
-                  {submitting ? 'Saving...' : 'Save Contact'}
+                  {submitting ? 'Saving...' : editingContact ? 'Save Changes' : 'Save Contact'}
                 </button>
               </div>
             </form>

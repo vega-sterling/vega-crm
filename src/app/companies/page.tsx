@@ -26,8 +26,19 @@ const formatDate = (d?: string) => {
   return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+const emptyForm = {
+  tenantId: '',
+  name: '',
+  industry: '',
+  website: '',
+  phone: '',
+  email: '',
+  address: '',
+  description: '',
+}
+
 /**
- * CompaniesPage — list companies, search client-side, and create new companies.
+ * CompaniesPage — list companies, search client-side, create, edit, and delete companies.
  */
 function CompaniesContent() {
   const [companies, setCompanies] = useState<CompanyListItem[]>([])
@@ -36,18 +47,10 @@ function CompaniesContent() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingCompany, setEditingCompany] = useState<CompanyListItem | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const [form, setForm] = useState({
-    tenantId: '',
-    name: '',
-    industry: '',
-    website: '',
-    phone: '',
-    email: '',
-    address: '',
-    description: '',
-  })
+  const [form, setForm] = useState({ ...emptyForm })
 
   const load = useCallback(async () => {
     try {
@@ -80,19 +83,59 @@ function CompaniesContent() {
     )
   }, [companies, search])
 
+  const openNew = () => {
+    setEditingCompany(null)
+    setForm({ ...emptyForm })
+    setModalOpen(true)
+  }
+
+  const openEdit = (company: CompanyListItem) => {
+    setEditingCompany(company)
+    setForm({
+      tenantId: company.tenantId,
+      name: company.name,
+      industry: company.industry || '',
+      website: company.website || '',
+      phone: company.phone || '',
+      email: company.email || '',
+      address: company.address || '',
+      description: company.description || '',
+    })
+    setModalOpen(true)
+  }
+
+  const handleDelete = async (company: CompanyListItem) => {
+    if (!window.confirm(`Delete company "${company.name}"?`)) return
+    try {
+      await apiFetch(`/api/companies/${company.id}`, { method: 'DELETE' })
+      setCompanies((prev) => prev.filter((c) => c.id !== company.id))
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete company')
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
     try {
-      const created = await apiFetch<Company>('/api/companies', {
-        method: 'POST',
-        body: JSON.stringify(form),
-      })
-      setCompanies((prev) => [created, ...prev])
+      if (editingCompany) {
+        const updated = await apiFetch<CompanyListItem>(`/api/companies/${editingCompany.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(form),
+        })
+        setCompanies((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
+      } else {
+        const created = await apiFetch<Company>('/api/companies', {
+          method: 'POST',
+          body: JSON.stringify(form),
+        })
+        setCompanies((prev) => [created, ...prev])
+      }
       setModalOpen(false)
-      setForm({ tenantId: '', name: '', industry: '', website: '', phone: '', email: '', address: '', description: '' })
+      setEditingCompany(null)
+      setForm({ ...emptyForm })
     } catch (err: any) {
-      setError(err.message || 'Failed to create company')
+      setError(err.message || `Failed to ${editingCompany ? 'update' : 'create'} company`)
     } finally {
       setSubmitting(false)
     }
@@ -110,7 +153,7 @@ function CompaniesContent() {
     <div style={layout.page}>
       <div style={layout.header}>
         <h1 style={typeography.title}>Companies</h1>
-        <button style={buttons.primary} onClick={() => setModalOpen(true)}>
+        <button style={buttons.primary} onClick={openNew}>
           New Company
         </button>
       </div>
@@ -140,12 +183,13 @@ function CompaniesContent() {
               <th style={table.th}>Email</th>
               <th style={table.th}>Contacts</th>
               <th style={table.th}>Created</th>
+              <th style={table.th}></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center' }}>
+                <td colSpan={7} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center' }}>
                   No companies found.
                 </td>
               </tr>
@@ -162,6 +206,12 @@ function CompaniesContent() {
                   <td style={table.td}>{c.email || '—'}</td>
                   <td style={table.td}>{c._count?.contacts ?? 0}</td>
                   <td style={{ ...table.td, color: 'var(--fg-dim)', fontSize: 12 }}>{formatDate(c.createdAt)}</td>
+                  <td style={table.td}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button style={buttons.small} onClick={() => openEdit(c)}>Edit</button>
+                      <button style={buttons.danger} onClick={() => handleDelete(c)}>Delete</button>
+                    </div>
+                  </td>
                 </tr>
               ))
             )}
@@ -184,7 +234,7 @@ function CompaniesContent() {
           onClick={() => setModalOpen(false)}
         >
           <div style={{ ...panel.container, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>New Company</h2>
+            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{editingCompany ? 'Edit Company' : 'New Company'}</h2>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <label style={forms.group}>
                 <span style={forms.label}>Tenant</span>
@@ -275,7 +325,7 @@ function CompaniesContent() {
                   Cancel
                 </button>
                 <button type="submit" style={buttons.primary} disabled={submitting}>
-                  {submitting ? 'Saving...' : 'Save Company'}
+                  {submitting ? 'Saving...' : editingCompany ? 'Save Changes' : 'Save Company'}
                 </button>
               </div>
             </form>

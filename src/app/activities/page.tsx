@@ -50,8 +50,18 @@ const formatDate = (d?: string) => {
   return new Date(d).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
+const emptyForm = {
+  type: 'NOTE' as ActivityType,
+  subject: '',
+  description: '',
+  companyId: '',
+  contactId: '',
+  tenantId: '',
+  scheduledAt: '',
+}
+
 /**
- * ActivitiesPage — activity feed with type filters and a new activity modal.
+ * ActivitiesPage — activity feed with type filters, new activity modal, edit, and delete.
  */
 function ActivitiesContent() {
   const [activities, setActivities] = useState<ActivityListItem[]>([])
@@ -61,25 +71,10 @@ function ActivitiesContent() {
   const [error, setError] = useState('')
   const [filter, setFilter] = useState<ActivityTypeFilter>('ALL')
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingActivity, setEditingActivity] = useState<ActivityListItem | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const [form, setForm] = useState<{
-    type: ActivityType
-    subject: string
-    description: string
-    companyId: string
-    contactId: string
-    tenantId: string
-    scheduledAt: string
-  }>({
-    type: 'NOTE',
-    subject: '',
-    description: '',
-    companyId: '',
-    contactId: '',
-    tenantId: '',
-    scheduledAt: '',
-  })
+  const [form, setForm] = useState({ ...emptyForm })
 
   const load = useCallback(async () => {
     try {
@@ -105,6 +100,36 @@ function ActivitiesContent() {
   const companyMap = new Map(companies.map((c) => [c.id, c]))
   const filteredContacts = form.companyId ? contacts.filter((c) => c.companyId === form.companyId) : []
 
+  const openNew = () => {
+    setEditingActivity(null)
+    setForm({ ...emptyForm })
+    setModalOpen(true)
+  }
+
+  const openEdit = (activity: ActivityListItem) => {
+    setEditingActivity(activity)
+    setForm({
+      type: activity.type,
+      subject: activity.subject,
+      description: activity.description || '',
+      companyId: activity.companyId,
+      contactId: activity.contactId || '',
+      tenantId: activity.tenantId,
+      scheduledAt: activity.scheduledAt ? new Date(activity.scheduledAt).toISOString().slice(0, 16) : '',
+    })
+    setModalOpen(true)
+  }
+
+  const handleDelete = async (activity: ActivityListItem) => {
+    if (!window.confirm(`Delete activity "${activity.subject}"?`)) return
+    try {
+      await apiFetch(`/api/activities/${activity.id}`, { method: 'DELETE' })
+      setActivities((prev) => prev.filter((a) => a.id !== activity.id))
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete activity')
+    }
+  }
+
   const handleCompanyChange = (companyId: string) => {
     const company = companyMap.get(companyId)
     setForm((prev) => ({
@@ -128,15 +153,24 @@ function ActivitiesContent() {
       }
       if (form.contactId) body.contactId = form.contactId
       if (form.scheduledAt) body.scheduledAt = form.scheduledAt
-      const created = await apiFetch<ActivityListItem>('/api/activities', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      })
-      setActivities((prev) => [created, ...prev])
+      if (editingActivity) {
+        const updated = await apiFetch<ActivityListItem>(`/api/activities/${editingActivity.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(body),
+        })
+        setActivities((prev) => prev.map((a) => (a.id === updated.id ? updated : a)))
+      } else {
+        const created = await apiFetch<ActivityListItem>('/api/activities', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        })
+        setActivities((prev) => [created, ...prev])
+      }
       setModalOpen(false)
-      setForm({ type: 'NOTE', subject: '', description: '', companyId: '', contactId: '', tenantId: '', scheduledAt: '' })
+      setEditingActivity(null)
+      setForm({ ...emptyForm })
     } catch (err: any) {
-      setError(err.message || 'Failed to create activity')
+      setError(err.message || `Failed to ${editingActivity ? 'update' : 'create'} activity`)
     } finally {
       setSubmitting(false)
     }
@@ -154,7 +188,7 @@ function ActivitiesContent() {
     <div style={layout.page}>
       <div style={layout.header}>
         <h1 style={typeography.title}>Activities</h1>
-        <button style={buttons.primary} onClick={() => setModalOpen(true)}>New Activity</button>
+        <button style={buttons.primary} onClick={openNew}>New Activity</button>
       </div>
 
       {error && (
@@ -224,6 +258,10 @@ function ActivitiesContent() {
                     </p>
                   )}
                 </div>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                  <button style={buttons.small} onClick={() => openEdit(a)}>Edit</button>
+                  <button style={buttons.danger} onClick={() => handleDelete(a)}>Delete</button>
+                </div>
               </div>
             </div>
           ))
@@ -245,7 +283,7 @@ function ActivitiesContent() {
           onClick={() => setModalOpen(false)}
         >
           <div style={{ ...panel.container, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>New Activity</h2>
+            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{editingActivity ? 'Edit Activity' : 'New Activity'}</h2>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <label style={forms.group}>
                 <span style={forms.label}>Type</span>
@@ -318,7 +356,7 @@ function ActivitiesContent() {
 
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
                 <button type="button" style={buttons.secondary} onClick={() => setModalOpen(false)}>Cancel</button>
-                <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Save Activity'}</button>
+                <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : editingActivity ? 'Save Changes' : 'Save Activity'}</button>
               </div>
             </form>
           </div>

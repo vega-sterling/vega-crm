@@ -2,7 +2,7 @@
 
 // ============================================================================
 // File: src/app/admin/tenants/page.tsx
-// Description: Tenant management page. Lists all tenants with create modal.
+// Description: Tenant management page. Lists all tenants with create and edit modals.
 //              Requires SUPER_ADMIN access (enforced by API route).
 // ============================================================================
 
@@ -13,12 +13,15 @@ import { apiFetch } from "../../lib/api";
 import { layout, panel, typeography, forms, buttons, table } from "../../lib/styles";
 import type { Tenant } from "../../lib/types";
 
+const emptyForm = { name: "", slug: "", description: "" };
+
 export default function TenantsPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: "", slug: "", description: "" });
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
+  const [form, setForm] = useState({ ...emptyForm });
   const [saving, setSaving] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -36,21 +39,48 @@ export default function TenantsPage() {
     loadData();
   }, [loadData]);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const openNew = () => {
+    setEditingTenant(null);
+    setForm({ ...emptyForm });
+    setShowModal(true);
+  };
+
+  const openEdit = (tenant: Tenant) => {
+    setEditingTenant(tenant);
+    setForm({
+      name: tenant.name,
+      slug: tenant.slug,
+      description: tenant.description || "",
+    });
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setError("");
     try {
       const slug = form.slug || form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      await apiFetch("/api/admin/tenants", {
-        method: "POST",
-        body: JSON.stringify({ ...form, slug }),
-      });
-      setShowModal(false);
-      setForm({ name: "", slug: "", description: "" });
-      await loadData();
+      if (editingTenant) {
+        await apiFetch(`/api/admin/tenants/${editingTenant.id}`, {
+          method: "PUT",
+          body: JSON.stringify({ ...form, slug }),
+        });
+        setShowModal(false);
+        setEditingTenant(null);
+        setForm({ ...emptyForm });
+        await loadData();
+      } else {
+        await apiFetch("/api/admin/tenants", {
+          method: "POST",
+          body: JSON.stringify({ ...form, slug }),
+        });
+        setShowModal(false);
+        setForm({ ...emptyForm });
+        await loadData();
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create tenant");
+      setError(err instanceof Error ? err.message : `Failed to ${editingTenant ? "update" : "create"} tenant`);
     } finally {
       setSaving(false);
     }
@@ -63,7 +93,7 @@ export default function TenantsPage() {
       <div style={layout.page}>
         <div style={layout.header}>
           <h1 style={typeography.title}>Tenants</h1>
-          <button onClick={() => setShowModal(true)} style={buttons.primary}>
+          <button onClick={openNew} style={buttons.primary}>
             + New Tenant
           </button>
         </div>
@@ -82,12 +112,13 @@ export default function TenantsPage() {
                 <th style={table.th}>Slug</th>
                 <th style={table.th}>Description</th>
                 <th style={table.th}>Active</th>
+                <th style={table.th}></th>
               </tr>
             </thead>
             <tbody>
               {tenants.length === 0 ? (
                 <tr>
-                  <td style={table.td} colSpan={4}>
+                  <td style={table.td} colSpan={5}>
                     <span style={typeography.muted}>No tenants found</span>
                   </td>
                 </tr>
@@ -102,6 +133,9 @@ export default function TenantsPage() {
                         {t.isActive !== false ? "✓ Active" : "✕ Inactive"}
                       </span>
                     </td>
+                    <td style={table.td}>
+                      <button style={buttons.small} onClick={() => openEdit(t)}>Edit</button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -112,8 +146,8 @@ export default function TenantsPage() {
         {showModal && (
           <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 }}>
             <div style={{ ...panel.container, width: "100%", maxWidth: 480 }}>
-              <h2 style={{ ...typeography.subtitle, marginBottom: 16 }}>New Tenant</h2>
-              <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <h2 style={{ ...typeography.subtitle, marginBottom: 16 }}>{editingTenant ? "Edit Tenant" : "New Tenant"}</h2>
+              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div style={forms.group}>
                   <label style={forms.label}>Name *</label>
                   <input
@@ -149,7 +183,7 @@ export default function TenantsPage() {
                     Cancel
                   </button>
                   <button type="submit" disabled={saving} style={buttons.primary}>
-                    {saving ? "Creating..." : "Create Tenant"}
+                    {saving ? "Saving..." : editingTenant ? "Save Changes" : "Create Tenant"}
                   </button>
                 </div>
               </form>

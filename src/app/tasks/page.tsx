@@ -43,8 +43,19 @@ const formatDate = (d?: string) => {
   return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+const emptyForm = {
+  title: '',
+  description: '',
+  companyId: '',
+  contactId: '',
+  priority: 'MEDIUM' as TaskPriority,
+  assignedToId: '',
+  dueDate: '',
+  tenantId: '',
+}
+
 /**
- * TasksPage — kanban-style task board with 4 status columns and a new task modal.
+ * TasksPage — kanban-style task board with 4 status columns, new task modal, edit, and delete.
  */
 function TasksContent() {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -53,27 +64,10 @@ function TasksContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const [form, setForm] = useState<{
-    title: string
-    description: string
-    companyId: string
-    contactId: string
-    priority: TaskPriority
-    assignedToId: string
-    dueDate: string
-    tenantId: string
-  }>({
-    title: '',
-    description: '',
-    companyId: '',
-    contactId: '',
-    priority: 'MEDIUM',
-    assignedToId: '',
-    dueDate: '',
-    tenantId: '',
-  })
+  const [form, setForm] = useState({ ...emptyForm })
 
   const load = useCallback(async () => {
     try {
@@ -97,6 +91,37 @@ function TasksContent() {
   }, [load])
 
   const companyMap = new Map(companies.map((c) => [c.id, c]))
+
+  const openNew = () => {
+    setEditingTask(null)
+    setForm({ ...emptyForm })
+    setModalOpen(true)
+  }
+
+  const openEdit = (task: Task) => {
+    setEditingTask(task)
+    setForm({
+      title: task.title,
+      description: task.description || '',
+      companyId: task.companyId,
+      contactId: task.contactId || '',
+      priority: task.priority,
+      assignedToId: task.assignedToId,
+      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : '',
+      tenantId: task.tenantId,
+    })
+    setModalOpen(true)
+  }
+
+  const handleDelete = async (task: Task) => {
+    if (!window.confirm(`Delete task "${task.title}"?`)) return
+    try {
+      await apiFetch(`/api/tasks/${task.id}`, { method: 'DELETE' })
+      setTasks((prev) => prev.filter((t) => t.id !== task.id))
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete task')
+    }
+  }
 
   const handleCompanyChange = (companyId: string) => {
     const company = companyMap.get(companyId)
@@ -122,24 +147,24 @@ function TasksContent() {
       }
       if (form.contactId) body.contactId = form.contactId
       if (form.dueDate) body.dueDate = form.dueDate
-      const created = await apiFetch<Task>('/api/tasks', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      })
-      setTasks((prev) => [created, ...prev])
+      if (editingTask) {
+        const updated = await apiFetch<Task>(`/api/tasks/${editingTask.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(body),
+        })
+        setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
+      } else {
+        const created = await apiFetch<Task>('/api/tasks', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        })
+        setTasks((prev) => [created, ...prev])
+      }
       setModalOpen(false)
-      setForm({
-        title: '',
-        description: '',
-        companyId: '',
-        contactId: '',
-        priority: 'MEDIUM',
-        assignedToId: '',
-        dueDate: '',
-        tenantId: '',
-      })
+      setEditingTask(null)
+      setForm({ ...emptyForm })
     } catch (err: any) {
-      setError(err.message || 'Failed to create task')
+      setError(err.message || `Failed to ${editingTask ? 'update' : 'create'} task`)
     } finally {
       setSubmitting(false)
     }
@@ -157,7 +182,7 @@ function TasksContent() {
     <div style={layout.page}>
       <div style={layout.header}>
         <h1 style={typeography.title}>Tasks</h1>
-        <button style={buttons.primary} onClick={() => setModalOpen(true)}>New Task</button>
+        <button style={buttons.primary} onClick={openNew}>New Task</button>
       </div>
 
       {error && (
@@ -225,6 +250,10 @@ function TasksContent() {
                         </Link>
                       </div>
                     )}
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                      <button style={buttons.small} onClick={() => openEdit(t)}>Edit</button>
+                      <button style={buttons.danger} onClick={() => handleDelete(t)}>Delete</button>
+                    </div>
                   </div>
                 ))}
             </div>
@@ -247,7 +276,7 @@ function TasksContent() {
           onClick={() => setModalOpen(false)}
         >
           <div style={{ ...panel.container, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>New Task</h2>
+            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{editingTask ? 'Edit Task' : 'New Task'}</h2>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <label style={forms.group}>
                 <span style={forms.label}>Title</span>
@@ -323,7 +352,7 @@ function TasksContent() {
 
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
                 <button type="button" style={buttons.secondary} onClick={() => setModalOpen(false)}>Cancel</button>
-                <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Save Task'}</button>
+                <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : editingTask ? 'Save Changes' : 'Save Task'}</button>
               </div>
             </form>
           </div>
