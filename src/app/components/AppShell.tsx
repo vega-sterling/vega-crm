@@ -7,7 +7,10 @@ import { apiFetch } from '../lib/api'
 import type { User } from '../lib/types'
 
 const navSections = [
-  { title: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: '◈' }] },
+  { title: 'Overview', items: [
+    { label: 'Dashboard', href: '/dashboard', icon: '◈' },
+    { label: 'Reports', href: '/reports', icon: '📊' },
+  ]},
   {
     title: 'CRM',
     items: [
@@ -18,9 +21,22 @@ const navSections = [
     ],
   },
   {
+    title: 'Sales',
+    items: [
+      { label: 'Deals', href: '/deals', icon: '💠' },
+    ],
+  },
+  {
     title: 'Projects',
     items: [
       { label: 'Projects', href: '/projects', icon: '▤' },
+    ],
+  },
+  {
+    title: 'Communications',
+    items: [
+      { label: 'Templates', href: '/templates', icon: '✉' },
+      { label: 'Calendar', href: '/calendar', icon: '📅' },
     ],
   },
   {
@@ -29,6 +45,7 @@ const navSections = [
     items: [
       { label: 'Users', href: '/admin/users', icon: '⚙' },
       { label: 'Tenants', href: '/admin/tenants', icon: '▦' },
+      { label: 'Settings', href: '/settings', icon: '🔧' },
     ],
   },
 ]

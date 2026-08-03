@@ -52,6 +52,12 @@ enum TaskPriority {
   URGENT
 }
 
+enum DealStatus {
+  OPEN
+  WON
+  LOST
+}
+
 enum ActivitySource {
   MANUAL    // User logged this manually
   GMAIL     // Synced from Gmail API (future)
@@ -76,6 +82,15 @@ model Tenant {
   companies   Company[]
   userTenants UserTenant[]
   projects    Project[]
+  deals       Deal[]
+  pipelineStages PipelineStage[]
+  customProperties CustomProperty[]
+  emailMessages  EmailMessage[]
+  emailTemplates EmailTemplate[]
+  emailSequences EmailSequence[]
+  workflows      Workflow[]
+  calendarEvents CalendarEvent[]
+  bookingSlots   BookingSlot[]
 
   @@map("tenants")
 }
@@ -115,6 +130,23 @@ model User {
   projectTasks  ProjectTask[] @relation("ProjectTaskAssignee")
   projectTasksCreated ProjectTask[] @relation("ProjectTaskCreator")
   subtasks       Subtask[]   @relation("SubtaskAssignee")
+  
+  // Google OAuth per-user (Gmail + Calendar)
+  googleAccessToken    String?
+  googleRefreshToken   String?
+  googleTokenExpiry    DateTime?
+  googleEmail          String?  // The Google email they connected
+  googleScope          String?  // Scopes granted
+  
+  // CRM feature relations
+  deals          Deal[]    @relation("DealOwner")
+  dealsCreated   Deal[]    @relation("DealCreator")
+  emailMessages  EmailMessage[] @relation("EmailUser")
+  emailTemplates EmailTemplate[] @relation("TemplateCreator")
+  workflows      Workflow[] @relation("WorkflowCreator")
+  calendarEvents CalendarEvent[]
+  bookingSlots   BookingSlot[] @relation("BookingOwner")
+  emailSequences EmailSequence[] @relation("SequenceCreator")
   auditLogs     AuditLog[]
 
   @@map("users")
@@ -164,6 +196,10 @@ model Company {
   contacts    Contact[]
   activities  Activity[]
   tasks       Task[]
+  deals       Deal[]
+  emailMessages EmailMessage[]
+  calendarEvents CalendarEvent[]
+  bookings    Booking[]
 
   @@index([tenantId])
   @@map("companies")
@@ -194,6 +230,11 @@ model Contact {
   company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   activities  Activity[]
   tasks       Task[]
+  deals       Deal[]
+  emailMessages EmailMessage[]
+  calendarEvents CalendarEvent[]
+  sequenceEnrollments SequenceEnrollment[]
+  bookings    Booking[]
 
   @@index([tenantId])
   @@index([companyId])
@@ -211,6 +252,7 @@ model Activity {
   companyId   String                                  // Which company this relates to
   contactId   String?                                 // Optional: specific contact
   userId      String                                  // Who created/logged this activity
+  dealId      String?                                 // Optional: linked deal
   subject     String                                  // Title/summary
   description String?                                 // Detailed notes
   
@@ -240,12 +282,14 @@ model Activity {
   company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   contact     Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   user        User      @relation(fields: [userId], references: [id])
+  deal        Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([companyId])
   @@index([userId])
   @@index([type])
   @@index([createdAt])
+  @@index([dealId])
   @@map("activities")
 }
 
@@ -390,6 +434,399 @@ model Subtask {
 
   @@index([taskId])
   @@map("subtasks")
+}
+
+// ============================================================================
+// DEAL — sales opportunity in a pipeline
+// ============================================================================
+
+model Deal {
+  id             String   @id @default(cuid())
+  tenantId       String
+  title          String
+  description    String?                                // Detailed notes
+  companyId      String
+  contactId      String?
+  stageId        String
+  value          Float    @default(0)              // Deal value in USD
+  currency       String   @default("USD")
+  probability    Int      @default(50)             // 0-100 win probability
+  expectedCloseDate DateTime?
+  actualCloseDate    DateTime?
+  status         DealStatus @default(OPEN)
+  lossReason     String?
+  leadSource      String?                           // e.g., "referral", "cold outreach", "website"
+  assignedToId   String
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact        Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  stage          PipelineStage @relation(fields: [stageId], references: [id])
+  assignee       User         @relation("DealOwner", fields: [assignedToId], references: [id])
+  creator        User         @relation("DealCreator", fields: [createdById], references: [id])
+  activities     Activity[]
+  emailMessages  EmailMessage[]
+
+  @@index([tenantId])
+  @@index([stageId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([companyId])
+  @@map("deals")
+}
+
+// ============================================================================
+// PIPELINE_STAGE — stages in a sales pipeline (per tenant)
+// ============================================================================
+
+model PipelineStage {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String                                  // e.g., "Lead", "Qualified", "Proposal"
+  color       String   @default("#8b8d98")
+  position    Int                                      // Sort order
+  probability  Int     @default(0)                     // Default win probability for this stage
+  isWonStage  Boolean  @default(false)                 // Deals here = won
+  isLostStage Boolean  @default(false)                 // Deals here = lost
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deals       Deal[]
+
+  @@index([tenantId])
+  @@map("pipeline_stages")
+}
+
+// ============================================================================
+// CUSTOM_PROPERTY — user-defined fields on companies/contacts (per tenant)
+// ============================================================================
+
+model CustomProperty {
+  id          String   @id @default(cuid())
+  tenantId    String
+  entity      String                                  // "company" or "contact"
+  key         String                                  // Field key (e.g., "property_type")
+  label       String                                  // Display label (e.g., "Property Type")
+  fieldType   String                                  // "text", "number", "dropdown", "date", "boolean"
+  options     String[] @default([])                   // Dropdown options
+  isRequired  Boolean  @default(false)
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  values      CustomPropertyValue[]
+
+  @@index([tenantId])
+  @@index([entity])
+  @@map("custom_properties")
+}
+
+model CustomPropertyValue {
+  id          String   @id @default(cuid())
+  propertyId  String
+  entityId    String                                  // company or contact ID
+  value       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  property    CustomProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([entityId])
+  @@map("custom_property_values")
+}
+
+// ============================================================================
+// EMAIL_MESSAGE — emails sent/received via Gmail sync
+// ============================================================================
+
+model EmailMessage {
+  id            String   @id @default(cuid())
+  tenantId      String
+  userId        String                                  // CRM user who sent/received
+  companyId     String?
+  contactId     String?
+  dealId        String?
+  threadId      String?                                 // Gmail thread ID
+  messageId     String?                                 // Gmail message ID
+  direction     String                                  // "outbound" or "inbound"
+  fromEmail     String
+  toEmails      String[]                                // Array of recipient emails
+  ccEmails      String[] @default([])
+  subject       String
+  bodyText      String?
+  bodyHtml      String?
+  isRead        Boolean  @default(false)
+  isReplied     Boolean  @default(false)                // Has this outbound email been replied to?
+  sentAt        DateTime?
+  receivedAt    DateTime?
+  syncedAt      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user          User     @relation("EmailUser", fields: [userId], references: [id])
+  company       Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact       Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  deal          Deal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([threadId])
+  @@index([direction])
+  @@map("email_messages")
+}
+
+// ============================================================================
+// EMAIL_TEMPLATE — reusable email templates with variables
+// ============================================================================
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String                                  // "Welcome Email", "Follow-up #1"
+  subject     String                                  // Subject line (with {variables})
+  body        String                                  // Email body (with {variables})
+  category    String?                                 // "sales", "onboarding", "support"
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator     User     @relation("TemplateCreator", fields: [createdById], references: [id])
+  steps       SequenceStep[]
+
+  @@index([tenantId])
+  @@map("email_templates")
+}
+
+// ============================================================================
+// EMAIL_SEQUENCE — multi-touch email cadence
+// ============================================================================
+
+model EmailSequence {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String                                  // "ISP Cold Outreach 5-Step"
+  description String?
+  isActive    Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator     User     @relation("SequenceCreator", fields: [createdById], references: [id])
+  steps       SequenceStep[]
+  enrollments SequenceEnrollment[]
+
+  @@index([tenantId])
+  @@map("email_sequences")
+}
+
+model SequenceStep {
+  id          String   @id @default(cuid())
+  sequenceId  String
+  templateId  String?
+  stepNumber  Int                                     // 1, 2, 3...
+  delayDays   Int      @default(0)                    // Days after previous step
+  sendTime    String?                                 // "09:00" — time of day to send
+  createdAt   DateTime @default(now())
+
+  // Relations
+  sequence    EmailSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  template    EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  enrollments SequenceEnrollmentStep[]
+
+  @@index([sequenceId])
+  @@map("sequence_steps")
+}
+
+model SequenceEnrollment {
+  id          String   @id @default(cuid())
+  sequenceId  String
+  contactId   String
+  tenantId    String
+  status      String   @default("ACTIVE")             // ACTIVE, COMPLETED, PAUSED, BOUNCED
+  enrolledAt  DateTime @default(now())
+  completedAt DateTime?
+
+  // Relations
+  sequence    EmailSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  contact     Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  steps       SequenceEnrollmentStep[]
+
+  @@index([sequenceId])
+  @@index([contactId])
+  @@index([tenantId])
+  @@map("sequence_enrollments")
+}
+
+model SequenceEnrollmentStep {
+  id            String    @id @default(cuid())
+  enrollmentId  String
+  stepId        String
+  status        String    @default("PENDING")          // PENDING, SENT, SKIPPED, FAILED
+  scheduledFor  DateTime?
+  sentAt        DateTime?
+  emailMessageId String?
+
+  // Relations
+  enrollment    SequenceEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  step          SequenceStep       @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([enrollmentId])
+  @@index([stepId])
+  @@map("sequence_enrollment_steps")
+}
+
+// ============================================================================
+// WORKFLOW — visual automation rules
+// ============================================================================
+
+model Workflow {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  trigger     String                                  // "deal_stage_change", "contact_created", "task_assigned", "email_received"
+  triggerConfig Json?                                 // Trigger-specific config
+  conditions  Json?                                   // Array of condition objects
+  actions     Json                                     // Array of action objects
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator     User     @relation("WorkflowCreator", fields: [createdById], references: [id])
+  executions  WorkflowExecution[]
+
+  @@index([tenantId])
+  @@index([trigger])
+  @@map("workflows")
+}
+
+model WorkflowExecution {
+  id          String   @id @default(cuid())
+  workflowId  String
+  entityId    String                                  // The entity that triggered it
+  entityType  String                                  // "deal", "contact", "task", "email"
+  status      String   @default("PENDING")            // PENDING, RUNNING, COMPLETED, FAILED
+  result      Json?
+  error       String?
+  executedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([entityType])
+  @@map("workflow_executions")
+}
+
+// ============================================================================
+// CALENDAR_EVENT — synced from Google Calendar
+// ============================================================================
+
+model CalendarEvent {
+  id            String   @id @default(cuid())
+  userId        String
+  tenantId      String
+  googleEventId String?                                // Google Calendar event ID
+  title         String
+  description   String?
+  location      String?
+  startAt       DateTime
+  endAt         DateTime
+  attendees     String[] @default([])                  // Email addresses
+  companyId     String?
+  contactId     String?
+  isAllDay      Boolean  @default(false)
+  status        String   @default("CONFIRMED")         // CONFIRMED, TENTATIVE, CANCELLED
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company       Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact       Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([startAt])
+  @@map("calendar_events")
+}
+
+// ============================================================================
+// BOOKING_SLOT — self-service meeting scheduler (Calendly-style)
+// ============================================================================
+
+model BookingSlot {
+  id          String   @id @default(cuid())
+  userId      String                                   // The CRM user accepting bookings
+  tenantId    String
+  dayOfWeek   Int                                      // 0=Sunday, 6=Saturday
+  startTime   String                                   // "09:00"
+  endTime     String                                   // "17:00"
+  durationMin Int      @default(30)                    // Meeting duration
+  bufferMin   Int      @default(0)                     // Buffer between meetings
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User     @relation("BookingOwner", fields: [userId], references: [id], onDelete: Cascade)
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
+
+  @@index([userId])
+  @@index([tenantId])
+  @@map("booking_slots")
+}
+
+model Booking {
+  id          String   @id @default(cuid())
+  bookingSlotId String
+  slotId      String                                  // Kept for backward compatibility with existing data
+  contactId   String?
+  contactName String?
+  contactEmail String?
+  contactPhone String?
+  companyId   String?
+  notes       String?
+  scheduledAt DateTime?
+  startAt     DateTime
+  endAt       DateTime
+  status      String   @default("PENDING")             // PENDING, CONFIRMED, CANCELLED, COMPLETED
+  googleEventId String?                                // Created Google Calendar event
+  createdAt   DateTime @default(now())
+
+  // Relations
+  slot        BookingSlot @relation(fields: [bookingSlotId], references: [id], onDelete: Cascade)
+  contact     Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  company     Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([bookingSlotId])
+  @@index([slotId])
+  @@index([contactId])
+  @@map("bookings")
 }
 
 // ============================================================================
