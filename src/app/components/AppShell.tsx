@@ -18,6 +18,12 @@ const navSections = [
     ],
   },
   {
+    title: 'Projects',
+    items: [
+      { label: 'Projects', href: '/projects', icon: '▤' },
+    ],
+  },
+  {
     title: 'Administration',
     adminOnly: true,
     items: [

@@ -109,3 +109,69 @@ export interface DashboardData {
     overdue: number
   }
 }
+
+// ============================================================================
+// PROJECTS (Kanban)
+// ============================================================================
+
+export interface ProjectColumn {
+  id: string
+  projectId: string
+  name: string
+  color: string
+  position: number
+  wipLimit?: number | null
+  isDoneColumn: boolean
+  createdAt: string
+  updatedAt: string
+  tasks?: ProjectTask[]
+}
+
+export interface Subtask {
+  id: string
+  taskId: string
+  title: string
+  isCompleted: boolean
+  position: number
+  assignedToId?: string | null
+  dueDate?: string | null
+  assignee?: { id: string; name: string } | null
+}
+
+export interface ProjectTask {
+  id: string
+  projectId: string
+  columnId: string
+  tenantId: string
+  title: string
+  description?: string | null
+  position: number
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+  assignedToId?: string | null
+  createdById: string
+  dueDate?: string | null
+  completedAt?: string | null
+  labels: string[]
+  color?: string | null
+  createdAt: string
+  updatedAt: string
+  assignee?: { id: string; name: string } | null
+  creator?: { id: string; name: string } | null
+  subtasks?: Subtask[]
+}
+
+export interface Project {
+  id: string
+  tenantId: string
+  name: string
+  description?: string | null
+  color: string
+  icon?: string | null
+  isArchived: boolean
+  createdById: string
+  createdAt: string
+  updatedAt: string
+  creator?: { id: string; name: string } | null
+  columns?: ProjectColumn[]
+  _count?: { tasks: number; columns: number }
+}

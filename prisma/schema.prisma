@@ -75,6 +75,7 @@ model Tenant {
   // Relations
   companies   Company[]
   userTenants UserTenant[]
+  projects    Project[]
 
   @@map("tenants")
 }
@@ -110,6 +111,10 @@ model User {
   activities    Activity[]
   tasks         Task[]     @relation("TaskAssignee")
   tasksCreated  Task[]     @relation("TaskCreator")
+  projects      Project[]  @relation("ProjectCreator")
+  projectTasks  ProjectTask[] @relation("ProjectTaskAssignee")
+  projectTasksCreated ProjectTask[] @relation("ProjectTaskCreator")
+  subtasks       Subtask[]   @relation("SubtaskAssignee")
   auditLogs     AuditLog[]
 
   @@map("users")
@@ -277,6 +282,114 @@ model Task {
   @@index([status])
   @@index([dueDate])
   @@map("tasks")
+}
+
+// ============================================================================
+// PROJECT — kanban board container (replaces external task tracking)
+// ============================================================================
+
+model Project {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  color       String   @default("#c9a96e")            // Board accent color
+  icon        String?                                  // Emoji or single-char icon
+  isArchived  Boolean  @default(false)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator     User           @relation("ProjectCreator", fields: [createdById], references: [id])
+  columns     ProjectColumn[]
+  tasks       ProjectTask[]
+
+  @@index([tenantId])
+  @@map("projects")
+}
+
+// ============================================================================
+// PROJECT_COLUMN — kanban columns within a project
+// ============================================================================
+
+model ProjectColumn {
+  id           String   @id @default(cuid())
+  projectId    String
+  name         String
+  color        String   @default("#8b8d98")
+  position     Int                                       // Sort order (0-based)
+  wipLimit     Int?                                     // Max cards (WIP limit); null = unlimited
+  isDoneColumn Boolean  @default(false)                  // Tasks moved here auto-complete
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks        ProjectTask[]
+
+  @@index([projectId])
+  @@map("project_columns")
+}
+
+// ============================================================================
+// PROJECT_TASK — kanban cards within a column
+// ============================================================================
+
+model ProjectTask {
+  id            String       @id @default(cuid())
+  projectId     String
+  columnId      String
+  tenantId      String                                   // Denormalized for tenant filtering
+  title         String
+  description   String?
+  position      Int                                      // Sort order within column (0-based)
+  priority      TaskPriority @default(MEDIUM)
+  assignedToId  String?
+  createdById   String
+  dueDate       DateTime?
+  completedAt   DateTime?
+  labels        String[]    @default([])                  // Label names (e.g., "bug", "urgent")
+  color         String?                                   // Card accent / cover color
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  column        ProjectColumn  @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  assignee      User?          @relation("ProjectTaskAssignee", fields: [assignedToId], references: [id])
+  creator       User           @relation("ProjectTaskCreator", fields: [createdById], references: [id])
+  subtasks      Subtask[]
+
+  @@index([projectId])
+  @@index([columnId])
+  @@index([tenantId])
+  @@index([assignedToId])
+  @@map("project_tasks")
+}
+
+// ============================================================================
+// SUBTASK — checklist items within a project task card
+// ============================================================================
+
+model Subtask {
+  id            String   @id @default(cuid())
+  taskId        String
+  title         String
+  isCompleted   Boolean  @default(false)
+  position      Int
+  assignedToId  String?
+  dueDate       DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  task          ProjectTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  assignee      User?       @relation("SubtaskAssignee", fields: [assignedToId], references: [id])
+
+  @@index([taskId])
+  @@map("subtasks")
 }
 
 // ============================================================================
