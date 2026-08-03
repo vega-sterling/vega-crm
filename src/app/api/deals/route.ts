@@ -98,19 +98,26 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (contactId) where.contactId = contactId;
   if (assignedToId) where.assignedToId = assignedToId;
 
-  const data = await prisma.deal.findMany({
-    where,
-    orderBy: { updatedAt: 'desc' },
-    include: {
-      company: { select: { id: true, name: true } },
-      contact: { select: { id: true, firstName: true, lastName: true } },
-      stage: { select: { id: true, name: true, color: true } },
-      assignee: { select: { id: true, name: true } },
-      creator: { select: { id: true, name: true } },
-    },
-  });
+  const [data, stages] = await Promise.all([
+    prisma.deal.findMany({
+      where,
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        company: { select: { id: true, name: true } },
+        contact: { select: { id: true, firstName: true, lastName: true } },
+        stage: { select: { id: true, name: true, color: true } },
+        assignee: { select: { id: true, name: true } },
+        creator: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.pipelineStage.findMany({
+      where: { tenantId: tenantIds ? { in: tenantIds } : undefined },
+      orderBy: { position: 'asc' },
+      include: { _count: { select: { deals: true } } },
+    }),
+  ]);
 
-  return NextResponse.json({ data });
+  return NextResponse.json({ stages, deals: data });
 }
 
 /**
