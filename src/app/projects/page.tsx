@@ -134,11 +134,12 @@ export default function ProjectsPage() {
           </p>
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gap: 16,
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-        }}>
+        <div className="project-grid"
+ style={{
+   display: 'grid',
+   gap: 16,
+   gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+ }}>
           {projects.map(project => (
             <div
               key={project.id}

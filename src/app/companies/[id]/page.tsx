@@ -202,7 +202,7 @@ function CompanyDetailContent() {
         </div>
       )}
 
-      <div style={panel.container}>
+      <div className="panel-container" style={panel.container}>
         <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Company details</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
           <div>
@@ -249,34 +249,36 @@ function CompanyDetailContent() {
       </div>
 
       {activeTab === 'contacts' && (
-        <div style={panel.container}>
+        <div className="panel-container" style={panel.container}>
           {contacts.length === 0 ? (
             <p style={{ color: 'var(--fg-dim)' }}>No contacts yet.</p>
           ) : (
-            <table style={table.table}>
-              <thead>
-                <tr>
-                  <th style={table.th}>Name</th>
-                  <th style={table.th}>Email</th>
-                  <th style={table.th}>Phone</th>
-                  <th style={table.th}>Title</th>
-                </tr>
-              </thead>
-              <tbody>
-                {contacts.map((c) => (
-                  <tr key={c.id} style={table.tr}>
-                    <td style={table.td}>
-                      <Link href={`/contacts/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)' }}>
-                        {c.firstName} {c.lastName}
-                      </Link>
-                    </td>
-                    <td style={table.td}>{c.email || '—'}</td>
-                    <td style={table.td}>{c.phone || '—'}</td>
-                    <td style={table.td}>{c.title || '—'}</td>
+            <div className="table-wrapper" style={{ overflowX: 'auto' }}>
+              <table style={table.table}>
+                <thead>
+                  <tr>
+                    <th style={table.th}>Name</th>
+                    <th style={table.th}>Email</th>
+                    <th style={table.th}>Phone</th>
+                    <th style={table.th}>Title</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {contacts.map((c) => (
+                    <tr key={c.id} style={table.tr}>
+                      <td style={table.td}>
+                        <Link href={`/contacts/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)' }}>
+                          {c.firstName} {c.lastName}
+                        </Link>
+                      </td>
+                      <td style={table.td}>{c.email || '—'}</td>
+                      <td style={table.td}>{c.phone || '—'}</td>
+                      <td style={table.td}>{c.title || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
@@ -284,7 +286,7 @@ function CompanyDetailContent() {
       {activeTab === 'activities' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {activities.length === 0 ? (
-            <div style={panel.container}>
+            <div className="panel-container" style={panel.container}>
               <p style={{ color: 'var(--fg-dim)' }}>No activity logged yet.</p>
             </div>
           ) : (

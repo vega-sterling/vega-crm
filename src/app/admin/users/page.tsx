@@ -145,49 +145,51 @@ function AdminUsersContent() {
         </div>
       )}
 
-      <div style={panel.container}>
-        <table style={table.table}>
-          <thead>
-            <tr>
-              <th style={table.th}>Name</th>
-              <th style={table.th}>Email</th>
-              <th style={table.th}>Role</th>
-              <th style={table.th}>Active</th>
-              <th style={table.th}>Tenants</th>
-              <th style={table.th}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.length === 0 ? (
+      <div className="panel-container" style={panel.container}>
+        <div className="table-wrapper" style={{ overflowX: 'auto' }}>
+          <table style={table.table}>
+            <thead>
               <tr>
-                <td colSpan={6} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center' }}>
-                  No users found.
-                </td>
+                <th style={table.th}>Name</th>
+                <th style={table.th}>Email</th>
+                <th style={table.th}>Role</th>
+                <th style={table.th}>Active</th>
+                <th style={table.th}>Tenants</th>
+                <th style={table.th}></th>
               </tr>
-            ) : (
-              users.map((u) => (
-                <tr key={u.id} style={table.tr}>
-                  <td style={table.td}><strong>{u.name}</strong></td>
-                  <td style={table.td}>{u.email}</td>
-                  <td style={table.td}>
-                    <span style={statusBadge(roleColor[u.globalRole] || 'var(--fg-dim)')}>{u.globalRole.replace('_', ' ')}</span>
-                  </td>
-                  <td style={table.td}>
-                    <span style={statusBadge(u.isActive ? 'var(--emerald)' : 'var(--rust)')}>{u.isActive ? 'Active' : 'Inactive'}</span>
-                  </td>
-                  <td style={table.td}>
-                    {u.userTenants?.length
-                      ? u.userTenants.map((ut) => ut.tenant.name).join(', ')
-                      : '—'}
-                  </td>
-                  <td style={table.td}>
-                    <button style={buttons.small} onClick={() => openEdit(u)}>Edit</button>
+            </thead>
+            <tbody>
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center' }}>
+                    No users found.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                users.map((u) => (
+                  <tr key={u.id} style={table.tr}>
+                    <td style={table.td}><strong>{u.name}</strong></td>
+                    <td style={table.td}>{u.email}</td>
+                    <td style={table.td}>
+                      <span style={statusBadge(roleColor[u.globalRole] || 'var(--fg-dim)')}>{u.globalRole.replace('_', ' ')}</span>
+                    </td>
+                    <td style={table.td}>
+                      <span style={statusBadge(u.isActive ? 'var(--emerald)' : 'var(--rust)')}>{u.isActive ? 'Active' : 'Inactive'}</span>
+                    </td>
+                    <td style={table.td}>
+                      {u.userTenants?.length
+                        ? u.userTenants.map((ut) => ut.tenant.name).join(', ')
+                        : '—'}
+                    </td>
+                    <td style={table.td}>
+                      <button style={buttons.small} onClick={() => openEdit(u)}>Edit</button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {modalOpen && (

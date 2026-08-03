@@ -191,58 +191,60 @@ function ContactsContent() {
         />
       </div>
 
-      <div style={panel.container}>
-        <table style={table.table}>
-          <thead>
-            <tr>
-              <th style={table.th}>Name</th>
-              <th style={table.th}>Email</th>
-              <th style={table.th}>Phone</th>
-              <th style={table.th}>Title</th>
-              <th style={table.th}>Company</th>
-              <th style={table.th}>Created</th>
-              <th style={table.th}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
+      <div className="panel-container" style={panel.container}>
+        <div className="table-wrapper" style={{ overflowX: 'auto' }}>
+          <table style={table.table}>
+            <thead>
               <tr>
-                <td colSpan={7} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center' }}>
-                  No contacts found.
-                </td>
+                <th style={table.th}>Name</th>
+                <th style={table.th}>Email</th>
+                <th style={table.th}>Phone</th>
+                <th style={table.th}>Title</th>
+                <th style={table.th}>Company</th>
+                <th style={table.th}>Created</th>
+                <th style={table.th}></th>
               </tr>
-            ) : (
-              filtered.map((c) => (
-                <tr key={c.id} style={table.tr}>
-                  <td style={table.td}>
-                    <Link href={`/contacts/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)' }}>
-                      {c.firstName} {c.lastName}
-                    </Link>
-                  </td>
-                  <td style={table.td}>{c.email || '—'}</td>
-                  <td style={table.td}>{c.phone || '—'}</td>
-                  <td style={table.td}>{c.title || '—'}</td>
-                  <td style={table.td}>
-                    {c.company ? (
-                      <Link href={`/companies/${c.company.id}`} style={{ color: 'var(--gold)' }}>
-                        {c.company.name}
-                      </Link>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
-                  <td style={{ ...table.td, color: 'var(--fg-dim)', fontSize: 12 }}>{formatDate(c.createdAt)}</td>
-                  <td style={table.td}>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button style={buttons.small} onClick={() => openEdit(c)}>Edit</button>
-                      <button style={buttons.danger} onClick={() => handleDelete(c)}>Delete</button>
-                    </div>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center' }}>
+                    No contacts found.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                filtered.map((c) => (
+                  <tr key={c.id} style={table.tr}>
+                    <td style={table.td}>
+                      <Link href={`/contacts/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)' }}>
+                        {c.firstName} {c.lastName}
+                      </Link>
+                    </td>
+                    <td style={table.td}>{c.email || '—'}</td>
+                    <td style={table.td}>{c.phone || '—'}</td>
+                    <td style={table.td}>{c.title || '—'}</td>
+                    <td style={table.td}>
+                      {c.company ? (
+                        <Link href={`/companies/${c.company.id}`} style={{ color: 'var(--gold)' }}>
+                          {c.company.name}
+                        </Link>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td style={{ ...table.td, color: 'var(--fg-dim)', fontSize: 12 }}>{formatDate(c.createdAt)}</td>
+                    <td style={table.td}>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button style={buttons.small} onClick={() => openEdit(c)}>Edit</button>
+                        <button style={buttons.danger} onClick={() => handleDelete(c)}>Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {modalOpen && (

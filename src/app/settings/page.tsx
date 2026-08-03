@@ -87,7 +87,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Account Section */}
-      <div style={panel.container}>
+      <div className="panel-container" style={panel.container}>
         <div style={panel.header}>
           <h2 style={typeography.subtitle}>{t("settings.account")}</h2>
         </div>

@@ -57,3 +57,17 @@ export const statusBadge = (color: string): CSSProperties => ({
   fontSize: 12,
   fontWeight: 600,
 })
+
+// ── Responsive class name constants for use with CSS media queries ──
+export const responsiveClassNames = {
+  projectGrid: 'project-grid',
+  statGrid: 'stat-grid',
+  formGrid: 'form-grid',
+  tableWrapper: 'table-wrapper',
+  kanbanBoard: 'kanban-board',
+  kanbanBoardScroll: 'kanban-board-scroll',
+  kanbanColumn: 'kanban-column',
+  panelContainer: 'panel-container',
+  modalOverlay: 'modal-overlay',
+  modalContent: 'modal-content',
+}

@@ -98,22 +98,22 @@ function DashboardContent() {
         </div>
       )}
 
-      <div style={layout.grid}>
+      <div className="stat-grid" style={layout.grid}>
         {[
           { label: 'Companies', value: counts.companies ?? 0, color: 'var(--blue)' },
           { label: 'Contacts', value: counts.contacts ?? 0, color: 'var(--emerald)' },
           { label: 'Activities', value: counts.activities ?? 0, color: 'var(--gold)' },
           { label: 'Tasks', value: counts.tasks ?? 0, color: 'var(--cyan)' },
         ].map((s) => (
-          <div key={s.label} style={panel.container}>
+          <div key={s.label} className="panel-container" style={panel.container}>
             <div style={{ fontSize: 32, fontWeight: 800, color: s.color }}>{s.value}</div>
             <div style={{ color: 'var(--fg-dim)', fontSize: 14, marginTop: 6 }}>{s.label}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginTop: 24 }}>
-        <div style={panel.container}>
+      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginTop: 24 }}>
+        <div className="panel-container" style={panel.container}>
           <div style={{ ...layout.header, marginBottom: 8 }}>
             <h2 style={{ ...typeography.subtitle, margin: 0 }}>Recent activity</h2>
             <Link href="/activities" style={{ color: 'var(--gold)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>View all →</Link>
@@ -125,7 +125,7 @@ function DashboardContent() {
           )}
         </div>
 
-        <div style={panel.container}>
+        <div className="panel-container" style={panel.container}>
           <h2 style={{ ...typeography.subtitle, margin: '0 0 20px' }}>Task summary</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[

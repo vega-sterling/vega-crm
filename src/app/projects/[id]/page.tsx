@@ -420,7 +420,7 @@ export default function KanbanBoardPage() {
       </div>
 
       {/* Kanban Board */}
-      <div style={{
+      <div className="kanban-board-scroll" style={{
         display: 'flex',
         gap: 16,
         overflowX: 'auto',
@@ -433,6 +433,7 @@ export default function KanbanBoardPage() {
           return (
             <div
               key={column.id}
+              className="kanban-column"
               onDragOver={e => handleColumnDragOver(e, column.id)}
               onDrop={e => handleColumnDrop(e, column.id)}
               onDragLeave={() => {
@@ -866,6 +867,7 @@ function TaskDetailDrawer({
 
       {/* Drawer */}
       <div
+        className="task-drawer"
         style={{
           position: 'fixed',
           top: 0,

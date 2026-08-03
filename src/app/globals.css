@@ -92,3 +92,137 @@ input:focus, select:focus, textarea:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--panel-border-hot);
 }
+
+/* ============================================================================
+   Responsive breakpoints
+   ─ Desktop (>768px):   sidebar visible by default, fixed left
+   ─ Mobile (≤768px):    sidebar hidden, hamburger toggle, full-width header
+   ============================================================================ */
+
+/* Desktop — sidebar visible, main content offset */
+@media (min-width: 769px) {
+  .sidebar {
+    transform: translateX(0) !important;
+  }
+
+  .main-content {
+    margin-left: 260px;
+  }
+
+  /* Hide mobile-only elements on desktop */
+  .mobile-only {
+    display: none !important;
+  }
+
+  .page-content {
+    padding: '88px 24px 24px';
+  }
+}
+
+/* Mobile — sidebar slide-out, full-width content */
+@media (max-width: 768px) {
+  .page-content {
+    padding: 88px 12px 24px !important;
+  }
+
+  /* Truncate long usernames on mobile */
+  .user-name {
+    font-size: 12px !important;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Tables scroll horizontally on mobile */
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Modals full-width on mobile */
+  .modal-overlay {
+    padding: 0 !important;
+  }
+
+  .modal-content {
+    width: 100% !important;
+    maxWidth: 100% !important;
+    maxHeight: 100vh !important;
+    borderRadius: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Kanban board — full horizontal scroll, snap to columns */
+  .kanban-board {
+    padding-bottom: 16px;
+  }
+
+  .kanban-column {
+    scroll-snap-align: start;
+  }
+
+  .kanban-board-scroll {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+
+  /* Project cards — single column on mobile */
+  .project-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Dashboard stat cards — 2 columns on mobile */
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Form rows — single column on mobile */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Headers — smaller on mobile */
+  h1 {
+    font-size: 22px !important;
+  }
+
+  h2 {
+    font-size: 16px !important;
+  }
+
+  /* Panel padding tighter on mobile */
+  .panel-container {
+    padding: 16px !important;
+  }
+
+  /* Dashboard 2fr/1fr grid → stack on mobile */
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Very small screens (≤480px) — phone portrait */
+@media (max-width: 480px) {
+  .page-content {
+    padding: 80px 8px 16px !important;
+  }
+
+  /* Dashboard stat cards — single column on tiny screens */
+  .stat-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Hide the role badge text on tiny screens */
+  .user-name span {
+    display: none;
+  }
+
+  /* Task drawer — full screen on mobile */
+  .task-drawer {
+    width: 100% !important;
+    maxWidth: 100% !important;
+    padding: 16px !important;
+  }
+}

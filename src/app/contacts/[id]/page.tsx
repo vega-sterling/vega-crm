@@ -196,7 +196,7 @@ function ContactDetailContent() {
         </div>
       )}
 
-      <div style={panel.container}>
+      <div className="panel-container" style={panel.container}>
         <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Contact details</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
           <div>
@@ -236,7 +236,7 @@ function ContactDetailContent() {
       <div style={{ marginTop: 24 }}>
         <h2 style={{ ...typeography.subtitle, marginBottom: 16 }}>Activity history</h2>
         {activities.length === 0 ? (
-          <div style={panel.container}>
+          <div className="panel-container" style={panel.container}>
             <p style={{ color: 'var(--fg-dim)' }}>No activity yet.</p>
           </div>
         ) : (

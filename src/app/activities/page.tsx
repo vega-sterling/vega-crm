@@ -216,7 +216,7 @@ function ActivitiesContent() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {activities.length === 0 ? (
-          <div style={panel.container}>
+          <div className="panel-container" style={panel.container}>
             <p style={{ color: 'var(--fg-dim)' }}>No activities found.</p>
           </div>
         ) : (

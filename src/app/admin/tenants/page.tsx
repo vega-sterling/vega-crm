@@ -104,43 +104,45 @@ export default function TenantsPage() {
           </div>
         )}
 
-        <div style={panel.container}>
-          <table style={table.table}>
-            <thead>
-              <tr>
-                <th style={table.th}>Name</th>
-                <th style={table.th}>Slug</th>
-                <th style={table.th}>Description</th>
-                <th style={table.th}>Active</th>
-                <th style={table.th}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {tenants.length === 0 ? (
+        <div className="panel-container" style={panel.container}>
+          <div className="table-wrapper" style={{ overflowX: 'auto' }}>
+            <table style={table.table}>
+              <thead>
                 <tr>
-                  <td style={table.td} colSpan={5}>
-                    <span style={typeography.muted}>No tenants found</span>
-                  </td>
+                  <th style={table.th}>Name</th>
+                  <th style={table.th}>Slug</th>
+                  <th style={table.th}>Description</th>
+                  <th style={table.th}>Active</th>
+                  <th style={table.th}></th>
                 </tr>
-              ) : (
-                tenants.map((t) => (
-                  <tr key={t.id} style={table.tr}>
-                    <td style={table.td}>{t.name}</td>
-                    <td style={table.td}><code style={{ fontSize: 13, color: "var(--fg-dim)" }}>{t.slug}</code></td>
-                    <td style={table.td}>{t.description || "—"}</td>
-                    <td style={table.td}>
-                      <span style={{ color: t.isActive !== false ? "var(--emerald)" : "var(--rust)", fontSize: 14 }}>
-                        {t.isActive !== false ? "✓ Active" : "✕ Inactive"}
-                      </span>
-                    </td>
-                    <td style={table.td}>
-                      <button style={buttons.small} onClick={() => openEdit(t)}>Edit</button>
+              </thead>
+              <tbody>
+                {tenants.length === 0 ? (
+                  <tr>
+                    <td style={table.td} colSpan={5}>
+                      <span style={typeography.muted}>No tenants found</span>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  tenants.map((t) => (
+                    <tr key={t.id} style={table.tr}>
+                      <td style={table.td}>{t.name}</td>
+                      <td style={table.td}><code style={{ fontSize: 13, color: "var(--fg-dim)" }}>{t.slug}</code></td>
+                      <td style={table.td}>{t.description || "—"}</td>
+                      <td style={table.td}>
+                        <span style={{ color: t.isActive !== false ? "var(--emerald)" : "var(--rust)", fontSize: 14 }}>
+                          {t.isActive !== false ? "✓ Active" : "✕ Inactive"}
+                        </span>
+                      </td>
+                      <td style={table.td}>
+                        <button style={buttons.small} onClick={() => openEdit(t)}>Edit</button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {showModal && (
