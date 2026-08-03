@@ -1,10 +1,16 @@
 # Environment
 .env
 .env.*
+.env.local
+.env.*.local
 !.env.example
 
-# Node
+# Dependencies
 node_modules/
+.pnp
+.pnp.js
+
+# Next.js
 .next/
 out/
 build/
@@ -15,6 +21,7 @@ prisma/migrations/dev.db*
 
 # Docker volumes
 volumes/
+docker-compose.override.yml
 
 # Logs
 *.log
@@ -27,6 +34,8 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # Secrets / credentials
 *.pem
@@ -34,6 +43,10 @@ Thumbs.db
 *.p12
 credentials.json
 service-account.json
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
 
 # DB backups — keep only the latest in git, archive everything else
 backups/vega_crm_dump_*.sql.gz
