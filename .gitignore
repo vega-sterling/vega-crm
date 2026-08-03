@@ -1,39 +1,40 @@
-# Dependencies
-node_modules
-.pnp
-.pnp.js
+# Environment
+.env
+.env.*
+!.env.example
 
-# Next.js
-.next
-out
-build
-dist
+# Node
+node_modules/
+.next/
+out/
+build/
+dist/
 
 # Prisma
 prisma/migrations/dev.db*
 
-# Environment
-.env
-.env.local
-.env.*.local
-
-# Docker
-docker-compose.override.yml
+# Docker volumes
+volumes/
 
 # Logs
 *.log
 npm-debug.log*
 
-# OS
+# OS files
 .DS_Store
-*.pem
+Thumbs.db
 
 # IDE
-.idea
-.vscode
-*.swp
-*.swo
+.vscode/
+.idea/
 
-# TypeScript
-*.tsbuildinfo
-next-env.d.ts
+# Secrets / credentials
+*.pem
+*.key
+*.p12
+credentials.json
+service-account.json
+
+# DB backups — keep only the latest in git, archive everything else
+backups/vega_crm_dump_*.sql.gz
+!backups/vega_crm_latest.sql.gz
