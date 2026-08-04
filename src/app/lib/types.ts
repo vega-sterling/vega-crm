@@ -138,6 +138,17 @@ export interface Subtask {
   assignee?: { id: string; name: string } | null
 }
 
+export interface TaskComment {
+  id: string
+  taskId: string
+  tenantId: string
+  userId: string
+  body: string
+  createdAt: string
+  updatedAt: string
+  user?: { id: string; name: string } | null
+}
+
 export interface ProjectTask {
   id: string
   projectId: string

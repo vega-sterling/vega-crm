@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { apiFetch } from '../../lib/api'
-import type { Project, ProjectColumn, ProjectTask, Subtask, User } from '../../lib/types'
+import type { Project, ProjectColumn, ProjectTask, Subtask, User, TaskComment } from '../../lib/types'
 import { layout, panel, typeography, buttons, forms, statusBadge } from '../../lib/styles'
 import ProtectedLayout from '../../components/ProtectedLayout'
 
@@ -76,6 +76,7 @@ export default function KanbanBoardPage() {
   const [editingColumn, setEditingColumn] = useState<ProjectColumn | null>(null)
   const [showAddColumn, setShowAddColumn] = useState(false)
   const [showEditProject, setShowEditProject] = useState(false)
+  const [taskComments, setTaskComments] = useState<TaskComment[]>([])
 
   // Inline add task
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null)
@@ -102,6 +103,24 @@ export default function KanbanBoardPage() {
   useEffect(() => {
     apiFetch<{ data: User[] }>('/api/admin/users').then(res => setUsers(res.data || [])).catch(() => {})
   }, [])
+
+  // === Task comments / activity history ===
+  const fetchComments = useCallback(async (taskId: string) => {
+    try {
+      const res = await apiFetch<{ data: TaskComment[] }>(`/api/projects/${projectId}/tasks/${taskId}/comments`)
+      setTaskComments(res.data || [])
+    } catch {
+      setTaskComments([])
+    }
+  }, [projectId])
+
+  const handleCreateComment = useCallback(async (taskId: string, body: string) => {
+    const created = await apiFetch<TaskComment>(`/api/projects/${projectId}/tasks/${taskId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    })
+    setTaskComments(prev => [created, ...prev])
+  }, [projectId])
 
   // === Task drag and drop ===
   const handleTaskDragStart = (e: React.DragEvent, taskId: string) => {
@@ -517,7 +536,7 @@ export default function KanbanBoardPage() {
                     isDragging={draggingTaskId === task.id}
                     onDragStart={e => handleTaskDragStart(e, task.id)}
                     onDragEnd={handleTaskDragEnd}
-                    onClick={() => setSelectedTask(task)}
+                    onClick={() => { setSelectedTask(task); fetchComments(task.id) }}
                   />
                 ))}
 
@@ -604,12 +623,14 @@ export default function KanbanBoardPage() {
           task={selectedTask}
           project={project}
           users={users}
+          comments={taskComments}
           onClose={() => setSelectedTask(null)}
           onUpdate={(updates) => handleUpdateTask(selectedTask.id, updates)}
           onDelete={() => handleDeleteTask(selectedTask.id)}
           onCreateSubtask={(title) => handleCreateSubtask(selectedTask.id, title)}
           onToggleSubtask={(subtaskId, isCompleted) => handleToggleSubtask(selectedTask.id, subtaskId, isCompleted)}
           onDeleteSubtask={(subtaskId) => handleDeleteSubtask(selectedTask.id, subtaskId)}
+          onCreateComment={(body) => handleCreateComment(selectedTask.id, body)}
         />
       )}
 
@@ -792,22 +813,26 @@ function TaskDetailDrawer({
   task,
   project,
   users,
+  comments,
   onClose,
   onUpdate,
   onDelete,
   onCreateSubtask,
   onToggleSubtask,
   onDeleteSubtask,
+  onCreateComment,
 }: {
   task: ProjectTask
   project: Project
   users: User[]
+  comments: TaskComment[]
   onClose: () => void
   onUpdate: (updates: Record<string, unknown>) => void
   onDelete: () => void
   onCreateSubtask: (title: string) => void
   onToggleSubtask: (subtaskId: string, isCompleted: boolean) => void
   onDeleteSubtask: (subtaskId: string) => void
+  onCreateComment: (body: string) => void
 }) {
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description || '')
@@ -818,6 +843,7 @@ function TaskDetailDrawer({
   const [newSubtask, setNewSubtask] = useState('')
   const [showSubtaskInput, setShowSubtaskInput] = useState(false)
   const [editingField, setEditingField] = useState<string | null>(null)
+  const [newComment, setNewComment] = useState('')
 
   // Sync local state when task changes
   useEffect(() => {
@@ -1115,6 +1141,82 @@ function TaskDetailDrawer({
               />
             </div>
           )}
+        </div>
+
+        {/* Activity History / Comments */}
+        <div style={{ marginTop: 24 }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 12,
+          }}>
+            <label style={forms.label}>
+              Activity History {comments.length > 0 && `(${comments.length})`}
+            </label>
+          </div>
+
+          {/* Comment list */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+            {comments.length === 0 ? (
+              <p style={{ color: 'var(--fg-dimmer)', fontSize: 13, fontStyle: 'italic' }}>
+                No activity logged yet.
+              </p>
+            ) : (
+              comments.map(comment => (
+                <div
+                  key={comment.id}
+                  style={{
+                    ...panel.compact,
+                    padding: 10,
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    marginBottom: 6,
+                    fontSize: 11,
+                    color: 'var(--fg-dimmer)',
+                  }}>
+                    <span style={{ fontWeight: 600 }}>{comment.user?.name || 'Unknown'}</span>
+                    <span>{comment.createdAt && new Date(comment.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  {comment.body}
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* New comment input */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              style={{ ...forms.input, flex: 1 }}
+              value={newComment}
+              onChange={e => setNewComment(e.target.value)}
+              placeholder="Log a call, email, note, or update..."
+              onKeyDown={e => {
+                if (e.key === 'Enter' && newComment.trim()) {
+                  onCreateComment(newComment)
+                  setNewComment('')
+                }
+              }}
+            />
+            <button
+              onClick={() => {
+                if (newComment.trim()) {
+                  onCreateComment(newComment)
+                  setNewComment('')
+                }
+              }}
+              disabled={!newComment.trim()}
+              style={{ ...buttons.primary, opacity: newComment.trim() ? 1 : 0.5, whiteSpace: 'nowrap' }}
+            >
+              Add
+            </button>
+          </div>
         </div>
 
         {/* Footer info */}

@@ -136,6 +136,7 @@ model User {
   projectTasks  ProjectTask[] @relation("ProjectTaskAssignee")
   projectTasksCreated ProjectTask[] @relation("ProjectTaskCreator")
   subtasks       Subtask[]   @relation("SubtaskAssignee")
+  taskComments   TaskComment[]
   
   // Google OAuth per-user (Gmail + Calendar)
   googleAccessToken    String?
@@ -412,12 +413,34 @@ model ProjectTask {
   assignee      User?          @relation("ProjectTaskAssignee", fields: [assignedToId], references: [id])
   creator       User           @relation("ProjectTaskCreator", fields: [createdById], references: [id])
   subtasks      Subtask[]
+  comments      TaskComment[]
 
   @@index([projectId])
   @@index([columnId])
   @@index([tenantId])
   @@index([assignedToId])
   @@map("project_tasks")
+}
+
+// ============================================================================
+// TASK_COMMENT — activity history / comments on project task cards
+// ============================================================================
+
+model TaskComment {
+  id          String   @id @default(cuid())
+  taskId      String
+  tenantId    String
+  userId      String
+  body        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  task        ProjectTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id])
+
+  @@index([taskId])
+  @@index([tenantId])
+  @@map("task_comments")
 }
 
 // ============================================================================
