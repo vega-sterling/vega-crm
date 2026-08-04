@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { apiFetch } from '../../lib/api'
 import type { Project, ProjectColumn, ProjectTask, Subtask, User } from '../../lib/types'
 import { layout, panel, typeography, buttons, forms, statusBadge } from '../../lib/styles'
+import ProtectedLayout from '../../components/ProtectedLayout'
 
 const PRIORITY_COLORS: Record<string, string> = {
   LOW: '#8b8d98',
@@ -384,6 +385,7 @@ export default function KanbanBoardPage() {
   }
 
   return (
+    <ProtectedLayout>
     <div style={{ padding: '88px 24px 24px' }}>
       {/* Board Header */}
       <div style={{
@@ -642,6 +644,7 @@ export default function KanbanBoardPage() {
         />
       )}
     </div>
+    </ProtectedLayout>
   )
 }
 

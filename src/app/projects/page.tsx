@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { apiFetch } from '../lib/api'
 import type { Project, User } from '../lib/types'
 import { layout, panel, typeography, buttons, forms } from '../lib/styles'
+import ProtectedLayout from '../components/ProtectedLayout'
 
 const PROJECT_COLORS = [
   '#c9a96e', '#60a5fa', '#4ade80', '#a78bfa',
@@ -104,6 +105,7 @@ export default function ProjectsPage() {
   }
 
   return (
+    <ProtectedLayout>
     <div style={layout.page}>
       <div style={layout.header}>
         <h1 style={typeography.title}>Projects</h1>
@@ -336,5 +338,6 @@ export default function ProjectsPage() {
         </div>
       )}
     </div>
+    </ProtectedLayout>
   )
 }

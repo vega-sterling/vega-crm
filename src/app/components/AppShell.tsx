@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { apiFetch } from '../lib/api'
 import type { User } from '../lib/types'
+import NotificationBell from './NotificationBell'
 
 const navSections = [
   { title: 'Overview', items: [
@@ -24,6 +25,7 @@ const navSections = [
     title: 'Sales',
     items: [
       { label: 'Deals', href: '/deals', icon: '💠' },
+      { label: 'Quotes', href: '/quotes', icon: '📄' },
     ],
   },
   {
@@ -35,6 +37,8 @@ const navSections = [
   {
     title: 'Communications',
     items: [
+      { label: 'Inbox', href: '/inbox', icon: '📥' },
+      { label: 'Campaigns', href: '/campaigns', icon: '📣' },
       { label: 'Templates', href: '/templates', icon: '✉' },
       { label: 'Calendar', href: '/calendar', icon: '📅' },
     ],
@@ -45,6 +49,9 @@ const navSections = [
     items: [
       { label: 'Users', href: '/admin/users', icon: '⚙' },
       { label: 'Tenants', href: '/admin/tenants', icon: '▦' },
+      { label: 'Lead Forms', href: '/admin/lead-forms', icon: '📋' },
+      { label: 'Lead Scoring', href: '/admin/lead-scoring', icon: '🎯' },
+      { label: 'Integrations', href: '/admin/integrations', icon: '🔗' },
       { label: 'Settings', href: '/settings', icon: '🔧' },
     ],
   },
@@ -273,6 +280,7 @@ export default function AppShell({ user, children }: { user: User; children: Rea
             ☰
           </button>
 
+          <NotificationBell />
           {/* User info + logout */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
             <span

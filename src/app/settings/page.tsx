@@ -2,6 +2,7 @@
 
 // ============================================================================
 // File: src/app/settings/page.tsx
+import ProtectedLayout from '../components/ProtectedLayout'
 // Description: User settings page — theme, language, Google integration, custom
 //              properties, and workflow automation builder.
 // ============================================================================
@@ -265,6 +266,7 @@ export default function SettingsPage() {
   if (!mounted) return null;
 
   return (
+    <ProtectedLayout>
     <div style={layout.page}>
       <h1 style={typeography.title}>{t("settings.title")}</h1>
 
@@ -676,5 +678,6 @@ export default function SettingsPage() {
         </div>
       )}
     </div>
+    </ProtectedLayout>
   );
 }

@@ -1,8 +1,9 @@
 // ============================================================================
 // GET /api/email/messages — Vega CRM
 // ============================================================================
-// Lists email messages for a given contact or company, paginated and ordered
-// by most recent first.
+// Lists email messages. Supports filtering by contactId, companyId, dealId,
+// or no filter (universal inbox mode — returns all emails for accessible
+// tenants). Paginated and ordered by most recent first.
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -17,8 +18,9 @@ import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/ses
  *
  * @query contactId - filter to a specific contact
  * @query companyId - filter to a specific company
+ * @query dealId - filter to a specific deal
  * @query page - page number (default 1)
- * @query limit - page size (default 20, max 100)
+ * @query limit - page size (default 50, max 100)
  * @returns Paginated EmailMessage records
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -27,18 +29,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   const tenantIds = await getAccessibleTenantIds(session);
   if (tenantIds && tenantIds.length === 0) {
-    return NextResponse.json({ data: [], pagination: { page: 1, limit: 20, total: 0 } });
+    return NextResponse.json({ data: [], pagination: { page: 1, limit: 50, total: 0 } });
   }
 
   const { searchParams } = new URL(req.url);
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
-  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '20', 10)));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '50', 10)));
   const contactId = searchParams.get('contactId');
   const companyId = searchParams.get('companyId');
-
-  if (!contactId && !companyId) {
-    return errorResponse('Provide contactId or companyId', 400);
-  }
+  const dealId = searchParams.get('dealId');
 
   const where: Record<string, unknown> = {
     tenantId: tenantIds ? { in: tenantIds } : undefined,
@@ -46,8 +45,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   if (contactId) where.contactId = contactId;
   if (companyId) where.companyId = companyId;
+  if (dealId) where.dealId = dealId;
 
-  // Optional: enforce the related record belongs to an accessible tenant.
+  // Verify access for company/contact filters
   if (companyId) {
     const company = await prisma.company.findUnique({
       where: { id: companyId },

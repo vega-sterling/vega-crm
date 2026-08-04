@@ -91,6 +91,12 @@ model Tenant {
   workflows      Workflow[]
   calendarEvents CalendarEvent[]
   bookingSlots   BookingSlot[]
+  tenantSettings  TenantSetting[]
+  leadScoreRules  LeadScoreRule[]
+  quotes          Quote[]
+  leadForms       LeadForm[]
+  emailCampaigns  EmailCampaign[]
+  smsMessages     SmsMessage[]
 
   @@map("tenants")
 }
@@ -148,6 +154,7 @@ model User {
   bookingSlots   BookingSlot[] @relation("BookingOwner")
   emailSequences EmailSequence[] @relation("SequenceCreator")
   auditLogs     AuditLog[]
+  notifications  Notification[]
 
   @@map("users")
 }
@@ -470,6 +477,7 @@ model Deal {
   creator        User         @relation("DealCreator", fields: [createdById], references: [id])
   activities     Activity[]
   emailMessages  EmailMessage[]
+  quotes         Quote[]
 
   @@index([tenantId])
   @@index([stageId])
@@ -580,6 +588,8 @@ model EmailMessage {
   company       Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
   contact       Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   deal          Deal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  opens         EmailOpen[]
+  clicks        EmailClick[]
 
   @@index([tenantId])
   @@index([userId])
@@ -849,4 +859,265 @@ model AuditLog {
   @@index([entity])
   @@index([createdAt])
   @@map("audit_logs")
+}
+// ============================================================================
+// TENANT_SETTING — per-tenant key-value settings store for integrations
+// ============================================================================
+
+model TenantSetting {
+  id          String   @id @default(cuid())
+  tenantId    String
+  key         String                         // e.g., "google_oauth_client_id"
+  value       String                         // encrypted or plaintext value
+  isEncrypted Boolean  @default(false)        // marks sensitive values
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?                         // userId of last editor
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@map("tenant_settings")
+}
+
+// ============================================================================
+// NOTIFICATION — in-app notifications for users
+// ============================================================================
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String                          // Who sees this notification
+  type        String                          // "TASK_OVERDUE", "DEAL_STAGE_CHANGE", "EMAIL_RECEIVED", "BOOKING_CREATED", "LEAD_CAPTURED"
+  title       String
+  message     String
+  entityId    String?                         // ID of related object (task, deal, contact, etc.)
+  entityType  String?                         // "task", "deal", "contact", "email", "booking"
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ============================================================================
+// EMAIL_OPEN — tracks when a recipient opens an outbound email
+// ============================================================================
+
+model EmailOpen {
+  id             String   @id @default(cuid())
+  emailMessageId String
+  openedAt       DateTime @default(now())
+  ipAddress      String?
+  userAgent      String?
+
+  emailMessage   EmailMessage @relation(fields: [emailMessageId], references: [id], onDelete: Cascade)
+
+  @@index([emailMessageId])
+  @@map("email_opens")
+}
+
+// ============================================================================
+// EMAIL_CLICK — tracks link clicks within outbound emails
+// ============================================================================
+
+model EmailClick {
+  id             String   @id @default(cuid())
+  emailMessageId String
+  url            String
+  clickedAt      DateTime @default(now())
+  ipAddress      String?
+  userAgent      String?
+
+  emailMessage   EmailMessage @relation(fields: [emailMessageId], references: [id], onDelete: Cascade)
+
+  @@index([emailMessageId])
+  @@map("email_clicks")
+}
+
+// ============================================================================
+// LEAD_SCORE_RULE — configurable scoring rules per tenant
+// ============================================================================
+
+model LeadScoreRule {
+  id          String   @id @default(cuid())
+  tenantId    String
+  event       String                          // "EMAIL_OPENED", "DEAL_ADVANCED", "NO_ACTIVITY_30D", etc.
+  points      Int                             // Positive or negative
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, event])
+  @@map("lead_score_rules")
+}
+
+// ============================================================================
+// QUOTE — quotes/proposals attached to deals
+// ============================================================================
+
+model Quote {
+  id          String   @id @default(cuid())
+  dealId      String
+  tenantId    String
+  number      String                          // Quote number (e.g., Q-2026-001)
+  status      String   @default("DRAFT")      // DRAFT, SENT, ACCEPTED, REJECTED, EXPIRED
+  subtotal    Float    @default(0)
+  taxRate     Float    @default(0)             // Percentage (e.g., 8.5)
+  taxAmount   Float    @default(0)
+  total       Float    @default(0)
+  notes       String?
+  validUntil  DateTime?
+  sentAt      DateTime?
+  acceptedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lineItems   QuoteLineItem[]
+
+  @@index([dealId])
+  @@index([tenantId])
+  @@map("quotes")
+}
+
+// ============================================================================
+// QUOTE_LINE_ITEM — line items within a quote
+// ============================================================================
+
+model QuoteLineItem {
+  id          String   @id @default(cuid())
+  quoteId     String
+  description String
+  quantity    Float    @default(1)
+  unitPrice   Float    @default(0)
+  total       Float    @default(0)
+
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId])
+  @@map("quote_line_items")
+}
+
+// ============================================================================
+// LEAD_FORM — embeddable lead capture forms
+// ============================================================================
+
+model LeadForm {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String                          // Form name (internal)
+  slug        String   @unique                 // URL slug for public form
+  fields      Json                             // Array of {name, label, type, required}
+  redirectUrl String?                         // Where to redirect after submit
+  isActive    Boolean  @default(true)
+  webhookUrl  String?                         // Optional webhook on submission
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  submissions LeadFormSubmission[]
+
+  @@index([tenantId])
+  @@map("lead_forms")
+}
+
+// ============================================================================
+// LEAD_FORM_SUBMISSION — individual form submissions
+// ============================================================================
+
+model LeadFormSubmission {
+  id          String   @id @default(cuid())
+  formId      String
+  data        Json                             // Submitted field values
+  contactId   String?                          // Created contact if matched/created
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  form        LeadForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
+  @@index([createdAt])
+  @@map("lead_form_submissions")
+}
+
+// ============================================================================
+// EMAIL_CAMPAIGN — mass email campaigns
+// ============================================================================
+
+model EmailCampaign {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  subject     String
+  body        String                          // HTML body
+  templateId  String?                         // Optional template reference
+  status      String   @default("DRAFT")      // DRAFT, SCHEDULED, SENDING, SENT, PAUSED
+  audienceFilter Json?                        // Contact filter criteria
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  totalSent   Int      @default(0)
+  totalOpened Int      @default(0)
+  totalClicked Int     @default(0)
+  totalReplied Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  recipients  EmailCampaignRecipient[]
+
+  @@index([tenantId])
+  @@map("email_campaigns")
+}
+
+// ============================================================================
+// EMAIL_CAMPAIGN_RECIPIENT — per-recipient tracking for campaigns
+// ============================================================================
+
+model EmailCampaignRecipient {
+  id          String   @id @default(cuid())
+  campaignId  String
+  contactId   String?
+  email       String
+  sentAt      DateTime?
+  openedAt    DateTime?
+  clickedAt   DateTime?
+  repliedAt   DateTime?
+  status      String   @default("PENDING")    // PENDING, SENT, OPENED, CLICKED, REPLIED, BOUNCED
+
+  campaign    EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@map("email_campaign_recipients")
+}
+
+// ============================================================================
+// SMS_MESSAGE — SMS log for Twilio integration
+// ============================================================================
+
+model SmsMessage {
+  id          String   @id @default(cuid())
+  tenantId    String
+  contactId   String?
+  userId      String?                         // Who sent it (if outbound)
+  direction   String                          // "INBOUND" or "OUTBOUND"
+  body        String
+  status      String   @default("PENDING")    // PENDING, SENT, DELIVERED, FAILED
+  externalId  String?                         // Twilio message SID
+  fromNumber  String
+  toNumber    String
+  createdAt   DateTime @default(now())
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@index([tenantId])
+  @@index([createdAt])
+  @@map("sms_messages")
 }

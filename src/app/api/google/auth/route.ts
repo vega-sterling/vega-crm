@@ -2,7 +2,9 @@
 // GET, POST /api/google/auth — Vega CRM
 // ============================================================================
 // GET: Build Google OAuth consent URL and redirect the browser.
+//      Accepts ?tenantId=xxx to use per-tenant OAuth credentials.
 // POST: Exchange authorization code for tokens and persist them on the user.
+//       Accepts tenantId in the body to use per-tenant OAuth credentials.
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -18,10 +20,11 @@ import { validateBody } from '@/lib/validation';
 
 const GoogleAuthCodeSchema = z.object({
   code: z.string().min(1),
+  tenantId: z.string().optional(),
 });
 
 /**
- * GET /api/google/auth
+ * GET /api/google/auth?tenantId=xxx
  *
  * Redirects the user to Google's OAuth consent screen with the required
  * Gmail + Calendar scopes. Uses a stateless flow; the redirect URI must be
@@ -31,8 +34,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const session = await requireSession(req);
   if (session instanceof NextResponse) return session;
 
+  const tenantId = req.nextUrl.searchParams.get('tenantId') || undefined;
+
   try {
-    const oauth2Client = getOAuth2Client();
+    const oauth2Client = await getOAuth2Client(tenantId);
     const url = oauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: GOOGLE_SCOPES,
@@ -61,15 +66,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (body instanceof NextResponse) return body;
 
   try {
-    const oauth2Client = getOAuth2Client();
-    const { tokens } = await oauth2Client.getToken(body.code);
+    const oauth2Client = await getOAuth2Client(body.tenantId);
+    const { tokens } = await (oauth2Client as any).getToken(body.code);
 
     if (!tokens.access_token || !tokens.refresh_token) {
       return errorResponse('Google did not return required tokens', 400);
     }
 
     // Confirm the email address associated with the connected account.
-    oauth2Client.setCredentials(tokens);
+    (oauth2Client as any).setCredentials(tokens);
     const oauth2 = google.oauth2({ auth: oauth2Client, version: 'v2' });
     const { data: userInfo } = await oauth2.userinfo.get();
     const googleEmail = userInfo.email;
@@ -78,7 +83,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return errorResponse('Could not retrieve Google account email', 400);
     }
 
-    const expiryDate = tokens.expiry_date ? new Date(tokens.expiry_date) : new Date(Date.now() + 3600 * 1000);
+    const expiryDate = tokens.expiry_date
+      ? new Date(tokens.expiry_date)
+      : new Date(Date.now() + 3600 * 1000);
 
     await prisma.user.update({
       where: { id: session.userId! },
