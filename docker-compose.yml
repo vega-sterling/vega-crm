@@ -39,6 +39,9 @@ services:
       NEXT_PUBLIC_APP_URL: "https://earth.servers.onl"
       NEXT_PUBLIC_APP_NAME: "Vega CRM"
       NODE_ENV: production
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-https://earth.servers.onl/api/google/auth}
     ports:
       - "127.0.0.1:3001:3000"  # Only accessible locally, Caddy proxies to this
 
