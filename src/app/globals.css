@@ -417,3 +417,122 @@ input:focus, select:focus, textarea:focus {
     padding: 12px !important;
   }
 }
+
+/* ============================================================================
+   PHASE 3 CSS — Dashboard, Sales Pipeline and Advanced Features
+   Responsive breakpoints: desktop (>1024), tablet (768-1024), phone (<768)
+   ============================================================================ */
+
+.kpi-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+.kpi-card {
+  padding: 20px !important;
+}
+.dashboard-grid-2col {
+  grid-template-columns: 1.4fr 1fr;
+}
+.global-search {
+  max-width: 420px;
+}
+.global-search-dropdown {
+  max-width: 520px;
+}
+.kanban-board {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.kanban-board-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.kanban-board-scroll::-webkit-scrollbar-thumb {
+  background: var(--panel-border);
+  border-radius: 4px;
+}
+.task-kanban-desktop {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.task-kanban-phone {
+  display: none;
+}
+.list-toolbar {
+  flex-wrap: wrap;
+}
+.card-grid {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+@media (max-width: 1024px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .dashboard-grid-2col {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .global-search {
+    max-width: 300px;
+  }
+  .task-kanban-desktop {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .kanban-board {
+    grid-template-columns: repeat(6, minmax(240px, 1fr)) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .dashboard-grid-2col {
+    grid-template-columns: 1fr !important;
+  }
+  .global-search {
+    max-width: 100% !important;
+    flex: 1 !important;
+  }
+  .task-kanban-desktop {
+    display: none !important;
+  }
+  .task-kanban-phone {
+    display: flex !important;
+  }
+  .kanban-board {
+    grid-template-columns: repeat(6, minmax(260px, 1fr)) !important;
+  }
+  .list-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .list-toolbar .form-input,
+  .list-toolbar .form-select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .card-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .list-table-view {
+    display: none !important;
+  }
+  .list-card-view {
+    display: grid !important;
+  }
+  .kpi-card {
+    padding: 16px !important;
+  }
+  .global-search-dropdown {
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-card > div:nth-child(2) {
+    font-size: 26px !important;
+  }
+  .kanban-board {
+    grid-template-columns: repeat(6, minmax(240px, 1fr)) !important;
+  }
+}

@@ -1,375 +1,224 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import Link from 'next/link'
+// ============================================================================
+// File: src/app/activities/page.tsx
+// Phase 3: Enhanced activities page with date range filter, company filter,
+// user filter, activity cards (reusing ActivityCard component style),
+// inline note creation at top (with company selector). Fully responsive.
+// ============================================================================
+
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import ProtectedLayout from '../components/ProtectedLayout'
+import ActivityCard from '../components/ActivityCard'
 import Spinner from '../components/Spinner'
 import { apiFetch } from '../lib/api'
-import { layout, panel, typeography, forms, buttons, statusBadge } from '../lib/styles'
-import type { Activity, Company, Contact } from '../lib/types'
+import { layout, panel, typeography, forms, buttons } from '../lib/styles'
+import type { Activity, Company, User, Tenant } from '../lib/types'
 
-type ActivityType = Activity['type']
-type ActivityTypeFilter = ActivityType | 'ALL'
+type DateRange = 'today' | 'week' | 'month' | 'all'
 
-interface ActivityListItem extends Activity {
-  company?: { id: string; name: string }
-  contact?: { id: string; firstName: string; lastName: string }
-  user?: { id: string; name: string }
+type ActivityWithRels = Activity & {
+  company?: { id: string; name: string } | null
+  contact?: { id: string; firstName: string; lastName: string } | null
+  user?: { id: string; name: string } | null
 }
 
-interface ActivityListResponse {
-  data: ActivityListItem[]
-}
-
-const activityColor: Record<ActivityType, string> = {
-  CALL: 'var(--blue)',
-  EMAIL: 'var(--emerald)',
-  NOTE: 'var(--gold)',
-  MEETING: 'var(--violet)',
-  TASK: 'var(--cyan)',
-}
-
-const activityEmoji: Record<ActivityType, string> = {
-  CALL: '📞',
-  EMAIL: '✉️',
-  NOTE: '📝',
-  MEETING: '🤝',
-  TASK: '☑️',
-}
-
-const filters: { label: string; value: ActivityTypeFilter }[] = [
-  { label: 'All', value: 'ALL' },
-  { label: 'Calls', value: 'CALL' },
-  { label: 'Emails', value: 'EMAIL' },
-  { label: 'Notes', value: 'NOTE' },
-  { label: 'Meetings', value: 'MEETING' },
-]
-
-const formatDate = (d?: string) => {
-  if (!d) return '—'
-  return new Date(d).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
-
-const emptyForm = {
-  type: 'NOTE' as ActivityType,
-  subject: '',
-  description: '',
-  companyId: '',
-  contactId: '',
-  tenantId: '',
-  scheduledAt: '',
-}
-
-/**
- * ActivitiesPage — activity feed with type filters, new activity modal, edit, and delete.
- */
 function ActivitiesContent() {
-  const [activities, setActivities] = useState<ActivityListItem[]>([])
+  const [activities, setActivities] = useState<ActivityWithRels[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
-  const [contacts, setContacts] = useState<Contact[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [tenants, setTenants] = useState<Tenant[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [filter, setFilter] = useState<ActivityTypeFilter>('ALL')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingActivity, setEditingActivity] = useState<ActivityListItem | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const [dateRange, setDateRange] = useState<DateRange>('all')
+  const [companyFilter, setCompanyFilter] = useState('')
+  const [userFilter, setUserFilter] = useState('')
 
-  const [form, setForm] = useState({ ...emptyForm })
+  // Inline note composer state
+  const [noteText, setNoteText] = useState('')
+  const [noteCompany, setNoteCompany] = useState('')
+  const [noteFocused, setNoteFocused] = useState(false)
+  const [submittingNote, setSubmittingNote] = useState(false)
 
   const load = useCallback(async () => {
     try {
-      const [activitiesRes, companiesRes, contactsRes] = await Promise.all([
-        apiFetch<ActivityListResponse>(`/api/activities${filter !== 'ALL' ? `?type=${filter}` : ''}`),
-        apiFetch<{ data: Company[] }>('/api/companies'),
-        apiFetch<{ data: Contact[] }>('/api/contacts'),
+      const [actRes, coRes, usersRes, tenantsRes] = await Promise.all([
+        apiFetch<{ data: ActivityWithRels[] }>('/api/activities?limit=200'),
+        apiFetch<{ data: Company[] }>('/api/companies?limit=100'),
+        apiFetch<{ data: User[] }>('/api/admin/users'),
+        apiFetch<{ data: Tenant[] }>('/api/admin/tenants'),
       ])
-      setActivities(Array.isArray(activitiesRes) ? activitiesRes : activitiesRes.data || [])
-      setCompanies(Array.isArray(companiesRes) ? companiesRes : companiesRes.data || [])
-      setContacts(Array.isArray(contactsRes) ? contactsRes : contactsRes.data || [])
+      setActivities(actRes.data || [])
+      setCompanies(coRes.data || [])
+      setUsers(usersRes.data || [])
+      setTenants(tenantsRes.data || [])
     } catch (err: any) {
       setError(err.message || 'Failed to load activities')
     } finally {
       setLoading(false)
     }
-  }, [filter])
+  }, [])
 
-  useEffect(() => {
-    load()
-  }, [load])
+  useEffect(() => { load() }, [load])
 
-  const companyMap = new Map(companies.map((c) => [c.id, c]))
-  const filteredContacts = form.companyId ? contacts.filter((c) => c.companyId === form.companyId) : []
-
-  const openNew = () => {
-    setEditingActivity(null)
-    setForm({ ...emptyForm })
-    setModalOpen(true)
-  }
-
-  const openEdit = (activity: ActivityListItem) => {
-    setEditingActivity(activity)
-    setForm({
-      type: activity.type,
-      subject: activity.subject,
-      description: activity.description || '',
-      companyId: activity.companyId,
-      contactId: activity.contactId || '',
-      tenantId: activity.tenantId,
-      scheduledAt: activity.scheduledAt ? new Date(activity.scheduledAt).toISOString().slice(0, 16) : '',
-    })
-    setModalOpen(true)
-  }
-
-  const handleDelete = async (activity: ActivityListItem) => {
-    if (!window.confirm(`Delete activity "${activity.subject}"?`)) return
-    try {
-      await apiFetch(`/api/activities/${activity.id}`, { method: 'DELETE' })
-      setActivities((prev) => prev.filter((a) => a.id !== activity.id))
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete activity')
+  // Date range filter helper
+  const isInRange = useCallback((dateStr: string, range: DateRange) => {
+    if (range === 'all') return true
+    const date = new Date(dateStr)
+    const now = new Date()
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    if (range === 'today') return date >= start
+    if (range === 'week') {
+      const weekStart = new Date(start)
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+      return date >= weekStart
     }
-  }
+    if (range === 'month') {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      return date >= monthStart
+    }
+    return true
+  }, [])
 
-  const handleCompanyChange = (companyId: string) => {
-    const company = companyMap.get(companyId)
-    setForm((prev) => ({
-      ...prev,
-      companyId,
-      contactId: '',
-      tenantId: company?.tenantId || '',
-    }))
-  }
+  // Filtered activities
+  const filtered = useMemo(() => {
+    let result = [...activities]
+    if (dateRange !== 'all') {
+      result = result.filter((a) => a.createdAt && isInRange(a.createdAt, dateRange))
+    }
+    if (companyFilter) {
+      result = result.filter((a) => a.companyId === companyFilter)
+    }
+    if (userFilter) {
+      result = result.filter((a) => a.userId === userFilter)
+    }
+    // Sort by createdAt descending (most recent first)
+    result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    return result
+  }, [activities, dateRange, companyFilter, userFilter, isInRange])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitting(true)
+  const handleAddNote = async () => {
+    const trimmed = noteText.trim()
+    if (!trimmed || submittingNote || !noteCompany) return
+    setSubmittingNote(true)
     try {
-      const body: any = {
-        type: form.type,
-        subject: form.subject,
-        description: form.description,
-        companyId: form.companyId,
-        tenantId: form.tenantId,
+      const company = companies.find((c) => c.id === noteCompany)
+      const body = {
+        type: 'NOTE',
+        subject: trimmed.slice(0, 100),
+        description: trimmed,
+        companyId: noteCompany,
+        tenantId: company?.tenantId || tenants[0]?.id,
       }
-      if (form.contactId) body.contactId = form.contactId
-      if (form.scheduledAt) body.scheduledAt = form.scheduledAt
-      if (editingActivity) {
-        const updated = await apiFetch<ActivityListItem>(`/api/activities/${editingActivity.id}`, {
-          method: 'PUT',
-          body: JSON.stringify(body),
-        })
-        setActivities((prev) => prev.map((a) => (a.id === updated.id ? updated : a)))
-      } else {
-        const created = await apiFetch<ActivityListItem>('/api/activities', {
-          method: 'POST',
-          body: JSON.stringify(body),
-        })
-        setActivities((prev) => [created, ...prev])
-      }
-      setModalOpen(false)
-      setEditingActivity(null)
-      setForm({ ...emptyForm })
+      const created = await apiFetch<Activity>('/api/activities', { method: 'POST', body: JSON.stringify(body) })
+      setActivities((prev) => [{ ...created, company: { id: noteCompany, name: company?.name || '' }, user: { id: '', name: 'You' } } as ActivityWithRels, ...prev])
+      setNoteText('')
+      setNoteFocused(false)
     } catch (err: any) {
-      setError(err.message || `Failed to ${editingActivity ? 'update' : 'create'} activity`)
+      setError(err.message || 'Failed to add note')
     } finally {
-      setSubmitting(false)
+      setSubmittingNote(false)
     }
+  }
+
+  const handleDeleteActivity = (id: string) => {
+    setActivities((prev) => prev.filter((a) => a.id !== id))
   }
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
-        <Spinner size={32} />
-      </div>
-    )
+    return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}><Spinner size={32} /></div>
   }
+
+  const toolbarStyle: React.CSSProperties = {
+    display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16,
+  }
+  const selectStyle: React.CSSProperties = { ...forms.select, width: 'auto', minWidth: 140 }
 
   return (
     <div style={layout.page}>
       <div style={layout.header}>
         <h1 style={typeography.title}>Activities</h1>
-        <button style={buttons.primary} onClick={openNew}>New Activity</button>
       </div>
 
       {error && (
-        <div style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: 'var(--rust)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>
-          {error}
-        </div>
+        <div style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: 'var(--rust)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>{error}</div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
-        {filters.map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setFilter(f.value)}
-            style={{
-              ...buttons.small,
-              backgroundColor: filter === f.value ? 'var(--gold)' : undefined,
-              color: filter === f.value ? 'var(--bg)' : undefined,
-              borderColor: filter === f.value ? 'var(--gold)' : undefined,
-            }}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {activities.length === 0 ? (
-          <div className="panel-container" style={panel.container}>
-            <p style={{ color: 'var(--fg-dim)' }}>No activities found.</p>
+      {/* ── Inline Note Composer with Company Selector ── */}
+      <div className="panel-container" style={{ ...panel.container, marginBottom: 24, padding: noteFocused ? 20 : 16, transition: 'padding .15s' }}>
+        <div style={{ marginBottom: 12 }}>
+          <select className="form-select" style={{ ...forms.select, maxWidth: 300 }} value={noteCompany} onChange={(e) => setNoteCompany(e.target.value)}>
+            <option value="">Select a company…</option>
+            {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+        <textarea
+          className="form-textarea note-composer-input"
+          style={{ ...forms.textarea, minHeight: noteFocused ? 100 : 56 }}
+          placeholder={noteCompany ? "Write a note for this company…  (Enter to save)" : "Select a company above to write a note…"}
+          value={noteText}
+          onChange={(e) => setNoteText(e.target.value)}
+          onFocus={() => setNoteFocused(true)}
+          onBlur={() => { if (!noteText.trim()) setNoteFocused(false) }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              handleAddNote()
+            }
+          }}
+          disabled={!noteCompany}
+        />
+        {(noteFocused || noteText.trim()) && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+            <button className="btn-touch" style={buttons.secondary} onMouseDown={(e) => e.preventDefault()} onClick={() => { setNoteText(''); setNoteFocused(false) }}>Cancel</button>
+            <button className="btn-touch" style={{ ...buttons.primary, opacity: submittingNote || !noteText.trim() || !noteCompany ? 0.5 : 1 }} disabled={submittingNote || !noteText.trim() || !noteCompany} onClick={handleAddNote}>
+              {submittingNote ? 'Saving…' : 'Add Note'}
+            </button>
           </div>
-        ) : (
-          activities.map((a) => (
-            <div key={a.id} style={panel.compact}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '50%',
-                    backgroundColor: `${activityColor[a.type]}22`,
-                    color: activityColor[a.type],
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 15,
-                    flexShrink: 0,
-                  }}
-                >
-                  {activityEmoji[a.type]}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 600 }}>{a.subject}</span>
-                    <span style={statusBadge(activityColor[a.type])}>{a.type}</span>
-                  </div>
-                  <div style={{ color: 'var(--fg-dim)', fontSize: 13, marginTop: 6 }}>
-                    {a.company?.name || 'Unknown company'}
-                    {a.contact && ` · ${a.contact.firstName} ${a.contact.lastName}`}
-                    {' · '}
-                    {a.user?.name || 'Unknown user'}
-                    {' · '}
-                    {formatDate(a.createdAt)}
-                  </div>
-                  {a.description && (
-                    <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.4, color: 'var(--fg-dim)' }}>
-                      {a.description}
-                    </p>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <button style={buttons.small} onClick={() => openEdit(a)}>Edit</button>
-                  <button style={buttons.danger} onClick={() => handleDelete(a)}>Delete</button>
-                </div>
-              </div>
-            </div>
-          ))
         )}
       </div>
 
-      {modalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 100,
-            padding: 24,
-          }}
-          onClick={() => setModalOpen(false)}
-        >
-          <div style={{ ...panel.container, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{editingActivity ? 'Edit Activity' : 'New Activity'}</h2>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label style={forms.group}>
-                <span style={forms.label}>Type</span>
-                <select
-                  style={forms.select}
-                  value={form.type}
-                  onChange={(e) => setForm({ ...form, type: e.target.value as ActivityType })}
-                >
-                  <option value="CALL">Call</option>
-                  <option value="EMAIL">Email</option>
-                  <option value="NOTE">Note</option>
-                  <option value="MEETING">Meeting</option>
-                  <option value="TASK">Task</option>
-                </select>
-              </label>
+      {/* ── Toolbar: Date Range + Company Filter + User Filter ── */}
+      <div className="list-toolbar" style={toolbarStyle}>
+        <select className="form-select" style={selectStyle} value={dateRange} onChange={(e) => setDateRange(e.target.value as DateRange)}>
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+        </select>
+        <select className="form-select" style={selectStyle} value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)}>
+          <option value="">All Companies</option>
+          {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <select className="form-select" style={selectStyle} value={userFilter} onChange={(e) => setUserFilter(e.target.value)}>
+          <option value="">All Users</option>
+          {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+        </select>
+      </div>
 
-              <label style={forms.group}>
-                <span style={forms.label}>Company</span>
-                <select
-                  style={forms.select}
-                  required
-                  value={form.companyId}
-                  onChange={(e) => handleCompanyChange(e.target.value)}
-                >
-                  <option value="">Select company</option>
-                  {companies.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+      <div style={{ color: 'var(--fg-dim)', fontSize: 13, marginBottom: 16 }}>
+        {filtered.length} {filtered.length === 1 ? 'activity' : 'activities'}
+      </div>
 
-              <label style={forms.group}>
-                <span style={forms.label}>Contact (optional)</span>
-                <select
-                  style={forms.select}
-                  value={form.contactId}
-                  onChange={(e) => setForm({ ...form, contactId: e.target.value })}
-                  disabled={!form.companyId}
-                >
-                  <option value="">—</option>
-                  {filteredContacts.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.firstName} {c.lastName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label style={forms.group}>
-                <span style={forms.label}>Subject</span>
-                <input style={forms.input} required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
-              </label>
-
-              <label style={forms.group}>
-                <span style={forms.label}>Scheduled at (optional)</span>
-                <input
-                  style={forms.input}
-                  type="datetime-local"
-                  value={form.scheduledAt}
-                  onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
-                />
-              </label>
-
-              <label style={forms.group}>
-                <span style={forms.label}>Description</span>
-                <textarea style={forms.textarea} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-              </label>
-
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button type="button" style={buttons.secondary} onClick={() => setModalOpen(false)}>Cancel</button>
-                <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : editingActivity ? 'Save Changes' : 'Save Activity'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ── Activity Cards ── */}
+      <div className="activity-cards-list" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {filtered.length === 0 ? (
+          <div className="panel-container" style={{ ...panel.container, textAlign: 'center', color: 'var(--fg-dim)' }}>No activities found.</div>
+        ) : (
+          filtered.map((a) => (
+            <ActivityCard
+              key={a.id}
+              activity={a}
+              users={users}
+              onDelete={handleDeleteActivity}
+            />
+          ))
+        )}
+      </div>
     </div>
   )
 }
 
 export default function ActivitiesPage() {
-  return (
-    <ProtectedLayout>
-      <ActivitiesContent />
-    </ProtectedLayout>
-  )
+  return <ProtectedLayout><ActivitiesContent /></ProtectedLayout>
 }

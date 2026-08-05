@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { apiFetch } from '../lib/api'
 import type { User } from '../lib/types'
 import NotificationBell from './NotificationBell'
+import GlobalSearch from './GlobalSearch'
 
 const navSections = [
   { title: 'Overview', items: [
@@ -240,6 +241,7 @@ export default function AppShell({ user, children }: { user: User; children: Rea
       >
         {/* ── Header bar ── */}
         <header
+          className="app-header"
           style={{
             position: 'fixed',
             top: 0,
@@ -250,7 +252,6 @@ export default function AppShell({ user, children }: { user: User; children: Rea
             borderBottom: '1px solid var(--panel-border)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
             gap: 12,
             padding: '0 16px',
             zIndex: 40,
@@ -279,6 +280,9 @@ export default function AppShell({ user, children }: { user: User; children: Rea
           >
             ☰
           </button>
+
+          {/* Global Search — in header, works on all pages */}
+          <GlobalSearch />
 
           <NotificationBell />
           {/* User info + logout */}
