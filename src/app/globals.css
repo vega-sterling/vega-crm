@@ -94,13 +94,14 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ============================================================================
-   Responsive breakpoints
-   ─ Desktop (>768px):   sidebar visible by default, fixed left
-   ─ Mobile (≤768px):    sidebar hidden, hamburger toggle, full-width header
+   Responsive breakpoints — 3 sizes
+   ─ Desktop (>1024px):  Full layouts, sidebar visible, 3-column record layout
+   ─ Tablet (768-1024px): 2-column record layout (left collapses to top, middle + right)
+   ─ Phone (<768px):      Single column, stacked — properties, timeline, associations
    ============================================================================ */
 
-/* Desktop — sidebar visible, main content offset */
-@media (min-width: 769px) {
+/* ── DESKTOP (>1024px) ── */
+@media (min-width: 1025px) {
   .sidebar {
     transform: translateX(0) !important;
   }
@@ -109,20 +110,96 @@ input:focus, select:focus, textarea:focus {
     margin-left: 260px;
   }
 
-  /* Hide mobile-only elements on desktop */
   .mobile-only {
     display: none !important;
   }
 
   .page-content {
-    padding: '88px 24px 24px';
+    padding: 88px 24px 24px;
+  }
+
+  /* 3-column record layout — full */
+  .record-3col {
+    grid-template-columns: 280px 1fr 320px !important;
   }
 }
 
-/* Mobile — sidebar slide-out, full-width content */
+/* ── TABLET (768px – 1024px) ── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar {
+    transform: translateX(0) !important;
+  }
+
+  .main-content {
+    margin-left: 260px;
+  }
+
+  .mobile-only {
+    display: none !important;
+  }
+
+  .page-content {
+    padding: 88px 16px 20px !important;
+  }
+
+  /* Reduce panel padding on tablet */
+  .panel-container {
+    padding: 20px !important;
+  }
+
+  /* Project/contact grids → 2 columns max on tablet */
+  .project-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Form grids → 2 columns on tablet */
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Dashboard grid → single column on tablet */
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Stat grid → 2 columns on tablet */
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Slightly smaller headings on tablet */
+  h1 {
+    font-size: 24px !important;
+  }
+
+  /* 3-column record layout → 2-column (left collapses to top, middle + right) */
+  .record-3col {
+    grid-template-columns: 1fr 300px !important;
+  }
+
+  /* Left sidebar becomes a horizontal bar at the top */
+  .record-left {
+    grid-column: 1 / -1 !important;
+    position: static !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+  }
+
+  .record-left > .panel-container {
+    flex: 1 1 300px;
+  }
+
+  .record-left > div:last-child {
+    flex: 1 1 200px;
+    flex-direction: row !important;
+  }
+}
+
+/* ── PHONE (<768px) ── */
 @media (max-width: 768px) {
   .page-content {
-    padding: 88px 12px 24px !important;
+    padding: 80px 12px 20px !important;
   }
 
   /* Truncate long usernames on mobile */
@@ -134,26 +211,26 @@ input:focus, select:focus, textarea:focus {
     white-space: nowrap;
   }
 
-  /* Tables scroll horizontally on mobile */
+  /* Tables scroll horizontally */
   .table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Modals full-width on mobile */
+  /* Modals full-screen on mobile */
   .modal-overlay {
     padding: 0 !important;
   }
 
   .modal-content {
     width: 100% !important;
-    maxWidth: 100% !important;
-    maxHeight: 100vh !important;
-    borderRadius: 0 !important;
+    max-width: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
     margin: 0 !important;
   }
 
-  /* Kanban board — full horizontal scroll, snap to columns */
+  /* Kanban board — horizontal scroll with snap */
   .kanban-board {
     padding-bottom: 16px;
   }
@@ -168,22 +245,24 @@ input:focus, select:focus, textarea:focus {
     padding-bottom: 8px;
   }
 
-  /* Project cards — single column on mobile */
+  /* All grids → single column on phone */
   .project-grid {
     grid-template-columns: 1fr !important;
   }
 
-  /* Dashboard stat cards — 2 columns on mobile */
   .stat-grid {
     grid-template-columns: repeat(2, 1fr) !important;
   }
 
-  /* Form rows — single column on mobile */
   .form-grid {
     grid-template-columns: 1fr !important;
   }
 
-  /* Headers — smaller on mobile */
+  .detail-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Smaller headings on phone */
   h1 {
     font-size: 22px !important;
   }
@@ -192,21 +271,122 @@ input:focus, select:focus, textarea:focus {
     font-size: 16px !important;
   }
 
-  /* Panel padding tighter on mobile */
+  /* Panel padding tighter on phone */
   .panel-container {
     padding: 16px !important;
   }
 
-  /* Dashboard 2fr/1fr grid → stack on mobile */
+  /* Dashboard grid → single column */
   .dashboard-grid {
     grid-template-columns: 1fr !important;
   }
+
+  /* ── Touch targets: 44px minimum (Apple HIG) ── */
+  .btn-touch {
+    min-height: 44px !important;
+    min-width: 44px !important;
+    padding: 10px 16px !important;
+    font-size: 16px !important;
+  }
+
+  /* ── Form inputs: 44px minimum height, 16px font ── */
+  .form-input,
+  .form-select,
+  .form-textarea {
+    min-height: 44px !important;
+    font-size: 16px !important;
+    padding: 10px 12px !important;
+  }
+
+  /* Textarea can be taller but not shorter */
+  .form-textarea {
+    min-height: 80px !important;
+  }
+
+  /* Note composer — bigger on mobile */
+  .note-composer-input {
+    font-size: 16px !important;
+    min-height: 80px !important;
+  }
+
+  /* Quick action buttons — full-width row, wrap */
+  .quick-action-bar {
+    gap: 8px !important;
+  }
+
+  .quick-action-btn {
+    flex: 1 1 auto !important;
+    min-width: 120px !important;
+    justify-content: center !important;
+  }
+
+  /* Timeline filter tabs — scrollable */
+  .timeline-filter-tabs {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .timeline-filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-tab {
+    padding: 12px 14px !important;
+    font-size: 14px !important;
+  }
+
+  /* Tab bar — scrollable on phone */
+  .tab-bar {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .tab-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Page header — stack vertically on phone */
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  /* Quick action inline forms — full width */
+  .quick-action-form {
+    width: 100% !important;
+  }
+
+  /* Word-break long email/URL content */
+  .panel-container a,
+  .panel-container input[type="email"] {
+    word-break: break-word;
+  }
+
+  /* 3-column record layout → single column stacked on phone */
+  .record-3col {
+    grid-template-columns: 1fr !important;
+  }
+
+  .record-left,
+  .record-middle,
+  .record-right {
+    position: static !important;
+    grid-column: 1 !important;
+  }
+
+  /* Order: properties first, then timeline, then associations */
+  .record-left { order: 1; }
+  .record-middle { order: 2; }
+  .record-right { order: 3; }
 }
 
-/* Very small screens (≤480px) — phone portrait */
+/* ── VERY SMALL SCREENS (≤480px) — phone portrait ── */
 @media (max-width: 480px) {
   .page-content {
-    padding: 80px 8px 16px !important;
+    padding: 76px 8px 16px !important;
   }
 
   /* Dashboard stat cards — single column on tiny screens */
@@ -222,7 +402,18 @@ input:focus, select:focus, textarea:focus {
   /* Task drawer — full screen on mobile */
   .task-drawer {
     width: 100% !important;
-    maxWidth: 100% !important;
+    max-width: 100% !important;
     padding: 16px !important;
+  }
+
+  /* Quick action buttons — full width stacked on very small screens */
+  .quick-action-btn {
+    flex: 1 1 100% !important;
+    min-width: 100% !important;
+  }
+
+  /* Panel padding even tighter */
+  .panel-container {
+    padding: 12px !important;
   }
 }

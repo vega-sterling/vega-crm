@@ -5,153 +5,81 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import ProtectedLayout from '../../components/ProtectedLayout'
 import Spinner from '../../components/Spinner'
+import InlineNoteComposer from '../../components/InlineNoteComposer'
+import QuickActionBar from '../../components/QuickActionBar'
+import TimelineFilterTabs, { type TimelineFilter } from '../../components/TimelineFilterTabs'
+import TasksTab from '../../components/TasksTab'
+import ActivityCard from '../../components/ActivityCard'
+import PropertyQuickEdit from '../../components/PropertyQuickEdit'
+import { CompanyCard, DealsCard, TasksCard } from '../../components/AssociationCards'
+import { usePinnedNote } from '../../components/PinnedNotes'
 import { apiFetch } from '../../lib/api'
 import { layout, panel, typeography, forms, buttons, statusBadge } from '../../lib/styles'
-import type { Contact, Activity, Company, Task, ProjectTask, EmailMessage, Deal, CustomProperty, CustomValue } from '../../lib/types'
-
-type ActivityType = Activity['type']
+import type { Contact, Activity, Task, Deal, Company, EmailMessage, User } from '../../lib/types'
 
 interface ContactDetail extends Contact {
-  company?: { id: string; name: string; tenantId: string }
+  company?: { id: string; name: string } | null
 }
 
-interface TimelineItem {
-  id: string
-  type: 'activity' | 'deal' | 'task' | 'project_task' | 'email'
-  label: string
-  subject: string
-  date: string
-  user?: string
-  meta?: string
-  color: string
-  icon: string
-  href?: string
-}
+interface ActivityListResponse { data: Activity[] }
+interface TaskListResponse { data: Task[] }
+interface DealListResponse { data: Deal[] }
+interface EmailListResponse { data: EmailMessage[] }
+interface UserListResponse { data: User[] }
 
-const activityColor: Record<ActivityType, string> = {
-  CALL: 'var(--blue)',
-  EMAIL: 'var(--emerald)',
-  NOTE: 'var(--gold)',
-  MEETING: 'var(--violet)',
-  TASK: 'var(--cyan)',
-}
-
-const activityEmoji: Record<ActivityType, string> = {
-  CALL: '📞',
-  EMAIL: '✉️',
-  NOTE: '📝',
-  MEETING: '🤝',
-  TASK: '☑️',
-}
-
-const formatDate = (d?: string | null) => {
+const formatDate = (d?: string) => {
   if (!d) return '—'
   return new Date(d).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 /**
- * ContactDetailPage — view contact info, unified timeline, send email, and edit custom properties.
+ * ContactDetailPage — 3-column layout (HubSpot/Close CRM style).
+ * LEFT: Properties + actions. MIDDLE: Timeline. RIGHT: Associations.
  */
 function ContactDetailContent() {
   const { id } = useParams()
-  const contactId = Array.isArray(id) ? id[0] : id
+  const contactId = Array.isArray(id) ? id[0]! : id!
 
   const [contact, setContact] = useState<ContactDetail | null>(null)
   const [activities, setActivities] = useState<Activity[]>([])
-  const [deals, setDeals] = useState<Deal[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
-  const [projectTasks, setProjectTasks] = useState<ProjectTask[]>([])
+  const [deals, setDeals] = useState<Deal[]>([])
   const [emails, setEmails] = useState<EmailMessage[]>([])
-  const [companies, setCompanies] = useState<Company[]>([])
-  const [properties, setProperties] = useState<CustomProperty[]>([])
-  const [customValues, setCustomValues] = useState<Record<string, CustomValue>>({})
-  const [google, setGoogle] = useState<{ connected: boolean; email?: string | null }>({ connected: false })
-
+  const [users, setUsers] = useState<User[]>([])
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [editOpen, setEditOpen] = useState(false)
-  const [activityOpen, setActivityOpen] = useState(false)
-  const [emailOpen, setEmailOpen] = useState(false)
+  const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>('ALL')
+
+  const [emailModal, setEmailModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [following, setFollowing] = useState(false)
+  const [googleConnected, setGoogleConnected] = useState(false)
+  const [emailForm, setEmailForm] = useState({ to: '', subject: '', body: '' })
 
-  const [editForm, setEditForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    title: '',
-    department: '',
-    notes: '',
-  })
-
-  const [activityForm, setActivityForm] = useState<{
-    type: ActivityType
-    subject: string
-    description: string
-    scheduledAt: string
-  }>({
-    type: 'NOTE',
-    subject: '',
-    description: '',
-    scheduledAt: '',
-  })
-
-  const [emailForm, setEmailForm] = useState({
-    to: '',
-    subject: '',
-    body: '',
-  })
+  // Pinned notes (localStorage)
+  const { pinnedId, pin, unpin } = usePinnedNote('contact', contactId)
 
   const load = useCallback(async () => {
     try {
-      const [
-        contactRes,
-        activitiesRes,
-        companiesRes,
-        dealsRes,
-        tasksRes,
-        projectTasksRes,
-        emailsRes,
-        propsRes,
-        valuesRes,
-        googleRes,
-      ] = await Promise.all([
+      const [contactRes, activitiesRes, tasksRes, dealsRes, emailsRes, usersRes, meRes, googleRes] = await Promise.all([
         apiFetch<ContactDetail>(`/api/contacts/${contactId}`),
-        apiFetch<{ data: Activity[] }>(`/api/activities?contactId=${contactId}`),
-        apiFetch<{ data: Company[] }>('/api/companies'),
-        apiFetch<{ data: Deal[] }>(`/api/deals?contactId=${contactId}`),
-        apiFetch<{ data: Task[] }>(`/api/tasks?contactId=${contactId}`),
-        apiFetch<{ data: ProjectTask[] }>(`/api/projects/tasks?contactId=${contactId}`),
-        apiFetch<{ data: EmailMessage[] }>(`/api/email/messages?contactId=${contactId}`),
-        apiFetch<{ data: CustomProperty[] }>(`/api/custom-properties?entityType=CONTACT`),
-        apiFetch<{ data: CustomValue[] }>(`/api/custom-values?entityType=CONTACT&entityId=${contactId}`),
-        apiFetch<{ connected: boolean; email?: string | null }>('/api/integrations/google/status'),
+        apiFetch<ActivityListResponse>(`/api/activities?contactId=${contactId}&limit=100`).catch(() => ({ data: [] as Activity[] })),
+        apiFetch<TaskListResponse>(`/api/tasks?contactId=${contactId}&limit=100`).catch(() => ({ data: [] as Task[] })),
+        apiFetch<DealListResponse>(`/api/deals?contactId=${contactId}`).catch(() => ({ data: [] as Deal[] })),
+        apiFetch<EmailListResponse>(`/api/email?contactId=${contactId}`).catch(() => ({ data: [] as EmailMessage[] })),
+        apiFetch<UserListResponse>('/api/admin/users?limit=100').catch(() => ({ data: [] as User[] })),
+        apiFetch<User>('/api/auth/me').catch(() => null),
+        apiFetch<{ connected: boolean }>('/api/google/status').catch(() => ({ connected: false })),
       ])
       setContact(contactRes)
       setActivities(activitiesRes.data || [])
-      setDeals(dealsRes.data || [])
       setTasks(tasksRes.data || [])
-      setProjectTasks(projectTasksRes.data || [])
+      setDeals(dealsRes.data || [])
       setEmails(emailsRes.data || [])
-      setCompanies(companiesRes.data || [])
-      setProperties(propsRes.data || [])
-      setGoogle(googleRes || { connected: false })
-
-      const valueMap: Record<string, CustomValue> = {}
-      ;(valuesRes.data || []).forEach((v) => {
-        valueMap[v.propertyId] = v
-      })
-      setCustomValues(valueMap)
-
-      setEditForm({
-        firstName: contactRes.firstName,
-        lastName: contactRes.lastName,
-        email: contactRes.email || '',
-        phone: contactRes.phone || '',
-        title: contactRes.title || '',
-        department: contactRes.department || '',
-        notes: contactRes.notes || '',
-      })
+      setUsers(usersRes.data || [])
+      setCurrentUser(meRes)
+      setGoogleConnected(googleRes?.connected || false)
     } catch (err: any) {
       setError(err.message || 'Failed to load contact')
     } finally {
@@ -159,476 +87,305 @@ function ContactDetailContent() {
     }
   }, [contactId])
 
-  useEffect(() => {
-    load()
-  }, [load])
+  useEffect(() => { load() }, [load])
 
-  const timeline = useMemo<TimelineItem[]>(() => {
-    const items: TimelineItem[] = []
-    activities.forEach((a) => {
-      items.push({
-        id: `activity-${a.id}`,
-        type: 'activity',
-        label: a.type,
-        subject: a.subject,
-        date: a.createdAt,
-        user: a.user?.name,
-        color: activityColor[a.type],
-        icon: activityEmoji[a.type],
-      })
-    })
-    deals.forEach((d) => {
-      items.push({
-        id: `deal-${d.id}`,
-        type: 'deal',
-        label: 'DEAL',
-        subject: d.title,
-        date: d.createdAt,
-        user: d.assignee?.name,
-        meta: `$${d.value?.toLocaleString()} · ${d.status}`,
-        color: d.stage?.color || 'var(--gold)',
-        icon: '💰',
-        href: `/deals/${d.id}`,
-      })
-    })
-    tasks.forEach((t) => {
-      items.push({
-        id: `task-${t.id}`,
-        type: 'task',
-        label: 'TASK',
-        subject: t.title,
-        date: t.createdAt || new Date().toISOString(),
-        user: t.assignee?.name,
-        meta: `${t.status} · ${t.priority}`,
-        color: t.status === 'COMPLETED' ? 'var(--emerald)' : 'var(--cyan)',
-        icon: '☑️',
-      })
-    })
-    projectTasks.forEach((t) => {
-      items.push({
-        id: `project-${t.id}`,
-        type: 'project_task',
-        label: 'PROJECT TASK',
-        subject: t.title,
-        date: t.createdAt,
-        user: t.assignee?.name || undefined,
-        meta: t.priority,
-        color: t.color || 'var(--violet)',
-        icon: '📂',
-      })
-    })
-    emails.forEach((e) => {
-      items.push({
-        id: `email-${e.id}`,
-        type: 'email',
-        label: e.direction,
-        subject: e.subject,
-        date: e.createdAt,
-        user: e.fromEmail,
-        meta: e.toEmail,
-        color: e.direction === 'OUTBOUND' ? 'var(--blue)' : 'var(--emerald)',
-        icon: '📧',
-      })
-    })
-    return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [activities, deals, tasks, projectTasks, emails])
+  // Unified timeline: activities + emails (mapped to EMAIL type)
+  type UnifiedItem =
+    | { kind: 'activity'; type: Activity['type']; data: Activity }
+    | { kind: 'email'; type: 'EMAIL'; data: EmailMessage & { id: string; subject: string; createdAt: string; user?: { name: string }; description?: string; type: 'EMAIL' } }
 
-  const handleEdit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!contact) return
-    setSubmitting(true)
-    try {
-      const updated = await apiFetch<ContactDetail>(`/api/contacts/${contactId}`, {
-        method: 'PUT',
-        body: JSON.stringify(editForm),
-      })
-      setContact(updated)
-      setEditOpen(false)
-    } catch (err: any) {
-      setError(err.message || 'Failed to update contact')
-    } finally {
-      setSubmitting(false)
+  const unifiedTimeline = useMemo(() => {
+    const items: UnifiedItem[] = []
+    activities.forEach(a => items.push({ kind: 'activity', type: a.type, data: a }))
+    emails.forEach(e => items.push({
+      kind: 'email', type: 'EMAIL',
+      data: {
+        ...e,
+        id: e.id,
+        subject: e.subject || '(no subject)',
+        description: e.body?.slice(0, 500) || '',
+        createdAt: e.createdAt || new Date().toISOString(),
+        user: { name: e.fromEmail || 'System' },
+        type: 'EMAIL' as const,
+      },
+    }))
+    items.sort((a, b) => new Date(b.data.createdAt).getTime() - new Date(a.data.createdAt).getTime())
+    return items
+  }, [activities, emails])
+
+  const filterCounts = useMemo(() => {
+    const counts: Record<TimelineFilter, number> = { ALL: 0, NOTE: 0, CALL: 0, EMAIL: 0, TASK: 0, MEETING: 0 }
+    unifiedTimeline.forEach((item) => {
+      counts.ALL++
+      if (item.type in counts) counts[item.type as TimelineFilter]++
+    })
+    return counts
+  }, [unifiedTimeline])
+
+  const filteredTimeline = useMemo(() => {
+    if (timelineFilter === 'ALL') return unifiedTimeline
+    return unifiedTimeline.filter(item => item.type === timelineFilter)
+  }, [unifiedTimeline, timelineFilter])
+
+  // Pinned activity (must be from activities, not emails)
+  const pinnedActivity = pinnedId ? activities.find(a => a.id === pinnedId) : null
+  const timelineItems = filteredTimeline.filter(item => !(item.kind === 'activity' && item.data.id === pinnedId))
+
+  const handlePinToggle = (id: string) => {
+    if (pinnedId === id) {
+      unpin()
+    } else {
+      pin(id)
     }
   }
 
-  const handleLogActivity = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!contact) return
-    setSubmitting(true)
+  const handleDeleteActivity = async (id: string) => {
+    if (!confirm('Delete this activity?')) return
     try {
-      const body: any = {
-        type: activityForm.type,
-        subject: activityForm.subject,
-        description: activityForm.description,
-        companyId: contact.companyId,
-        tenantId: contact.tenantId,
-        contactId,
-      }
-      if (activityForm.scheduledAt) body.scheduledAt = activityForm.scheduledAt
-      const created = await apiFetch<Activity>('/api/activities', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      })
-      setActivities((prev) => [created, ...prev])
-      setActivityOpen(false)
-      setActivityForm({ type: 'NOTE', subject: '', description: '', scheduledAt: '' })
+      await apiFetch(`/api/activities/${id}`, { method: 'DELETE' })
+      setActivities((prev) => prev.filter(a => a.id !== id))
+      if (pinnedId === id) unpin()
     } catch (err: any) {
-      setError(err.message || 'Failed to log activity')
-    } finally {
-      setSubmitting(false)
+      setError(err.message || 'Failed to delete activity')
     }
+  }
+
+  const handleEditActivity = (activity: Activity) => {
+    const newDesc = prompt('Edit note:', activity.description || '')
+    if (newDesc === null) return
+    apiFetch<Activity>(`/api/activities/${activity.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ description: newDesc, subject: activity.subject }),
+    }).then(updated => {
+      setActivities(prev => prev.map(a => a.id === updated.id ? updated : a))
+    }).catch(err => setError(err.message || 'Failed to update activity'))
+  }
+
+  // Property quick-edit save
+  const handlePropertySave = async (field: string, value: string) => {
+    const updated = await apiFetch<ContactDetail>(`/api/contacts/${contactId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ [field]: value || null }),
+    })
+    setContact(updated)
   }
 
   const handleSendEmail = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!contact || !google.connected) return
+    if (!contact) return
     setSubmitting(true)
     try {
       await apiFetch('/api/email/send', {
-        method: 'POST',
-        body: JSON.stringify({
-          to: emailForm.to,
-          subject: emailForm.subject,
-          body: emailForm.body,
-          contactId,
-          companyId: contact.companyId,
-        }),
+        method: 'POST', body: JSON.stringify({ to: emailForm.to, subject: emailForm.subject, body: emailForm.body, contactId }),
       })
-      setEmailOpen(false)
+      setEmailModal(false)
       setEmailForm({ to: '', subject: '', body: '' })
       await load()
-    } catch (err: any) {
-      setError(err.message || 'Failed to send email')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleCustomValue = async (propertyId: string, value: string) => {
-    try {
-      const saved = await apiFetch<CustomValue>('/api/custom-values', {
-        method: 'POST',
-        body: JSON.stringify({ entityType: 'CONTACT', entityId: contactId, propertyId, value }),
-      })
-      setCustomValues((prev: Record<string, CustomValue>) => ({ ...prev, [propertyId]: saved }))
-    } catch (err: any) {
-      setError(err.message || 'Failed to save custom value')
-    }
+    } catch (err: any) { setError(err.message || 'Failed to send email') }
+    finally { setSubmitting(false) }
   }
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
-        <Spinner size={32} />
-      </div>
-    )
+    return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}><Spinner size={32} /></div>
   }
-
   if (!contact) {
-    return (
-      <div style={layout.page}>
-        <p style={{ color: 'var(--fg-dim)' }}>Contact not found.</p>
-      </div>
-    )
+    return <div style={layout.page}><p style={{ color: 'var(--fg-dim)' }}>Contact not found.</p></div>
   }
 
-  const company = companies.find((c) => c.id === contact.companyId)
+  const fullName = `${contact.firstName} ${contact.lastName}`.trim()
 
   return (
     <div style={layout.page}>
-      <div style={layout.header}>
+      {/* Header */}
+      <div className="page-header" style={layout.header}>
         <div>
           <Link href="/contacts" style={{ color: 'var(--fg-dim)', fontSize: 13 }}>← Contacts</Link>
-          <h1 style={{ ...typeography.title, marginBottom: 4, marginTop: 8 }}>
-            {contact.firstName} {contact.lastName}
-          </h1>
+          <h1 style={{ ...typeography.title, marginBottom: 4, marginTop: 8 }}>{fullName}</h1>
           <div style={{ color: 'var(--fg-dim)', fontSize: 14 }}>
-            {contact.title || 'No title'} · {contact.company?.name || company?.name || 'No company'}
+            {contact.title || 'No title'} {contact.company ? <span> · <Link href={`/companies/${contact.company.id}`} style={{ color: 'var(--gold)' }}>{contact.company.name}</Link></span> : ' · No company'}
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button style={buttons.secondary} onClick={() => setEditOpen(true)}>Edit</button>
-          <button style={buttons.primary} onClick={() => setEmailOpen(true)}>Send Email</button>
-          <button style={buttons.primary} onClick={() => setActivityOpen(true)}>Log Activity</button>
         </div>
       </div>
 
       {error && (
         <div style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: 'var(--rust)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>
           {error}
+          <button onClick={() => setError('')} style={{ float: 'right', background: 'none', border: 'none', color: 'var(--rust)', cursor: 'pointer' }}>✕</button>
         </div>
       )}
 
-      <div className="project-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
-        <div className="panel-container" style={panel.container}>
-          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Contact details</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-            <div>
-              <div style={typeography.small}>Email</div>
-              <div>{contact.email || '—'}</div>
-            </div>
-            <div>
-              <div style={typeography.small}>Phone</div>
-              <div>{contact.phone || '—'}</div>
-            </div>
-            <div>
-              <div style={typeography.small}>Mobile</div>
-              <div>{contact.mobile || '—'}</div>
-            </div>
-            <div>
-              <div style={typeography.small}>Department</div>
-              <div>{contact.department || '—'}</div>
-            </div>
-            <div>
-              <div style={typeography.small}>Company</div>
-              <div>
-                {contact.company ? (
-                  <Link href={`/companies/${contact.company.id}`} style={{ color: 'var(--gold)' }}>
-                    {contact.company.name}
-                  </Link>
-                ) : (
-                  company?.name || '—'
-                )}
-              </div>
-            </div>
-          </div>
-          {contact.notes && (
-            <p style={{ marginTop: 16, color: 'var(--fg-dim)', lineHeight: 1.5 }}>{contact.notes}</p>
-          )}
-        </div>
-
-        <div className="panel-container" style={panel.container}>
-          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Custom properties</h2>
-          {properties.length === 0 ? (
-            <p style={typeography.muted}>No custom fields configured.</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {properties.map((p) => {
-                const value = customValues[p.id]?.value || ''
-                return (
-                  <div key={p.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <span style={forms.label}>{p.label}{p.isRequired && ' *'}</span>
-                    {p.fieldType === 'DROPDOWN' ? (
-                      <select
-                        style={forms.select}
-                        value={value}
-                        onChange={(e) => handleCustomValue(p.id, e.target.value)}
-                      >
-                        <option value="">Select...</option>
-                        {(p.options || []).map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
-                        ))}
-                      </select>
-                    ) : p.fieldType === 'BOOLEAN' ? (
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
-                        <input
-                          type="checkbox"
-                          checked={value === 'true'}
-                          onChange={(e) => handleCustomValue(p.id, String(e.target.checked))}
-                        />
-                        Yes
-                      </label>
-                    ) : p.fieldType === 'DATE' ? (
-                      <input
-                        style={forms.input}
-                        type="date"
-                        value={value}
-                        onChange={(e) => handleCustomValue(p.id, e.target.value)}
-                      />
-                    ) : (
-                      <input
-                        style={forms.input}
-                        type={p.fieldType === 'NUMBER' ? 'number' : 'text'}
-                        value={value}
-                        onChange={(e) => handleCustomValue(p.id, e.target.value)}
-                      />
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div style={{ marginTop: 24 }}>
-        <div style={{ ...layout.header, marginBottom: 16 }}>
-          <h2 style={{ ...typeography.subtitle, margin: 0 }}>Unified timeline</h2>
-          <span style={{ color: 'var(--fg-dim)', fontSize: 14 }}>{timeline.length} events</span>
-        </div>
-        {timeline.length === 0 ? (
+      {/* 3-Column Layout */}
+      <div className="record-3col" style={{
+        display: 'grid',
+        gridTemplateColumns: '280px 1fr 320px',
+        gap: 20,
+        alignItems: 'start',
+      }}>
+        {/* ════════════════ LEFT SIDEBAR ════════════════ */}
+        <div className="record-left" style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 80 }}>
+          {/* Key Properties Card */}
           <div className="panel-container" style={panel.container}>
-            <p style={{ color: 'var(--fg-dim)' }}>No timeline events yet.</p>
+            <h2 style={{ ...typeography.subtitle, marginTop: 0, marginBottom: 16 }}>Properties</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <PropertyQuickEdit label="Email" value={contact.email} type="email" onSave={(v) => handlePropertySave('email', v)} />
+              <PropertyQuickEdit label="Phone" value={contact.phone} type="tel" onSave={(v) => handlePropertySave('phone', v)} />
+              <PropertyQuickEdit label="Mobile" value={contact.mobile} type="tel" onSave={(v) => handlePropertySave('mobile', v)} />
+              <PropertyQuickEdit label="Title" value={contact.title} onSave={(v) => handlePropertySave('title', v)} />
+              <PropertyQuickEdit label="Department" value={contact.department} onSave={(v) => handlePropertySave('department', v)} />
+            </div>
           </div>
-        ) : (
+
+          {/* About section */}
+          {contact.notes && (
+            <div className="panel-container" style={panel.container}>
+              <h2 style={{ ...typeography.subtitle, marginTop: 0, marginBottom: 12 }}>About</h2>
+              <p style={{ color: 'var(--fg-dim)', fontSize: 14, lineHeight: 1.5 }}>{contact.notes}</p>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              className="btn-touch"
+              style={{ ...buttons.secondary, width: '100%' }}
+              onClick={() => setFollowing(!following)}
+            >
+              {following ? '✓ Following' : '+ Follow'}
+            </button>
+            <button
+              className="btn-touch"
+              style={{ ...buttons.secondary, width: '100%' }}
+              onClick={() => setEmailModal(true)}
+            >Send Email</button>
+            <button
+              className="btn-touch"
+              style={{ ...buttons.danger, width: '100%' }}
+              onClick={() => { if (confirm('Delete this contact?')) { apiFetch(`/api/contacts/${contactId}`, { method: 'DELETE' }).then(() => window.location.href = '/contacts') } }}
+            >Delete</button>
+          </div>
+        </div>
+
+        {/* ════════════════ MIDDLE COLUMN ════════════════ */}
+        <div className="record-middle" style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+          {/* Pinned Notes Section */}
+          {pinnedActivity && (
+            <div style={{ marginBottom: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 16 }}>📌</span>
+                <span style={{ ...typeography.subtitle, margin: 0, fontSize: 15 }}>Pinned Note</span>
+              </div>
+              <div style={{ border: '2px solid var(--gold)', borderRadius: 12, overflow: 'hidden' }}>
+                <ActivityCard
+                  activity={pinnedActivity}
+                  users={users}
+                  pinned={true}
+                  onPin={handlePinToggle}
+                  onEdit={handleEditActivity}
+                  onDelete={handleDeleteActivity}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Quick Action Bar */}
+          <QuickActionBar
+            companyId={contact.companyId}
+            tenantId={contact.tenantId}
+            contactId={contactId}
+            contactName={fullName}
+            contactEmail={contact.email}
+            users={users}
+            onActivityCreated={(a) => setActivities((prev) => [a, ...prev])}
+            onTaskCreated={() => load()}
+            onSendEmail={() => setEmailModal(true)}
+          />
+
+          {/* Inline Note Composer */}
+          <div style={{ marginBottom: 16 }}>
+            <InlineNoteComposer
+              companyId={contact.companyId}
+              tenantId={contact.tenantId}
+              contactId={contactId}
+              onCreated={(a) => setActivities((prev) => [a, ...prev])}
+              users={users}
+            />
+          </div>
+
+          {/* Timeline Filter Tabs */}
+          <TimelineFilterTabs active={timelineFilter} onChange={setTimelineFilter} counts={filterCounts} />
+
+          {/* Activity Timeline */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {timeline.map((item) => {
-              const Wrapper = item.href ? Link : 'div'
-              return (
-                <Wrapper
-                  key={item.id}
-                  href={item.href || ''}
-                  style={{
-                    ...panel.compact,
-                    display: 'flex',
-                    gap: 14,
-                    textDecoration: 'none',
-                    cursor: item.href ? 'pointer' : 'default',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: '50%',
-                      backgroundColor: `${item.color}22`,
-                      color: item.color,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 18,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {item.icon}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ ...statusBadge(item.color), textTransform: 'uppercase' }}>{item.label}</span>
-                      <span style={{ fontWeight: 600 }}>{item.subject}</span>
-                    </div>
-                    <div style={{ color: 'var(--fg-dim)', fontSize: 13, marginTop: 6 }}>
-                      {item.user && <span>{item.user} · </span>}
-                      {formatDate(item.date)}
-                      {item.meta && <span> · {item.meta}</span>}
-                    </div>
-                  </div>
-                </Wrapper>
-              )
-            })}
+            {timelineItems.length === 0 ? (
+              <div className="panel-container" style={panel.container}>
+                <p style={{ color: 'var(--fg-dim)' }}>
+                  {timelineFilter === 'ALL' ? 'No activity logged yet.' : `No ${timelineFilter.toLowerCase()}s to show.`}
+                </p>
+              </div>
+            ) : (
+              timelineItems.map((item) => {
+                if (item.kind === 'activity') {
+                  return (
+                    <ActivityCard
+                      key={item.data.id}
+                      activity={item.data}
+                      users={users}
+                      onPin={handlePinToggle}
+                      onEdit={handleEditActivity}
+                      onDelete={handleDeleteActivity}
+                    />
+                  )
+                }
+                // Email item — render as a read-only activity card
+                const emailActivity: Activity = {
+                  id: item.data.id,
+                  type: 'EMAIL',
+                  tenantId: contact.tenantId,
+                  companyId: contact.companyId,
+                  contactId,
+                  userId: '',
+                  subject: item.data.subject,
+                  description: item.data.description,
+                  createdAt: item.data.createdAt,
+                  user: item.data.user,
+                }
+                return (
+                  <ActivityCard
+                    key={item.data.id}
+                    activity={emailActivity}
+                    users={users}
+                  />
+                )
+              })
+            )}
           </div>
-        )}
+        </div>
+
+        {/* ════════════════ RIGHT SIDEBAR ════════════════ */}
+        <div className="record-right" style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'sticky', top: 80 }}>
+          <CompanyCard company={contact.company} />
+          <DealsCard deals={deals} />
+          <TasksCard tasks={tasks} />
+        </div>
       </div>
 
-      {editOpen && (
-        <div
-          className="modal-overlay"
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }}
-          onClick={() => setEditOpen(false)}
-        >
-          <div className="modal-content" style={{ ...panel.container, width: '100%', maxWidth: 520, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Edit Contact</h2>
-            <form onSubmit={handleEdit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={forms.row}>
-                <label style={forms.group}>
-                  <span style={forms.label}>First name</span>
-                  <input style={forms.input} required value={editForm.firstName} onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })} />
-                </label>
-                <label style={forms.group}>
-                  <span style={forms.label}>Last name</span>
-                  <input style={forms.input} required value={editForm.lastName} onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })} />
-                </label>
-              </div>
-              <div style={forms.row}>
-                <label style={forms.group}>
-                  <span style={forms.label}>Email</span>
-                  <input style={forms.input} type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
-                </label>
-                <label style={forms.group}>
-                  <span style={forms.label}>Phone</span>
-                  <input style={forms.input} value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
-                </label>
-              </div>
-              <label style={forms.group}>
-                <span style={forms.label}>Title</span>
-                <input style={forms.input} value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
-              </label>
-              <label style={forms.group}>
-                <span style={forms.label}>Department</span>
-                <input style={forms.input} value={editForm.department} onChange={(e) => setEditForm({ ...editForm, department: e.target.value })} />
-              </label>
-              <label style={forms.group}>
-                <span style={forms.label}>Notes</span>
-                <textarea style={forms.textarea} value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
-              </label>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button type="button" style={buttons.secondary} onClick={() => setEditOpen(false)}>Cancel</button>
-                <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Save changes'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {activityOpen && (
-        <div
-          className="modal-overlay"
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }}
-          onClick={() => setActivityOpen(false)}
-        >
-          <div className="modal-content" style={{ ...panel.container, width: '100%', maxWidth: 520, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Log Activity</h2>
-            <form onSubmit={handleLogActivity} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label style={forms.group}>
-                <span style={forms.label}>Type</span>
-                <select style={forms.select} value={activityForm.type} onChange={(e) => setActivityForm({ ...activityForm, type: e.target.value as ActivityType })}>
-                  <option value="CALL">Call</option>
-                  <option value="EMAIL">Email</option>
-                  <option value="NOTE">Note</option>
-                  <option value="MEETING">Meeting</option>
-                  <option value="TASK">Task</option>
-                </select>
-              </label>
-              <label style={forms.group}>
-                <span style={forms.label}>Subject</span>
-                <input style={forms.input} required value={activityForm.subject} onChange={(e) => setActivityForm({ ...activityForm, subject: e.target.value })} />
-              </label>
-              <label style={forms.group}>
-                <span style={forms.label}>Scheduled at (optional)</span>
-                <input style={forms.input} type="datetime-local" value={activityForm.scheduledAt} onChange={(e) => setActivityForm({ ...activityForm, scheduledAt: e.target.value })} />
-              </label>
-              <label style={forms.group}>
-                <span style={forms.label}>Description</span>
-                <textarea style={forms.textarea} value={activityForm.description} onChange={(e) => setActivityForm({ ...activityForm, description: e.target.value })} />
-              </label>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button type="button" style={buttons.secondary} onClick={() => setActivityOpen(false)}>Cancel</button>
-                <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Save Activity'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {emailOpen && (
-        <div
-          className="modal-overlay"
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }}
-          onClick={() => setEmailOpen(false)}
-        >
+      {/* Email Modal */}
+      {emailModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }} onClick={() => setEmailModal(false)}>
           <div className="modal-content" style={{ ...panel.container, width: '100%', maxWidth: 600, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Send Email</h2>
-            {!google.connected && (
+            {!googleConnected && (
               <div style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: 'var(--rust)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
                 Google account not connected. Connect in <Link href="/settings" style={{ color: 'var(--gold)' }}>Settings</Link> to send email.
               </div>
             )}
             <form onSubmit={handleSendEmail} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label style={forms.group}>
-                <span style={forms.label}>To</span>
-                <input style={forms.input} type="email" required value={emailForm.to} onChange={(e) => setEmailForm({ ...emailForm, to: e.target.value })} />
-              </label>
-              <label style={forms.group}>
-                <span style={forms.label}>Subject</span>
-                <input style={forms.input} required value={emailForm.subject} onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })} />
-              </label>
-              <label style={forms.group}>
-                <span style={forms.label}>Body</span>
-                <textarea style={forms.textarea} rows={8} value={emailForm.body} onChange={(e) => setEmailForm({ ...emailForm, body: e.target.value })} />
-              </label>
+              <label style={forms.group}><span style={forms.label}>To</span><input className="form-input" style={forms.input} type="email" required value={emailForm.to} onChange={(e) => setEmailForm({ ...emailForm, to: e.target.value })} /></label>
+              <label style={forms.group}><span style={forms.label}>Subject</span><input className="form-input" style={forms.input} required value={emailForm.subject} onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })} /></label>
+              <label style={forms.group}><span style={forms.label}>Body</span><textarea className="form-textarea" style={forms.textarea} rows={8} value={emailForm.body} onChange={(e) => setEmailForm({ ...emailForm, body: e.target.value })} /></label>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button type="button" style={buttons.secondary} onClick={() => setEmailOpen(false)}>Cancel</button>
-                <button type="submit" style={buttons.primary} disabled={!google.connected || submitting}>{submitting ? 'Sending...' : 'Send'}</button>
+                <button type="button" className="btn-touch" style={buttons.secondary} onClick={() => setEmailModal(false)}>Cancel</button>
+                <button type="submit" className="btn-touch" style={buttons.primary} disabled={!googleConnected || submitting}>{submitting ? 'Sending...' : 'Send'}</button>
               </div>
             </form>
           </div>
@@ -639,9 +396,5 @@ function ContactDetailContent() {
 }
 
 export default function ContactDetailPage() {
-  return (
-    <ProtectedLayout>
-      <ContactDetailContent />
-    </ProtectedLayout>
-  )
+  return <ProtectedLayout><ContactDetailContent /></ProtectedLayout>
 }
