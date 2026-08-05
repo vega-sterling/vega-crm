@@ -12,22 +12,22 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { google, calendar_v3 } from 'googleapis';
-import { ActivitySource, ActivityType, Prisma } from '@prisma/client';
+import { ActivitySource, ActivityType, Prisma } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
 import { getGoogleClientForUser, hasGoogleConnection } from '@/lib/google';
 
 const CalendarEventCreateSchema = z.object({
-  tenantId: z.string().cuid(),
+  tenantId: z.cuid(),
   title: z.string().min(1),
   description: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
   startTime: z.coerce.date(),
   endTime: z.coerce.date(),
-  attendees: z.array(z.string().email()).optional().default([]),
-  companyId: z.string().cuid().optional().nullable(),
-  contactId: z.string().cuid().optional().nullable(),
+  attendees: z.array(z.email()).optional().default([]),
+  companyId: z.cuid().optional().nullable(),
+  contactId: z.cuid().optional().nullable(),
   status: z.enum(['CONFIRMED', 'TENTATIVE', 'CANCELLED']).optional().default('CONFIRMED'),
 });
 

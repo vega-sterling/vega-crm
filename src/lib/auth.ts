@@ -7,10 +7,10 @@
 // ============================================================================
 
 import { compare, hash } from "bcryptjs";
-import { authenticator } from "otplib";
+import { authenticator } from "@/lib/otplib-compat"
 import { randomBytes, timingSafeEqual } from "crypto";
 import type { IronSession } from "iron-session";
-import type { User } from "@prisma/client";
+import type { User } from "@prisma"
 
 import { prisma } from "./db";
 import { defaultSession, type SessionData } from "./rbac";

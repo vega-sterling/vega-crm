@@ -14,7 +14,7 @@ import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/ses
 import { validateBody } from '@/lib/validation';
 
 const PipelineStageCreateSchema = z.object({
-  tenantId: z.string().cuid(),
+  tenantId: z.cuid(),
   name: z.string().min(1).max(100),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   position: z.number().int().min(0).optional(),

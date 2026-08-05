@@ -12,21 +12,21 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { google, gmail_v1 } from 'googleapis';
-import { ActivitySource, ActivityType } from '@prisma/client';
+import { ActivitySource, ActivityType } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
 import { getGoogleClientForUser, hasGoogleConnection } from '@/lib/google';
 
 const EmailSendSchema = z.object({
-  tenantId: z.string().cuid(),
-  to: z.array(z.string().email()).min(1),
-  cc: z.array(z.string().email()).optional().default([]),
+  tenantId: z.cuid(),
+  to: z.array(z.email()).min(1),
+  cc: z.array(z.email()).optional().default([]),
   subject: z.string().min(1),
   body: z.string().min(1),
-  contactId: z.string().cuid().optional().nullable(),
-  companyId: z.string().cuid().optional().nullable(),
-  dealId: z.string().cuid().optional().nullable(),
+  contactId: z.cuid().optional().nullable(),
+  companyId: z.cuid().optional().nullable(),
+  dealId: z.cuid().optional().nullable(),
 });
 
 function makeEmailMessage(

@@ -16,17 +16,17 @@ import { validateBody } from '@/lib/validation';
 const CustomEntityType = z.enum(['COMPANY', 'CONTACT']);
 
 const CustomValueUpsertSchema = z.object({
-  tenantId: z.string().cuid(),
-  propertyId: z.string().cuid(),
+  tenantId: z.cuid(),
+  propertyId: z.cuid(),
   entityType: CustomEntityType,
-  entityId: z.string().cuid(),
+  entityId: z.cuid(),
   value: z.string().optional().nullable(),
 });
 
 const CustomValueQuerySchema = z.object({
-  tenantId: z.string().cuid().optional(),
+  tenantId: z.cuid().optional(),
   entityType: CustomEntityType,
-  entityId: z.string().cuid(),
+  entityId: z.cuid(),
 });
 
 function entityTypeToSchemaEntity(entityType: 'COMPANY' | 'CONTACT'): string {

@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticator } from 'otplib';
+import { authenticator } from "@/lib/otplib-compat"
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireSession, errorResponse, getSession } from '@/lib/session';

@@ -17,7 +17,7 @@ const SubtaskUpdateSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   isCompleted: z.boolean().optional(),
   position: z.number().int().min(0).optional(),
-  assignedToId: z.string().cuid().optional().nullable(),
+  assignedToId: z.cuid().optional().nullable(),
   dueDate: z.coerce.date().optional().nullable(),
 });
 

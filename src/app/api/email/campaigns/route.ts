@@ -8,11 +8,11 @@ import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/ses
 import { validateBody } from '@/lib/validation'
 
 const CampaignCreateSchema = z.object({
-  tenantId: z.string().cuid(),
+  tenantId: z.cuid(),
   name: z.string().min(1, 'Campaign name is required'),
   subject: z.string().min(1, 'Subject is required'),
   body: z.string().min(1, 'Email body is required'),
-  templateId: z.string().cuid().optional().nullable(),
+  templateId: z.cuid().optional().nullable(),
   audienceFilter: z.any().optional().nullable(),
   scheduledAt: z.coerce.date().optional().nullable(),
 })

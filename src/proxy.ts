@@ -1,14 +1,15 @@
 // ============================================================================
-// File: src/middleware.ts
-// Description: Next.js middleware for route protection. Redirects unauthenticated
+// File: src/proxy.ts (formerly src/middleware.ts)
+// Description: Next.js proxy for route protection. Redirects unauthenticated
 //              users to /login for all routes except auth pages and API routes.
+//              (Renamed from middleware.ts → proxy.ts in Next.js 16)
 // ============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_PATHS = ["/login", "/setup-2fa"];
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Allow API routes to handle their own auth

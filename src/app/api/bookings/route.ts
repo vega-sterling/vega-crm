@@ -12,16 +12,16 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { google, calendar_v3 } from 'googleapis';
-import { ActivitySource, ActivityType } from '@prisma/client';
+import { ActivitySource, ActivityType } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
 import { getGoogleClientForUser, hasGoogleConnection } from '@/lib/google';
 
 const BookingCreateSchema = z.object({
-  bookingSlotId: z.string().cuid(),
-  contactId: z.string().cuid(),
-  companyId: z.string().cuid().optional().nullable(),
+  bookingSlotId: z.cuid(),
+  contactId: z.cuid(),
+  companyId: z.cuid().optional().nullable(),
   scheduledAt: z.coerce.date(),
   notes: z.string().optional().nullable(),
 });

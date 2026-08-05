@@ -9,23 +9,23 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { DealStatus } from '@prisma/client';
+import { DealStatus } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
 
 const DealCreateSchema = z.object({
-  tenantId: z.string().cuid(),
-  companyId: z.string().cuid(),
-  contactId: z.string().cuid().optional().nullable(),
-  stageId: z.string().cuid(),
+  tenantId: z.cuid(),
+  companyId: z.cuid(),
+  contactId: z.cuid().optional().nullable(),
+  stageId: z.cuid(),
   title: z.string().min(1).max(255),
   description: z.string().max(5000).optional().nullable(),
   value: z.number().min(0).optional(),
   currency: z.string().max(3).optional(),
   probability: z.number().int().min(0).max(100).optional(),
   expectedCloseDate: z.coerce.date().optional().nullable(),
-  assignedToId: z.string().cuid(),
+  assignedToId: z.cuid(),
   leadSource: z.string().max(100).optional().nullable(),
 });
 

@@ -15,7 +15,7 @@ import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/ses
 import { validateBody } from '@/lib/validation';
 
 const ProjectCreateSchema = z.object({
-  tenantId: z.string().cuid(),
+  tenantId: z.cuid(),
   name: z.string().min(1).max(100),
   description: z.string().optional().nullable(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),

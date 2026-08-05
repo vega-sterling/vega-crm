@@ -15,11 +15,11 @@ import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/ses
 import { validateBody } from '@/lib/validation';
 
 const ContactCreateSchema = z.object({
-  companyId: z.string().cuid(),
-  tenantId: z.string().cuid(),
+  companyId: z.cuid(),
+  tenantId: z.cuid(),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
-  email: z.string().email().optional().or(z.literal('')),
+  email: z.email().optional().or(z.literal('')),
   phone: z.string().optional(),
   mobile: z.string().optional(),
   title: z.string().optional(),

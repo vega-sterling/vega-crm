@@ -14,7 +14,7 @@ import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/ses
 import { validateBody } from '@/lib/validation';
 
 const EmailTemplateCreateSchema = z.object({
-  tenantId: z.string().cuid(),
+  tenantId: z.cuid(),
   name: z.string().min(1),
   subject: z.string().min(1),
   body: z.string().min(1),

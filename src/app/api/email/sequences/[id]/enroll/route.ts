@@ -11,14 +11,14 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { google } from 'googleapis';
-import { ActivitySource, ActivityType } from '@prisma/client';
+import { ActivitySource, ActivityType } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
 import { getGoogleClientForUser, hasGoogleConnection } from '@/lib/google';
 
 const EnrollSchema = z.object({
-  contactId: z.string().cuid(),
+  contactId: z.cuid(),
 });
 
 interface RouteContext {

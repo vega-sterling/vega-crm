@@ -15,7 +15,7 @@ import { validateBody } from '@/lib/validation';
 
 const SubtaskCreateSchema = z.object({
   title: z.string().min(1).max(200),
-  assignedToId: z.string().cuid().optional().nullable(),
+  assignedToId: z.cuid().optional().nullable(),
   dueDate: z.coerce.date().optional().nullable(),
 });
 

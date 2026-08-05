@@ -14,7 +14,7 @@ import { errorResponse } from "./session";
 // ============================================================================
 
 /** Cuid identifier used throughout the schema. */
-const cuid = z.string().cuid();
+const cuid = z.cuid();
 
 /** Optional nullable string field. */
 const optionalString = z.string().trim().max(255).optional().nullable();
@@ -313,7 +313,7 @@ export const auditLogCreateSchema = z.object({
   action: z.enum(["create", "update", "delete"]),
   entity: z.enum(["company", "contact", "activity", "task", "user", "tenant"]),
   entityId: cuid,
-  changes: z.record(z.unknown()).optional().nullable(),
+  changes: z.record(z.string(), z.unknown()).optional().nullable(),
   ipAddress: optionalString,
 });
 
@@ -338,7 +338,7 @@ export async function validateBody<T>(
 
   const result = schema.safeParse(body);
   if (!result.success) {
-    const issues = result.error.issues.map((issue: { path: (string | number)[]; message: string }) => ({
+    const issues = result.error.issues.map((issue) => ({
       path: issue.path,
       message: issue.message,
     }));

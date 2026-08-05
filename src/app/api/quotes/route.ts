@@ -22,8 +22,8 @@ const QuoteLineItemSchema = z.object({
 });
 
 const QuoteCreateSchema = z.object({
-  dealId: z.string().cuid(),
-  tenantId: z.string().cuid(),
+  dealId: z.cuid(),
+  tenantId: z.cuid(),
   notes: z.string().max(5000).optional().nullable(),
   validUntil: z.coerce.date().optional().nullable(),
   lineItems: z.array(QuoteLineItemSchema).min(1),

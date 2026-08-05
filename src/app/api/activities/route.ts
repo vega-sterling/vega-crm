@@ -10,15 +10,15 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { ActivityType, ActivitySource } from '@prisma/client';
+import { ActivityType, ActivitySource } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
 
 const ActivityCreateSchema = z.object({
-  tenantId: z.string().cuid(),
-  companyId: z.string().cuid(),
-  contactId: z.string().cuid().optional().nullable(),
+  tenantId: z.cuid(),
+  companyId: z.cuid(),
+  contactId: z.cuid().optional().nullable(),
   type: z.enum(['CALL', 'EMAIL', 'NOTE', 'TASK', 'MEETING']),
   subject: z.string().min(1),
   description: z.string().optional().nullable(),
@@ -27,8 +27,8 @@ const ActivityCreateSchema = z.object({
   callDirection: z.string().optional().nullable(),
   callDuration: z.number().int().optional().nullable(),
   callOutcome: z.string().optional().nullable(),
-  emailFrom: z.string().email().optional().nullable().or(z.literal('')),
-  emailTo: z.string().email().optional().nullable().or(z.literal('')),
+  emailFrom: z.email().optional().nullable().or(z.literal('')),
+  emailTo: z.email().optional().nullable().or(z.literal('')),
   emailCc: z.string().optional().nullable(),
   emailBody: z.string().optional().nullable(),
   externalId: z.string().optional().nullable(),

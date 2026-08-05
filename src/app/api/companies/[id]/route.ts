@@ -17,9 +17,9 @@ import { validateBody } from '@/lib/validation';
 const CompanyUpdateSchema = z.object({
   name: z.string().min(1).optional(),
   industry: z.string().optional().nullable(),
-  website: z.string().url().optional().nullable().or(z.literal('')),
+  website: z.url().optional().nullable().or(z.literal('')),
   phone: z.string().optional().nullable(),
-  email: z.string().email().optional().nullable().or(z.literal('')),
+  email: z.email().optional().nullable().or(z.literal('')),
   address: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   isActive: z.boolean().optional(),

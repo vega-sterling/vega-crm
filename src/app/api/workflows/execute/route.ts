@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { TaskStatus, TaskPriority, Prisma } from '@prisma/client';
+import { TaskStatus, TaskPriority, Prisma } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
@@ -49,15 +49,15 @@ const WorkflowActionType = z.enum([
 
 const WorkflowActionSchema = z.object({
   type: WorkflowActionType,
-  config: z.record(z.unknown()).default({}),
+  config: z.record(z.string(), z.unknown()).default({}),
 });
 
 const WorkflowExecuteSchema = z.object({
-  tenantId: z.string().cuid(),
+  tenantId: z.cuid(),
   triggerType: WorkflowTrigger,
-  context: z.record(z.unknown()).default({}),
+  context: z.record(z.string(), z.unknown()).default({}),
   entityType: z.enum(['deal', 'contact', 'task', 'email']).optional(),
-  entityId: z.string().cuid().optional(),
+  entityId: z.cuid().optional(),
 });
 
 type WorkflowCondition = z.infer<typeof WorkflowConditionSchema>;

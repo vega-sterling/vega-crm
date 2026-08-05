@@ -17,7 +17,7 @@ import { validateBody } from '@/lib/validation';
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 const BookingSlotCreateSchema = z.object({
-  tenantId: z.string().cuid(),
+  tenantId: z.cuid(),
   weekday: z.number().int().min(0).max(6),
   startTime: z.string().regex(timeRegex, 'Start time must be HH:MM'),
   endTime: z.string().regex(timeRegex, 'End time must be HH:MM'),

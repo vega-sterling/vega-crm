@@ -15,7 +15,7 @@ import { prisma } from "@/lib/db";
 import { getSession, errorResponse } from "@/lib/session";
 
 const LoginSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(1),
 });
 

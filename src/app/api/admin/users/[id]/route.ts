@@ -10,18 +10,18 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { hashSync } from 'bcryptjs';
 import { z } from 'zod';
-import { GlobalRole } from '@prisma/client';
+import { GlobalRole } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireAdmin, requireSuperAdmin, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
 
 const UserUpdateSchema = z.object({
   name: z.string().min(1).optional(),
-  email: z.string().email().optional(),
+  email: z.email().optional(),
   password: z.string().min(8).optional(),
   globalRole: z.enum(['SUPER_ADMIN', 'ADMIN', 'USER']).optional(),
   isActive: z.boolean().optional(),
-  tenantIds: z.array(z.string().cuid()).optional(),
+  tenantIds: z.array(z.cuid()).optional(),
 });
 
 interface RouteContext {

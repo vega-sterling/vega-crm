@@ -13,10 +13,10 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 
 const PublicBookingSchema = z.object({
-  slotId: z.string().cuid(),
+  slotId: z.cuid(),
   startAt: z.coerce.date(),
   name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Valid email is required'),
+  email: z.email('Valid email is required'),
   company: z.string().optional().default(''),
   notes: z.string().optional().default(''),
 });

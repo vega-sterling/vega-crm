@@ -10,17 +10,17 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { TaskPriority } from '@prisma/client';
+import { TaskPriority } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
 
 const TaskCreateSchema = z.object({
-  columnId: z.string().cuid(),
+  columnId: z.cuid(),
   title: z.string().min(1).max(200),
   description: z.string().optional().nullable(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
-  assignedToId: z.string().cuid().optional().nullable(),
+  assignedToId: z.cuid().optional().nullable(),
   dueDate: z.coerce.date().optional().nullable(),
   labels: z.array(z.string()).optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),

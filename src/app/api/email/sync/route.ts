@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { google, gmail_v1 } from 'googleapis';
-import { ActivitySource, ActivityType, Prisma } from '@prisma/client';
+import { ActivitySource, ActivityType, Prisma } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { getGoogleClientForUser, hasGoogleConnection } from '@/lib/google';

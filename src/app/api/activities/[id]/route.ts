@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { ActivityType } from '@prisma/client';
+import { ActivityType } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
@@ -23,8 +23,8 @@ const ActivityUpdateSchema = z.object({
   callDirection: z.string().optional().nullable(),
   callDuration: z.number().int().optional().nullable(),
   callOutcome: z.string().optional().nullable(),
-  emailFrom: z.string().email().optional().nullable().or(z.literal('')),
-  emailTo: z.string().email().optional().nullable().or(z.literal('')),
+  emailFrom: z.email().optional().nullable().or(z.literal('')),
+  emailTo: z.email().optional().nullable().or(z.literal('')),
   emailCc: z.string().optional().nullable(),
   emailBody: z.string().optional().nullable(),
   externalId: z.string().optional().nullable(),

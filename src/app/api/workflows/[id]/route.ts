@@ -46,14 +46,14 @@ const WorkflowActionType = z.enum([
 
 const WorkflowActionSchema = z.object({
   type: WorkflowActionType,
-  config: z.record(z.unknown()).default({}),
+  config: z.record(z.string(), z.unknown()).default({}),
 });
 
 const WorkflowUpdateSchema = z.object({
   name: z.string().trim().min(1).max(255).optional(),
   description: z.string().trim().max(5000).optional().nullable(),
   triggerType: WorkflowTrigger.optional(),
-  triggerConfig: z.record(z.unknown()).optional().nullable(),
+  triggerConfig: z.record(z.string(), z.unknown()).optional().nullable(),
   conditions: z.array(WorkflowConditionSchema).optional(),
   actions: z.array(WorkflowActionSchema).optional(),
   isActive: z.boolean().optional(),

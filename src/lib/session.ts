@@ -62,7 +62,7 @@ export async function destroySession(req: NextRequest): Promise<void> {
 export function errorResponse(
   message: string,
   status: number,
-  issues?: Array<{ message: string; path: (string | number)[] }>
+  issues?: Array<{ message: string; path: PropertyKey[] }>
 ): NextResponse {
   return NextResponse.json({ error: message, issues }, { status });
 }

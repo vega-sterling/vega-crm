@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { TaskStatus, TaskPriority } from '@prisma/client';
+import { TaskStatus, TaskPriority } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
@@ -19,7 +19,7 @@ const TaskUpdateSchema = z.object({
   description: z.string().optional().nullable(),
   status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
-  assignedToId: z.string().cuid().optional(),
+  assignedToId: z.cuid().optional(),
   dueDate: z.coerce.date().optional().nullable(),
   completedAt: z.coerce.date().optional().nullable(),
 });

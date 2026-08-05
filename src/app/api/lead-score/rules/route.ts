@@ -10,7 +10,7 @@ import { validateBody } from '@/lib/validation';
 const RuleSchema = z.object({
   event: z.string().min(1),
   points: z.number().int(),
-  tenantId: z.string().cuid(),
+  tenantId: z.cuid(),
 });
 
 export async function GET(req: NextRequest): Promise<NextResponse> {

@@ -8,7 +8,7 @@ import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/ses
 import { validateBody } from '@/lib/validation';
 
 const LeadFormCreateSchema = z.object({
-  tenantId: z.string().cuid(),
+  tenantId: z.cuid(),
   name: z.string().min(1, 'Form name is required'),
   fields: z.array(z.object({
     name: z.string(),
@@ -17,8 +17,8 @@ const LeadFormCreateSchema = z.object({
     required: z.boolean().default(false),
     options: z.array(z.string()).optional(),
   })),
-  redirectUrl: z.string().url().optional().nullable(),
-  webhookUrl: z.string().url().optional().nullable(),
+  redirectUrl: z.url().optional().nullable(),
+  webhookUrl: z.url().optional().nullable(),
 });
 
 export async function GET(req: NextRequest): Promise<NextResponse> {

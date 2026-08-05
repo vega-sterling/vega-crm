@@ -11,17 +11,17 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { hashSync } from 'bcryptjs';
 import { z } from 'zod';
-import { GlobalRole } from '@prisma/client';
+import { GlobalRole } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireAdmin, requireSuperAdmin, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
 
 const UserCreateSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   name: z.string().min(1),
   password: z.string().min(8),
   globalRole: z.enum(['SUPER_ADMIN', 'ADMIN', 'USER']).optional(),
-  tenantIds: z.array(z.string().cuid()).optional(),
+  tenantIds: z.array(z.cuid()).optional(),
   isActive: z.boolean().optional(),
 });
 

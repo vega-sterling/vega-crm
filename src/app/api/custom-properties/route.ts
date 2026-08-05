@@ -23,7 +23,7 @@ const DropdownOptionSchema = z.object({
 });
 
 const CustomPropertyCreateSchema = z.object({
-  tenantId: z.string().cuid(),
+  tenantId: z.cuid(),
   name: z.string().trim().min(1).max(120).regex(/^[a-z0-9_]+$/, {
     message: 'Name must be lowercase letters, numbers, and underscores',
   }),

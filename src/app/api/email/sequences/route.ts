@@ -21,7 +21,7 @@ const SequenceStepSchema = z.object({
 });
 
 const EmailSequenceCreateSchema = z.object({
-  tenantId: z.string().cuid(),
+  tenantId: z.cuid(),
   name: z.string().min(1),
   description: z.string().optional().nullable(),
   steps: z.array(SequenceStepSchema).min(1),

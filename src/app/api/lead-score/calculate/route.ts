@@ -7,7 +7,7 @@ import { prisma } from '@/lib/db';
 import { requireSession, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
 
-const CalcSchema = z.object({ contactId: z.string().cuid() });
+const CalcSchema = z.object({ contactId: z.cuid() });
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const session = await requireSession(req);

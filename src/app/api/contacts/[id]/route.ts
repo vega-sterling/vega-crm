@@ -16,7 +16,7 @@ import { validateBody } from '@/lib/validation';
 const ContactUpdateSchema = z.object({
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
-  email: z.string().email().optional().nullable().or(z.literal('')),
+  email: z.email().optional().nullable().or(z.literal('')),
   phone: z.string().optional().nullable(),
   mobile: z.string().optional().nullable(),
   title: z.string().optional().nullable(),

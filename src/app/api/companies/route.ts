@@ -15,12 +15,12 @@ import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/ses
 import { validateBody } from '@/lib/validation';
 
 const CompanyCreateSchema = z.object({
-  tenantId: z.string().cuid(),
+  tenantId: z.cuid(),
   name: z.string().min(1),
   industry: z.string().optional(),
-  website: z.string().url().optional().or(z.literal('')),
+  website: z.url().optional().or(z.literal('')),
   phone: z.string().optional(),
-  email: z.string().email().optional().or(z.literal('')),
+  email: z.email().optional().or(z.literal('')),
   address: z.string().optional(),
   description: z.string().optional(),
 });

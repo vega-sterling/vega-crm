@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
-import { Prisma } from '@prisma/client';
+import { Prisma } from "@prisma"
 
 const WorkflowTrigger = z.enum([
   'DEAL_STAGE_CHANGE',
@@ -48,15 +48,15 @@ const WorkflowActionType = z.enum([
 
 const WorkflowActionSchema = z.object({
   type: WorkflowActionType,
-  config: z.record(z.unknown()).default({}),
+  config: z.record(z.string(), z.unknown()).default({}),
 });
 
 const WorkflowCreateSchema = z.object({
-  tenantId: z.string().cuid(),
+  tenantId: z.cuid(),
   name: z.string().trim().min(1).max(255),
   description: z.string().trim().max(5000).optional().nullable(),
   triggerType: WorkflowTrigger,
-  triggerConfig: z.record(z.unknown()).optional().nullable(),
+  triggerConfig: z.record(z.string(), z.unknown()).optional().nullable(),
   conditions: z.array(WorkflowConditionSchema).optional().default([]),
   actions: z.array(WorkflowActionSchema).min(1, 'At least one action is required'),
   isActive: z.boolean().optional(),
