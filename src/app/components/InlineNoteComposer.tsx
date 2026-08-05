@@ -16,11 +16,12 @@ interface InlineNoteComposerProps {
   companyId: string
   tenantId: string
   contactId?: string
+  dealId?: string
   onCreated: (activity: Activity) => void
   users?: User[]
 }
 
-export default function InlineNoteComposer({ companyId, tenantId, contactId, onCreated, users = [] }: InlineNoteComposerProps) {
+export default function InlineNoteComposer({ companyId, tenantId, contactId, dealId, onCreated, users = [] }: InlineNoteComposerProps) {
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [focused, setFocused] = useState(false)
@@ -38,6 +39,7 @@ export default function InlineNoteComposer({ companyId, tenantId, contactId, onC
         tenantId,
       }
       if (contactId) body.contactId = contactId
+      if (dealId) body.dealId = dealId
       const created = await apiFetch<Activity>('/api/activities', {
         method: 'POST', body: JSON.stringify(body),
       })

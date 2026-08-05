@@ -19,6 +19,7 @@ const ActivityCreateSchema = z.object({
   tenantId: z.cuid(),
   companyId: z.cuid(),
   contactId: z.cuid().optional().nullable(),
+  dealId: z.cuid().optional().nullable(),
   type: z.enum(['CALL', 'EMAIL', 'NOTE', 'TASK', 'MEETING']),
   subject: z.string().min(1),
   description: z.string().optional().nullable(),
@@ -74,6 +75,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '20', 10)));
   const type = searchParams.get('type') as ActivityType | null;
   const companyId = searchParams.get('companyId');
+  const dealId = searchParams.get("dealId");
   const contactId = searchParams.get('contactId');
   const tenantId = searchParams.get('tenantId');
 
@@ -88,6 +90,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (type) where.type = type;
   if (companyId) where.companyId = companyId;
   if (contactId) where.contactId = contactId;
+  if (dealId) where.dealId = dealId;
 
   const [data, total] = await Promise.all([
     prisma.activity.findMany({
@@ -131,6 +134,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       tenantId: body.tenantId,
       companyId: body.companyId,
       contactId: body.contactId || null,
+      dealId: body.dealId || null,
       userId: session.userId!,
       type: body.type as ActivityType,
       subject: body.subject,

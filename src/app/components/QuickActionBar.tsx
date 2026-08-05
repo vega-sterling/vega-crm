@@ -17,6 +17,7 @@ interface QuickActionBarProps {
   companyId: string
   tenantId: string
   contactId?: string
+  dealId?: string
   contactName?: string
   contactEmail?: string
   users: User[]
@@ -27,8 +28,8 @@ interface QuickActionBarProps {
 
 // ── Sub-components for inline forms ──
 
-function CallForm({ companyId, tenantId, contactId, onCreated, onCancel }: {
-  companyId: string; tenantId: string; contactId?: string
+function CallForm({ companyId, tenantId, contactId, dealId, onCreated, onCancel }: {
+  companyId: string; tenantId: string; contactId?: string; dealId?: string
   onCreated: (a: Activity) => void; onCancel: () => void
 }) {
   const [form, setForm] = useState({
@@ -51,6 +52,7 @@ function CallForm({ companyId, tenantId, contactId, onCreated, onCancel }: {
         callDuration: form.duration ? parseInt(form.duration, 10) : null,
       }
       if (contactId) body.contactId = contactId
+      if (dealId) body.dealId = dealId
       const created = await apiFetch<Activity>('/api/activities', {
         method: 'POST', body: JSON.stringify(body),
       })
@@ -106,8 +108,8 @@ function CallForm({ companyId, tenantId, contactId, onCreated, onCancel }: {
   )
 }
 
-function MeetingForm({ companyId, tenantId, contactId, onCreated, onCancel }: {
-  companyId: string; tenantId: string; contactId?: string
+function MeetingForm({ companyId, tenantId, contactId, dealId, onCreated, onCancel }: {
+  companyId: string; tenantId: string; contactId?: string; dealId?: string
   onCreated: (a: Activity) => void; onCancel: () => void
 }) {
   const [form, setForm] = useState({ subject: '', scheduledAt: '', description: '' })
@@ -125,6 +127,7 @@ function MeetingForm({ companyId, tenantId, contactId, onCreated, onCancel }: {
         companyId, tenantId,
       }
       if (contactId) body.contactId = contactId
+      if (dealId) body.dealId = dealId
       if (form.scheduledAt) body.scheduledAt = form.scheduledAt
       const created = await apiFetch<Activity>('/api/activities', {
         method: 'POST', body: JSON.stringify(body),
@@ -251,7 +254,7 @@ function TaskForm({ companyId, tenantId, contactId, users, currentUserId, onCrea
 // ── Main QuickActionBar component ──
 
 export default function QuickActionBar({
-  companyId, tenantId, contactId, contactName, contactEmail,
+  companyId, tenantId, contactId, dealId, contactName, contactEmail,
   users, onActivityCreated, onTaskCreated, onSendEmail,
 }: QuickActionBarProps) {
   const [activeAction, setActiveAction] = useState<ActionType>(null)
@@ -317,7 +320,7 @@ export default function QuickActionBar({
 
       {activeAction === 'call' && (
         <CallForm
-          companyId={companyId} tenantId={tenantId} contactId={contactId}
+          companyId={companyId} tenantId={tenantId} contactId={contactId} dealId={dealId}
           onCreated={(a) => { onActivityCreated(a); setActiveAction(null) }}
           onCancel={() => setActiveAction(null)}
         />
@@ -325,7 +328,7 @@ export default function QuickActionBar({
 
       {activeAction === 'meeting' && (
         <MeetingForm
-          companyId={companyId} tenantId={tenantId} contactId={contactId}
+          companyId={companyId} tenantId={tenantId} contactId={contactId} dealId={dealId}
           onCreated={(a) => { onActivityCreated(a); setActiveAction(null) }}
           onCancel={() => setActiveAction(null)}
         />
