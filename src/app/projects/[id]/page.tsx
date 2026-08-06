@@ -6,6 +6,7 @@ import { apiFetch } from '../../lib/api'
 import type { Project, ProjectColumn, ProjectTask, Subtask, User, TaskComment } from '../../lib/types'
 import { layout, panel, typeography, buttons, forms, statusBadge } from '../../lib/styles'
 import ProtectedLayout from '../../components/ProtectedLayout'
+import ConfirmDialog from '../../components/ConfirmDialog'
 
 const PRIORITY_COLORS: Record<string, string> = {
   LOW: '#8b8d98',
@@ -77,6 +78,9 @@ export default function KanbanBoardPage() {
   const [showAddColumn, setShowAddColumn] = useState(false)
   const [showEditProject, setShowEditProject] = useState(false)
   const [taskComments, setTaskComments] = useState<TaskComment[]>([])
+
+  // Confirm delete dialog state
+  const [confirmDelete, setConfirmDelete] = useState<any>(null)
 
   // Inline add task
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null)
@@ -262,14 +266,17 @@ export default function KanbanBoardPage() {
     }
   }
 
-  const handleDeleteTask = async (taskId: string) => {
-    if (!confirm('Delete this task?')) return
+  const handleDeleteTask = (task: any) => {
+    setConfirmDelete({ ...task, _type: 'task' })
+  }
+
+  const performDeleteTask = async (task: any) => {
     try {
-      await apiFetch(`/api/projects/${projectId}/tasks/${taskId}`, { method: 'DELETE' })
+      await apiFetch(`/api/projects/${projectId}/tasks/${task.id}`, { method: 'DELETE' })
       setSelectedTask(null)
       setColumns(columns.map(col => ({
         ...col,
-        tasks: (col.tasks || []).filter(t => t.id !== taskId),
+        tasks: (col.tasks || []).filter(t => t.id !== task.id),
       })))
     } catch (e) {
       alert('Failed to delete task')
@@ -320,11 +327,14 @@ export default function KanbanBoardPage() {
     }
   }
 
-  const handleDeleteColumn = async (columnId: string) => {
-    if (!confirm('Delete this column and all its tasks?')) return
+  const handleDeleteColumn = (column: any) => {
+    setConfirmDelete({ ...column, _type: 'column' })
+  }
+
+  const performDeleteColumn = async (column: any) => {
     try {
-      await apiFetch(`/api/projects/${projectId}/columns/${columnId}`, { method: 'DELETE' })
-      setColumns(columns.filter(c => c.id !== columnId))
+      await apiFetch(`/api/projects/${projectId}/columns/${column.id}`, { method: 'DELETE' })
+      setColumns(columns.filter(c => c.id !== column.id))
       setEditingColumn(null)
     } catch (e) {
       alert('Failed to delete column')
@@ -367,13 +377,17 @@ export default function KanbanBoardPage() {
     }
   }
 
-  const handleDeleteSubtask = async (taskId: string, subtaskId: string) => {
+  const handleDeleteSubtask = (taskId: string, subtask: any) => {
+    setConfirmDelete({ ...subtask, _type: 'subtask', _taskId: taskId })
+  }
+
+  const performDeleteSubtask = async (subtask: any) => {
     try {
-      await apiFetch(`/api/projects/${projectId}/tasks/${taskId}/subtasks/${subtaskId}`, { method: 'DELETE' })
-      if (selectedTask?.id === taskId) {
+      await apiFetch(`/api/projects/${projectId}/tasks/${subtask._taskId}/subtasks/${subtask.id}`, { method: 'DELETE' })
+      if (selectedTask?.id === subtask._taskId) {
         setSelectedTask(prev => prev ? {
           ...prev,
-          subtasks: (prev.subtasks || []).filter(s => s.id !== subtaskId),
+          subtasks: (prev.subtasks || []).filter(s => s.id !== subtask.id),
         } : prev)
       }
     } catch (e) {
@@ -626,10 +640,10 @@ export default function KanbanBoardPage() {
           comments={taskComments}
           onClose={() => setSelectedTask(null)}
           onUpdate={(updates) => handleUpdateTask(selectedTask.id, updates)}
-          onDelete={() => handleDeleteTask(selectedTask.id)}
+          onDelete={() => handleDeleteTask(selectedTask)}
           onCreateSubtask={(title) => handleCreateSubtask(selectedTask.id, title)}
           onToggleSubtask={(subtaskId, isCompleted) => handleToggleSubtask(selectedTask.id, subtaskId, isCompleted)}
-          onDeleteSubtask={(subtaskId) => handleDeleteSubtask(selectedTask.id, subtaskId)}
+          onDeleteSubtask={(subtaskId) => handleDeleteSubtask(selectedTask.id, selectedTask.subtasks?.find(s => s.id === subtaskId))}
           onCreateComment={(body) => handleCreateComment(selectedTask.id, body)}
         />
       )}
@@ -652,7 +666,7 @@ export default function KanbanBoardPage() {
           onSave={(name, color, wipLimit, isDoneColumn) =>
             handleUpdateColumn(editingColumn.id, { name, color, wipLimit, isDoneColumn })
           }
-          onDelete={() => handleDeleteColumn(editingColumn.id)}
+          onDelete={() => handleDeleteColumn(editingColumn)}
         />
       )}
 

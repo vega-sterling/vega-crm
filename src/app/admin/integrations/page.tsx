@@ -11,6 +11,7 @@
 import { useEffect, useState, useCallback } from "react";
 import ProtectedLayout from "../../components/ProtectedLayout";
 import Spinner from "../../components/Spinner";
+import ConfirmDialog from "../../components/ConfirmDialog";
 import { apiFetch } from "../../lib/api";
 import { layout, panel, forms, buttons } from "../../lib/styles";
 
@@ -62,6 +63,7 @@ export default function IntegrationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [confirmClear, setConfirmClear] = useState<any>(null);
   const [saveStatus, setSaveStatus] = useState<Record<string, string>>({});
 
   const loadData = useCallback(async () => {
@@ -169,7 +171,11 @@ export default function IntegrationsPage() {
     }
   };
 
-  const handleClear = async (tenantId: string, key: string) => {
+  const handleClear = (tenantId: string, key: string) => {
+    setConfirmClear({ tenantId, key });
+  };
+
+  const performClear = async (tenantId: string, key: string) => {
     const compositeKey = `${tenantId}:${key}`;
     setSavingKey(compositeKey);
 
@@ -411,6 +417,15 @@ export default function IntegrationsPage() {
           })}
         </div>
       </div>
+      <ConfirmDialog
+        open={!!confirmClear}
+        title="Clear Setting?"
+        itemName={confirmClear?.key}
+        message="This will reset this integration setting to its default value."
+        confirmLabel="Clear"
+        onCancel={() => setConfirmClear(null)}
+        onConfirm={() => { if (confirmClear) performClear(confirmClear.tenantId, confirmClear.key); setConfirmClear(null) }}
+      />
     </ProtectedLayout>
   );
 }

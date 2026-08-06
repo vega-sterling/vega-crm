@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import ProtectedLayout from '../components/ProtectedLayout'
 import Spinner from '../components/Spinner'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { apiFetch } from '../lib/api'
 import { layout, panel, typeography, forms, buttons, statusBadge } from '../lib/styles'
 import type { CalendarEvent, BookingSlot, Contact, Company } from '../lib/types'
@@ -31,6 +32,7 @@ function CalendarContent() {
 
   const [showEventModal, setShowEventModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<any>(null)
 
   const [eventForm, setEventForm] = useState({
     title: '',
@@ -153,10 +155,14 @@ function CalendarContent() {
     }
   }
 
-  const handleDeleteSlot = async (id: string) => {
+  const handleDeleteSlot = (slot: any) => {
+    setConfirmDelete(slot)
+  }
+
+  const performDeleteSlot = async (slot: any) => {
     try {
-      await apiFetch(`/api/calendar/booking-slots/${id}`, { method: 'DELETE' })
-      setSlots((prev) => prev.filter((s) => s.id !== id))
+      await apiFetch(`/api/calendar/booking-slots/${slot.id}`, { method: 'DELETE' })
+      setSlots((prev) => prev.filter((s) => s.id !== slot.id))
     } catch (err: any) {
       setError(err.message || 'Failed to delete slot')
     }
@@ -273,7 +279,7 @@ function CalendarContent() {
                   <span style={{ fontWeight: 600 }}>{WEEKDAYS[slot.weekday]}</span>
                   {' '}<span style={{ color: 'var(--fg-dim)' }}>{slot.startTime.slice(0, 5)}–{slot.endTime.slice(0, 5)} · {slot.durationMinutes} min</span>
                 </div>
-                <button style={buttons.danger} onClick={() => handleDeleteSlot(slot.id)}>Delete</button>
+                <button style={buttons.danger} onClick={() => handleDeleteSlot(slot)}>Delete</button>
               </div>
             ))}
           </div>
@@ -353,6 +359,13 @@ function CalendarContent() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Delete Booking Slot?"
+        itemName={confirmDelete ? `${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][confirmDelete.weekday]} ${confirmDelete.startTime}-${confirmDelete.endTime}` : undefined}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => { performDeleteSlot(confirmDelete); setConfirmDelete(null) }}
+      />
     </div>
   )
 }

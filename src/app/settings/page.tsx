@@ -11,6 +11,7 @@ import { useApp } from "@/app/components/ThemeProvider";
 import { layout, panel, typeography, forms, buttons, statusBadge } from "@/app/lib/styles";
 import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "../lib/api";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 import type { CustomProperty, Workflow } from "../lib/types";
 
 const GOOGLE_SCOPES = ["Gmail send", "Gmail read", "Calendar"];
@@ -41,6 +42,7 @@ export default function SettingsPage() {
   const [propModal, setPropModal] = useState<Partial<CustomProperty> | null>(null);
   const [workflowModal, setWorkflowModal] = useState<Partial<Workflow> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<any>(null);
   const [error, setError] = useState("");
 
   const [propForm, setPropForm] = useState<{
@@ -155,11 +157,14 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDeleteProperty = async (id: string) => {
-    if (!confirm("Delete this custom property?")) return;
+  const handleDeleteProperty = (property: any) => {
+    setConfirmDelete(property);
+  };
+
+  const performDeleteProperty = async (property: any) => {
     try {
-      await apiFetch(`/api/custom-properties/${id}`, { method: "DELETE" });
-      setProperties((prev) => prev.filter((p) => p.id !== id));
+      await apiFetch(`/api/custom-properties/${property.id}`, { method: "DELETE" });
+      setProperties((prev) => prev.filter((p) => p.id !== property.id));
     } catch (err: any) {
       setError(err.message || "Failed to delete property");
     }
@@ -382,7 +387,7 @@ export default function SettingsPage() {
                   <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14, textAlign: "right" }}>
                     <button style={buttons.small} onClick={() => openProperty(p)}>Edit</button>
                     {" "}
-                    <button style={buttons.danger} onClick={() => handleDeleteProperty(p.id)}>Delete</button>
+                    <button style={buttons.danger} onClick={() => handleDeleteProperty(p)}>Delete</button>
                   </td>
                 </tr>
               ))}
@@ -677,6 +682,13 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Delete Custom Property?"
+        itemName={confirmDelete?.label || confirmDelete?.name}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => { performDeleteProperty(confirmDelete); setConfirmDelete(null) }}
+      />
     </div>
     </ProtectedLayout>
   );

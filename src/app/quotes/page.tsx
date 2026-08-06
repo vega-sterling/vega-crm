@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import ProtectedLayout from '../components/ProtectedLayout'
 import Spinner from '../components/Spinner'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { apiFetch } from '../lib/api'
 import { layout, panel, typeography, forms, buttons, table, statusBadge } from '../lib/styles'
 import type { Deal } from '../lib/types'
@@ -66,6 +67,7 @@ function QuotesContent() {
   const [error, setError] = useState('')
   const [showNew, setShowNew] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<any>(null)
 
   const [form, setForm] = useState({
     dealId: '',
@@ -167,8 +169,11 @@ function QuotesContent() {
     }
   }
 
-  const handleDelete = async (quote: Quote) => {
-    if (!confirm(`Delete quote ${quote.number}?`)) return
+  const handleDelete = (quote: Quote) => {
+    setConfirmDelete(quote)
+  }
+
+  const performDelete = async (quote: any) => {
     try {
       await apiFetch<{ success: boolean }>(`/api/quotes/${quote.id}`, { method: 'DELETE' })
       setQuotes((prev) => prev.filter((q) => q.id !== quote.id))
@@ -355,6 +360,13 @@ function QuotesContent() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Delete Quote?"
+        itemName={confirmDelete?.number}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => { performDelete(confirmDelete); setConfirmDelete(null) }}
+      />
     </div>
   )
 }

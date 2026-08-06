@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import ProtectedLayout from '../components/ProtectedLayout'
 import Spinner from '../components/Spinner'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { apiFetch } from '../lib/api'
 import { layout, panel, typeography, forms, buttons, statusBadge } from '../lib/styles'
 import type { EmailTemplate, EmailSequence, Contact } from '../lib/types'
@@ -22,6 +23,7 @@ function TemplatesContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<any>(null)
 
   const [templateModal, setTemplateModal] = useState<EmailTemplate | null>(null)
   const [sequenceModal, setSequenceModal] = useState<EmailSequence | null>(null)
@@ -130,11 +132,14 @@ function TemplatesContent() {
     }
   }
 
-  const handleDeleteTemplate = async (id: string) => {
-    if (!confirm('Delete this template?')) return
+  const handleDeleteTemplate = (template: any) => {
+    setConfirmDelete({ ...template, _type: 'template' })
+  }
+
+  const performDeleteTemplate = async (template: any) => {
     try {
-      await apiFetch(`/api/email/templates/${id}`, { method: 'DELETE' })
-      setTemplates((prev) => prev.filter((t) => t.id !== id))
+      await apiFetch(`/api/email/templates/${template.id}`, { method: 'DELETE' })
+      setTemplates((prev) => prev.filter((t) => t.id !== template.id))
     } catch (err: any) {
       setError(err.message || 'Failed to delete template')
     }
@@ -160,11 +165,14 @@ function TemplatesContent() {
     }
   }
 
-  const handleDeleteSequence = async (id: string) => {
-    if (!confirm('Delete this sequence?')) return
+  const handleDeleteSequence = (sequence: any) => {
+    setConfirmDelete({ ...sequence, _type: 'sequence' })
+  }
+
+  const performDeleteSequence = async (sequence: any) => {
     try {
-      await apiFetch(`/api/email/sequences/${id}`, { method: 'DELETE' })
-      setSequences((prev) => prev.filter((s) => s.id !== id))
+      await apiFetch(`/api/email/sequences/${sequence.id}`, { method: 'DELETE' })
+      setSequences((prev) => prev.filter((s) => s.id !== sequence.id))
     } catch (err: any) {
       setError(err.message || 'Failed to delete sequence')
     }
@@ -255,7 +263,7 @@ function TemplatesContent() {
                     <td style={{ padding: '12px 8px', borderBottom: '1px solid var(--panel-border)', fontSize: 14, textAlign: 'right' }}>
                       <button style={buttons.small} onClick={() => openTemplate(t)}>Edit</button>
                       {' '}
-                      <button style={buttons.danger} onClick={() => handleDeleteTemplate(t.id)}>Delete</button>
+                      <button style={buttons.danger} onClick={() => handleDeleteTemplate(t)}>Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -292,7 +300,7 @@ function TemplatesContent() {
                       {' '}
                       <button style={buttons.small} onClick={() => openSequence(s)}>Edit</button>
                       {' '}
-                      <button style={buttons.danger} onClick={() => handleDeleteSequence(s.id)}>Delete</button>
+                      <button style={buttons.danger} onClick={() => handleDeleteSequence(s)}>Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -434,6 +442,17 @@ function TemplatesContent() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title={confirmDelete?._type === 'sequence' ? 'Delete Sequence?' : 'Delete Template?'}
+        itemName={confirmDelete?.name}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          if (confirmDelete?._type === 'sequence') performDeleteSequence(confirmDelete)
+          else performDeleteTemplate(confirmDelete)
+          setConfirmDelete(null)
+        }}
+      />
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import ProtectedLayout from "../../components/ProtectedLayout";
 import Spinner from "../../components/Spinner";
+import ConfirmDialog from "../../components/ConfirmDialog";
 import { apiFetch } from "../../lib/api";
 import { layout, panel, typeography, forms, buttons, table, statusBadge } from "../../lib/styles";
 
@@ -18,6 +19,7 @@ export default function LeadScoringPage() {
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResult, setSearchResult] = useState<{ score: number; breakdown: Array<{ event: string; points: number }> } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<any>(null);
 
   const load = useCallback(async () => {
     try {
@@ -45,8 +47,12 @@ export default function LeadScoringPage() {
     finally { setSaving(false); }
   };
 
-  const deleteRule = async (id: string) => {
-    try { await apiFetch(`/api/lead-score/rules?id=${id}`, { method: "DELETE" }); load(); }
+  const deleteRule = (rule: any) => {
+    setConfirmDelete(rule);
+  };
+
+  const performDeleteRule = async (rule: any) => {
+    try { await apiFetch(`/api/lead-score/rules?id=${rule.id}`, { method: "DELETE" }); load(); }
     catch (err: any) { setError(err.message); }
   };
 
@@ -90,13 +96,20 @@ export default function LeadScoringPage() {
                     <td style={table.td}>{r.event}</td>
                     <td style={table.td}><span style={statusBadge(r.points >= 0 ? "var(--emerald)" : "var(--rust)")}>{r.points > 0 ? "+" : ""}{r.points}</span></td>
                     <td style={table.td}>{r.isActive ? "Active" : "Inactive"}</td>
-                    <td style={table.td}><button style={buttons.danger} onClick={() => deleteRule(r.id)}>Delete</button></td>
+                    <td style={table.td}><button style={buttons.danger} onClick={() => deleteRule(r)}>Delete</button></td>
                   </tr>
                 ))}</tbody>
               </table>
             </div>
           )}
         </div>
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Delete Scoring Rule?"
+        itemName={confirmDelete?.event}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => { performDeleteRule(confirmDelete); setConfirmDelete(null) }}
+      />
       </div>
     </ProtectedLayout>
   );

@@ -6,6 +6,7 @@ import { apiFetch } from '../lib/api'
 import type { Project, User } from '../lib/types'
 import { layout, panel, typeography, buttons, forms } from '../lib/styles'
 import ProtectedLayout from '../components/ProtectedLayout'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 const PROJECT_COLORS = [
   '#c9a96e', '#60a5fa', '#4ade80', '#a78bfa',
@@ -30,6 +31,7 @@ export default function ProjectsPage() {
   const [icon, setIcon] = useState('📋')
   const [tenantId, setTenantId] = useState('')
   const [creating, setCreating] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<any>(null)
 
   const fetchProjects = useCallback(async () => {
     setLoading(true)
@@ -94,10 +96,13 @@ export default function ProjectsPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this project and all its data? This cannot be undone.')) return
+  const handleDelete = (project: Project) => {
+    setConfirmDelete(project)
+  }
+
+  const performDelete = async (project: any) => {
     try {
-      await apiFetch(`/api/projects/${id}`, { method: 'DELETE' })
+      await apiFetch(`/api/projects/${project.id}`, { method: 'DELETE' })
       fetchProjects()
     } catch (e) {
       alert('Failed to delete project')
@@ -204,7 +209,7 @@ export default function ProjectsPage() {
                         ↩️
                       </button>
                       <button
-                        onClick={() => handleDelete(project.id)}
+                        onClick={() => handleDelete(project)}
                         style={{ ...buttons.small, fontSize: 11, color: 'var(--rust)', borderColor: 'var(--rust)' }}
                         title="Delete"
                       >
@@ -337,6 +342,13 @@ export default function ProjectsPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Delete Project?"
+        itemName={confirmDelete?.name}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => { performDelete(confirmDelete); setConfirmDelete(null) }}
+      />
     </div>
     </ProtectedLayout>
   )

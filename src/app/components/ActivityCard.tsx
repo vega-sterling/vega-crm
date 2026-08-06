@@ -8,6 +8,7 @@
 
 import { useState, useMemo } from 'react'
 import { panel, typeography, statusBadge, buttons } from '../lib/styles'
+import ConfirmDialog from './ConfirmDialog'
 import type { Activity, User } from '../lib/types'
 
 type ActivityType = Activity['type']
@@ -115,6 +116,7 @@ export default function ActivityCard({
   activity, users = [], pinned = false, onPin, onEdit, onDelete, compact = false,
 }: ActivityCardProps) {
   const [expanded, setExpanded] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const a = activity
   const color = activityColor[a.type] || 'var(--fg-dim)'
   const icon = activityEmoji[a.type] || '📋'
@@ -223,7 +225,7 @@ export default function ActivityCard({
         )}
         {onDelete && (
           <button
-            onClick={() => onDelete(a.id)}
+            onClick={() => setConfirmDelete(true)}
             title="Delete"
             style={{
               ...buttons.small,
@@ -239,6 +241,16 @@ export default function ActivityCard({
           </button>
         )}
       </div>
+
+      {onDelete && (
+        <ConfirmDialog
+          open={confirmDelete}
+          title="Delete Activity?"
+          itemName={a.subject}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => { onDelete(a.id); setConfirmDelete(false) }}
+        />
+      )}
     </div>
   )
 }
