@@ -752,4 +752,56 @@ input:focus, select:focus, textarea:focus {
   .kanban-board {
     grid-template-columns: repeat(6, minmax(240px, 1fr)) !important;
   }
+}/* ============================================================================ */
+/* PHASE 5 CSS — Breadcrumbs & Recently Viewed Records                          */
+/* ============================================================================ */
+
+/* Breadcrumbs — contextual navigation trail */
+.breadcrumbs {
+  max-width: 100%;
+}
+.breadcrumbs a:hover {
+  color: var(--fg) !important;
+  opacity: 1 !important;
+}
+
+/* Recently Viewed — sidebar section */
+.recent-sidebar {
+  display: block;
+}
+.recent-sidebar-item:hover {
+  background-color: var(--panel) !important;
+  color: var(--fg) !important;
+}
+
+/* Recently Viewed — dropdown menu items */
+.vega-dropdown-menu .vega-dropdown-item:hover {
+  background-color: var(--panel-elevated) !important;
+}
+
+/* Hide the "Recent" button label on very small screens (icon only) */
+@media (max-width: 600px) {
+  .recent-btn-label {
+    display: none !important;
+  }
+}
+
+/* Breadcrumbs — hide home crumb on phone to save space */
+@media (max-width: 768px) {
+  .breadcrumbs > div:first-child {
+    display: none !important;
+  }
+  /* Also hide the separator after the home crumb */
+  .breadcrumbs > div:nth-child(2) {
+    display: none !important;
+  }
+}
+
+/* Recently Viewed sidebar — already hidden via CSS for mobile sidebar
+   since the sidebar is off-canvas on phone. But ensure it doesn't
+   take space when sidebar is shown on mobile (it's in the scroll area). */
+@media (max-width: 768px) {
+  .recent-sidebar {
+    margin-bottom: 16px;
+  }
 }

@@ -1,5 +1,46 @@
 # Vega CRM — Changelog
 
+## 2026-08-06 — Phase 5: Breadcrumb Navigation + Recently Viewed Records
+
+### Added
+- **Breadcrumb navigation** — context-aware breadcrumbs on every page:
+  - Parses URL path to generate breadcrumb trail (Home › Companies › Company Name)
+  - Fetches record names for detail pages via API (company/contact/deal names)
+  - Home icon as first crumb, clickable links throughout
+  - Chevron separators between crumbs
+  - Responsive: hides Home crumb on mobile to save space
+  - New IconHome and IconClock SVG icons added to Icons.tsx
+- **Recently Viewed Records** — Salesforce-style recent items tracking:
+  - RecentlyViewedTracker: invisible component in AppShell that watches route changes and records visits to detail pages (companies, contacts, deals) in localStorage
+  - RecentlyViewedDropdown: header button with clock icon that opens a dropdown showing the last 8 recently viewed records, with record type icons, names, and relative timestamps
+  - RecentlyViewedSidebar: compact list at the bottom of the sidebar showing the 5 most recent records with colored type icons
+  - Smart deduplication (most recent visit wins), max 20 records stored
+  - Relative time formatting ("2m ago", "1h ago", "3d ago")
+  - Click any recent item to navigate directly to that record
+  - Responsive: sidebar list scrolls, dropdown is touch-friendly with 44px tap targets
+
+### Enhanced
+- **AppShell**: Integrated breadcrumbs (below header bar, above page content), recently viewed dropdown (in header next to notification bell), recently viewed sidebar (at bottom of sidebar nav), and invisible tracker component
+- **globals.css**: Added responsive CSS rules for breadcrumbs (hide home crumb on mobile) and recently viewed components
+- **Icons.tsx**: Added IconClock (clock face with hands) and IconHome (house outline) to the icon set
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded with no errors (Turbopack/Next.js 16.3.0)
+- ✅ All 8 authenticated pages return HTTP 200 (dashboard, companies, contacts, deals, tasks, activities, company detail, contact detail)
+- ✅ All 7 API endpoints return HTTP 200 with authentication
+- ✅ No runtime errors in container logs after hitting all pages
+- ✅ Component code confirmed in compiled JS bundles
+- ✅ Test user created, used for QA, and cleaned up (deleted from DB)
+- ✅ Login/logout flow working correctly
+
+### Files Changed
+- src/app/components/Breadcrumbs.tsx — NEW (191 lines)
+- src/app/components/RecentlyViewed.tsx — NEW (391 lines)
+- src/app/components/AppShell.tsx — MODIFIED (integrated breadcrumbs + recently viewed)
+- src/app/components/Icons.tsx — MODIFIED (added IconClock + IconHome)
+- src/app/globals.css — MODIFIED (responsive CSS for new components)
+
 ## 2026-08-05 — Phase 4: Deal Detail Page 3-Column Layout + P0 Bug Fix
 
 ### Fixed

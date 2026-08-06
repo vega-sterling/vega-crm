@@ -6,6 +6,7 @@
 //              sections, header bar with global search, notifications, and
 //              user menu. Phase 1-3 UI/UX improvements: SVG icons, text logo,
 //              auto-expand active section, localStorage persistence.
+//              Phase 5: Breadcrumb navigation, recently viewed records.
 // ============================================================================
 
 import Link from 'next/link'
@@ -15,6 +16,8 @@ import { apiFetch } from '../lib/api'
 import type { User } from '../lib/types'
 import NotificationBell from './NotificationBell'
 import GlobalSearch from './GlobalSearch'
+import Breadcrumbs from './Breadcrumbs'
+import { RecentlyViewedTracker, RecentlyViewedDropdown, RecentlyViewedSidebar } from './RecentlyViewed'
 import { navIconMap, IconX, IconMenu, IconChevronRight } from './Icons'
 
 const navSections = [
@@ -132,6 +135,9 @@ export default function AppShell({ user, children }: { user: User; children: Rea
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
+      {/* ── Recently Viewed Tracker (invisible — records page visits) ── */}
+      <RecentlyViewedTracker />
+
       {/* ── Mobile overlay backdrop ── */}
       {sidebarOpen && (
         <div
@@ -266,6 +272,9 @@ export default function AppShell({ user, children }: { user: User; children: Rea
             )
           })}
         </nav>
+
+        {/* ── Recently Viewed — sidebar bottom (desktop/tablet only) ── */}
+        <RecentlyViewedSidebar />
       </aside>
 
       {/* ── Main content area ── */}
@@ -322,6 +331,9 @@ export default function AppShell({ user, children }: { user: User; children: Rea
           {/* Global Search — in header, works on all pages */}
           <GlobalSearch />
 
+          {/* Recently Viewed — header dropdown */}
+          <RecentlyViewedDropdown />
+
           <NotificationBell />
           {/* User info + logout */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
@@ -355,6 +367,8 @@ export default function AppShell({ user, children }: { user: User; children: Rea
 
         {/* ── Page content ── */}
         <main className="page-content" style={{ padding: '88px 16px 24px', flex: 1 }}>
+          {/* ── Breadcrumb navigation ── */}
+          <Breadcrumbs />
           {children}
         </main>
       </div>
