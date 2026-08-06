@@ -15,8 +15,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" style={{ backgroundColor: "var(--bg)", color: "var(--fg)" }}>
-      <body style={{ margin: 0, minHeight: "100vh" }}>
+    <html lang="en" style={{ color: "var(--fg)" }}>
+      <body style={{
+        margin: 0,
+        minHeight: "100vh",
+        backgroundColor: "var(--bg)",
+        backgroundImage: "var(--bg-gradient)",
+        backgroundAttachment: "fixed",
+      }}>
         <AppProvider>{children}</AppProvider>
       </body>
     </html>

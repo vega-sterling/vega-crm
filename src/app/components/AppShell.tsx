@@ -1,70 +1,117 @@
 'use client'
 
+// ============================================================================
+// File: src/app/components/AppShell.tsx
+// Description: Main application shell — fixed sidebar with collapsible nav
+//              sections, header bar with global search, notifications, and
+//              user menu. Phase 1-3 UI/UX improvements: SVG icons, text logo,
+//              auto-expand active section, localStorage persistence.
+// ============================================================================
+
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { apiFetch } from '../lib/api'
 import type { User } from '../lib/types'
 import NotificationBell from './NotificationBell'
 import GlobalSearch from './GlobalSearch'
+import { navIconMap, IconX, IconMenu, IconChevronRight } from './Icons'
 
 const navSections = [
   { title: 'Overview', items: [
-    { label: 'Dashboard', href: '/dashboard', icon: '◈' },
-    { label: 'Reports', href: '/reports', icon: '📊' },
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Reports', href: '/reports' },
   ]},
   {
     title: 'CRM',
     items: [
-      { label: 'Companies', href: '/companies', icon: '⌂' },
-      { label: 'Contacts', href: '/contacts', icon: '◎' },
-      { label: 'Activities', href: '/activities', icon: '✎' },
-      { label: 'Tasks', href: '/tasks', icon: '☑' },
+      { label: 'Companies', href: '/companies' },
+      { label: 'Contacts', href: '/contacts' },
+      { label: 'Activities', href: '/activities' },
+      { label: 'Tasks', href: '/tasks' },
     ],
   },
   {
     title: 'Sales',
     items: [
-      { label: 'Deals', href: '/deals', icon: '💠' },
-      { label: 'Quotes', href: '/quotes', icon: '📄' },
+      { label: 'Deals', href: '/deals' },
+      { label: 'Quotes', href: '/quotes' },
     ],
   },
   {
     title: 'Projects',
     items: [
-      { label: 'Projects', href: '/projects', icon: '▤' },
+      { label: 'Projects', href: '/projects' },
     ],
   },
   {
     title: 'Communications',
     items: [
-      { label: 'Inbox', href: '/inbox', icon: '📥' },
-      { label: 'Campaigns', href: '/campaigns', icon: '📣' },
-      { label: 'Templates', href: '/templates', icon: '✉' },
-      { label: 'Calendar', href: '/calendar', icon: '📅' },
+      { label: 'Inbox', href: '/inbox' },
+      { label: 'Campaigns', href: '/campaigns' },
+      { label: 'Templates', href: '/templates' },
+      { label: 'Calendar', href: '/calendar' },
     ],
   },
   {
     title: 'Administration',
     adminOnly: true,
     items: [
-      { label: 'Users', href: '/admin/users', icon: '⚙' },
-      { label: 'Tenants', href: '/admin/tenants', icon: '▦' },
-      { label: 'Lead Forms', href: '/admin/lead-forms', icon: '📋' },
-      { label: 'Lead Scoring', href: '/admin/lead-scoring', icon: '🎯' },
-      { label: 'Integrations', href: '/admin/integrations', icon: '🔗' },
-      { label: 'Settings', href: '/settings', icon: '🔧' },
+      { label: 'Users', href: '/admin/users' },
+      { label: 'Tenants', href: '/admin/tenants' },
+      { label: 'Lead Forms', href: '/admin/lead-forms' },
+      { label: 'Lead Scoring', href: '/admin/lead-scoring' },
+      { label: 'Integrations', href: '/admin/integrations' },
+      { label: 'Settings', href: '/settings' },
     ],
   },
 ]
 
 const SIDEBAR_WIDTH = 260
+const COLLAPSE_KEY = 'vega-crm-sidebar-collapsed'
 
 export default function AppShell({ user, children }: { user: User; children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Determine which section the active route belongs to
+  const activeSection = useMemo(() => {
+    for (const section of navSections) {
+      for (const item of section.items) {
+        if (pathname === item.href || pathname.startsWith(`${item.href}/`)) {
+          return section.title
+        }
+      }
+    }
+    return null
+  }, [pathname])
+
+  // Load collapsed state from localStorage on mount, then auto-expand active section
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(COLLAPSE_KEY)
+      const savedCollapsed: Record<string, boolean> = saved ? JSON.parse(saved) : {}
+      // Auto-expand the active section (set collapsed=false for it)
+      if (activeSection) {
+        savedCollapsed[activeSection] = false
+      }
+      setCollapsed(savedCollapsed)
+    } catch {
+      // If localStorage is unavailable, just auto-expand active section
+      if (activeSection) {
+        setCollapsed({ [activeSection]: false })
+      }
+    }
+  }, [activeSection])
+
+  // Persist collapsed state to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLLAPSE_KEY, JSON.stringify(collapsed))
+    } catch {}
+  }, [collapsed])
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -119,27 +166,11 @@ export default function AppShell({ user, children }: { user: User; children: Rea
           transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
       >
-        {/* Logo + close button */}
+        {/* Logo + close button — text logo, no box */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, padding: '0 8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                backgroundColor: 'var(--gold)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--bg)',
-                fontWeight: 800,
-                fontSize: 16,
-              }}
-            >
-              V
-            </div>
-            <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: -0.5 }}>Vega CRM</span>
-          </div>
+          <span style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--fg)' }}>
+            VEGA<span style={{ color: 'var(--gold)' }}> CRM</span>
+          </span>
           {/* Close button — mobile only */}
           <button
             onClick={() => setSidebarOpen(false)}
@@ -148,13 +179,15 @@ export default function AppShell({ user, children }: { user: User; children: Rea
               background: 'transparent',
               border: 'none',
               color: 'var(--fg-dim)',
-              fontSize: 22,
               cursor: 'pointer',
               padding: 4,
-              lineHeight: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
+            aria-label="Close menu"
           >
-            ✕
+            <IconX size={20} />
           </button>
         </div>
 
@@ -162,7 +195,8 @@ export default function AppShell({ user, children }: { user: User; children: Rea
         <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
           {navSections.map((section) => {
             if (section.adminOnly && !canAdmin) return null
-            const isOpen = collapsed[section.title] !== false
+            const isOpen = collapsed[section.title] !== true
+            const isActiveSection = activeSection === section.title
             return (
               <div key={section.title} style={{ marginBottom: 4 }}>
                 <button
@@ -175,12 +209,13 @@ export default function AppShell({ user, children }: { user: User; children: Rea
                     padding: '10px 8px',
                     background: 'transparent',
                     border: 'none',
-                    color: 'var(--fg-dim)',
+                    color: isActiveSection ? 'var(--fg)' : 'var(--fg-dim)',
                     fontSize: 12,
                     fontWeight: 600,
                     textTransform: 'uppercase',
                     letterSpacing: 0.5,
                     cursor: 'pointer',
+                    transition: 'color .2s',
                   }}
                 >
                   {section.title}
@@ -189,19 +224,23 @@ export default function AppShell({ user, children }: { user: User; children: Rea
                       transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
                       transition: 'transform .2s',
                       color: 'var(--fg-dim)',
+                      display: 'flex',
+                      alignItems: 'center',
                     }}
                   >
-                    ›
+                    <IconChevronRight size={14} />
                   </span>
                 </button>
                 {isOpen && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {section.items.map((item) => {
                       const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                      const Icon = navIconMap[item.label]
                       return (
                         <Link
                           key={item.href}
                           href={item.href}
+                          className={`vega-nav-link${active ? ' active' : ''}`}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -212,11 +251,11 @@ export default function AppShell({ user, children }: { user: User; children: Rea
                             color: active ? 'var(--fg)' : 'var(--fg-dim)',
                             backgroundColor: active ? 'var(--panel)' : 'transparent',
                             fontSize: 14,
-                            fontWeight: 500,
+                            fontWeight: active ? 600 : 500,
                             transition: 'background .2s, color .2s',
                           }}
                         >
-                          <span style={{ width: 20, textAlign: 'center', fontSize: 16 }}>{item.icon}</span>
+                          {Icon && <Icon size={18} strokeWidth={1.5} />}
                           {item.label}
                         </Link>
                       )
@@ -255,6 +294,7 @@ export default function AppShell({ user, children }: { user: User; children: Rea
             gap: 12,
             padding: '0 16px',
             zIndex: 40,
+            boxShadow: 'var(--shadow-sm)',
           }}
         >
           {/* Hamburger — mobile only */}
@@ -265,10 +305,8 @@ export default function AppShell({ user, children }: { user: User; children: Rea
               background: 'transparent',
               border: 'none',
               color: 'var(--fg)',
-              fontSize: 22,
               cursor: 'pointer',
               padding: 4,
-              lineHeight: 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -278,7 +316,7 @@ export default function AppShell({ user, children }: { user: User; children: Rea
             }}
             aria-label="Open menu"
           >
-            ☰
+            <IconMenu size={22} />
           </button>
 
           {/* Global Search — in header, works on all pages */}
@@ -307,6 +345,7 @@ export default function AppShell({ user, children }: { user: User; children: Rea
                 fontSize: 13,
                 fontWeight: 600,
                 whiteSpace: 'nowrap',
+                cursor: 'pointer',
               }}
             >
               Log out

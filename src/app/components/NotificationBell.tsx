@@ -9,6 +9,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { apiFetch } from "../lib/api";
+import { IconBell } from "./Icons";
 
 interface Notification {
   id: string;
@@ -159,7 +160,7 @@ export default function NotificationBell() {
         }}
         aria-label="Notifications"
       >
-        🔔
+        <IconBell size={20} strokeWidth={1.5} />
         {unreadCount > 0 && (
           <span
             style={{

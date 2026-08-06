@@ -2,16 +2,21 @@
 
 // ============================================================================
 // File: src/app/companies/page.tsx
-// Phase 3: Enhanced companies list with search bar, industry filter, sort,
-// table/card grid toggle. Fully responsive.
+// Description: Enhanced companies list with search bar, industry filter, sort,
+//              table/card grid toggle, pagination, and hover row actions.
+//              Phase 1-3 UI/UX: SVG icons, hover-only delete via ⋯ menu,
+//              pagination, search filter bar with icon.
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import ProtectedLayout from '../components/ProtectedLayout'
 import Spinner from '../components/Spinner'
+import RowActions from '../components/RowActions'
+import Pagination from '../components/Pagination'
+import { IconSearch, IconPlus, IconBuilding, IconMail, IconPhone } from '../components/Icons'
 import { apiFetch } from '../lib/api'
-import { layout, panel, typeography, forms, buttons, table, statusBadge } from '../lib/styles'
+import { layout, panel, typeography, forms, buttons, table, statusBadge, statusDot } from '../lib/styles'
 import type { Company, Tenant } from '../lib/types'
 
 const formatDate = (d?: string) => {
@@ -21,6 +26,8 @@ const formatDate = (d?: string) => {
 
 type ViewMode = 'table' | 'card'
 type SortMode = 'name-asc' | 'name-desc' | 'recent' | 'activities'
+
+const PAGE_SIZE = 10
 
 interface CompanyListItem extends Company {
   _count?: { contacts?: number; deals?: number; activities?: number }
@@ -36,6 +43,7 @@ function CompaniesContent() {
   const [industryFilter, setIndustryFilter] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('name-asc')
   const [viewMode, setViewMode] = useState<ViewMode>('table')
+  const [page, setPage] = useState(1)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCompany, setEditingCompany] = useState<CompanyListItem | null>(null)
@@ -59,6 +67,9 @@ function CompaniesContent() {
 
   useEffect(() => { load() }, [load])
 
+  // Reset page when filters change
+  useEffect(() => { setPage(1) }, [search, industryFilter, sortMode])
+
   // Extract unique industries
   const industries = useMemo(() => {
     const set = new Set<string>()
@@ -69,20 +80,17 @@ function CompaniesContent() {
   // Filtered + sorted companies
   const filtered = useMemo(() => {
     let result = [...companies]
-    // Search filter
     if (search.trim()) {
       const q = search.toLowerCase()
       result = result.filter((c) =>
         c.name.toLowerCase().includes(q) ||
         (c.industry || '').toLowerCase().includes(q) ||
-        (c._count?.contacts ?? 0) > 0 // also matches by having contacts — simple
+        (c.email || '').toLowerCase().includes(q)
       )
     }
-    // Industry filter
     if (industryFilter) {
       result = result.filter((c) => c.industry === industryFilter)
     }
-    // Sort
     switch (sortMode) {
       case 'name-asc': result.sort((a, b) => a.name.localeCompare(b.name)); break
       case 'name-desc': result.sort((a, b) => b.name.localeCompare(a.name)); break
@@ -91,6 +99,13 @@ function CompaniesContent() {
     }
     return result
   }, [companies, search, industryFilter, sortMode])
+
+  // Paginated slice
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paginated = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return filtered.slice(start, start + PAGE_SIZE)
+  }, [filtered, page])
 
   const openNew = () => {
     setEditingCompany(null)
@@ -143,7 +158,6 @@ function CompaniesContent() {
       <div style={layout.header}>
         <h1 style={typeography.title}>Companies</h1>
         <div style={{ display: 'flex', gap: 8 }}>
-          {/* View toggle */}
           <div style={{ display: 'flex', border: '1px solid var(--panel-border)', borderRadius: 8, overflow: 'hidden' }}>
             <button onClick={() => setViewMode('table')} style={{
               padding: '8px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -156,17 +170,24 @@ function CompaniesContent() {
               color: viewMode === 'card' ? 'var(--gold)' : 'var(--fg-dim)', border: 'none',
             }}>Cards</button>
           </div>
-          <button className="btn-touch" style={buttons.primary} onClick={openNew}>+ New Company</button>
+          <button className="btn-touch" style={{ ...buttons.primary, display: 'flex', alignItems: 'center', gap: 6 }} onClick={openNew}>
+            <IconPlus size={16} /> New Company
+          </button>
         </div>
       </div>
 
       {error && (
-        <div style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: 'var(--rust)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>{error}</div>
+        <div style={{ backgroundColor: 'rgba(184,80,74,0.12)', color: 'var(--rust)', border: '1px solid rgba(184,80,74,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>{error}</div>
       )}
 
       {/* ── Toolbar: Search + Industry Filter + Sort ── */}
       <div className="list-toolbar" style={toolbarStyle}>
-        <input className="form-input" style={{ ...forms.input, flex: 1, minWidth: 200 }} placeholder="Search by name or industry…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-dim)', display: 'flex', alignItems: 'center' }}>
+            <IconSearch size={16} strokeWidth={1.5} />
+          </span>
+          <input className="form-input" style={{ ...forms.input, paddingLeft: 36 }} placeholder="Search by name, industry, or email…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
         <select className="form-select" style={selectStyle} value={industryFilter} onChange={(e) => setIndustryFilter(e.target.value)}>
           <option value="">All Industries</option>
           {industries.map((ind) => <option key={ind} value={ind}>{ind}</option>)}
@@ -183,7 +204,7 @@ function CompaniesContent() {
         {filtered.length} {filtered.length === 1 ? 'company' : 'companies'}
       </div>
 
-      {/* ── Table View (desktop) / Card View (phone or toggle) ── */}
+      {/* ── Table View ── */}
       {viewMode === 'table' ? (
         <div className="panel-container list-table-view" style={panel.container}>
           <div className="table-wrapper" style={{ overflowX: 'auto' }}>
@@ -196,31 +217,66 @@ function CompaniesContent() {
                   <th style={table.th}>Email</th>
                   <th style={table.th}>Contacts</th>
                   <th style={table.th}>Created</th>
-                  <th style={table.th}></th>
+                  <th style={{ ...table.th, width: 120 }}></th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={7} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center' }}>No companies found.</td></tr>
+                {paginated.length === 0 ? (
+                  <tr><td colSpan={7} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center', padding: 32 }}>No companies found.</td></tr>
                 ) : (
-                  filtered.map((c) => (
-                    <tr key={c.id} style={table.tr}>
-                      <td style={table.td}><Link href={`/companies/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)' }}>{c.name}</Link></td>
+                  paginated.map((c) => (
+                    <tr key={c.id} className="vega-table-row" style={table.tr}>
+                      <td style={table.td}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: 'var(--panel-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--blue)' }}>
+                            <IconBuilding size={16} strokeWidth={1.5} />
+                          </div>
+                          <Link href={`/companies/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)' }}>{c.name}</Link>
+                        </div>
+                      </td>
                       <td style={table.td}>{c.industry || '—'}</td>
-                      <td style={table.td}>{c.phone || '—'}</td>
-                      <td style={table.td}>{c.email || '—'}</td>
+                      <td style={table.td}>
+                        {c.phone ? (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <IconPhone size={14} strokeWidth={1.5} />
+                            {c.phone}
+                          </span>
+                        ) : (
+                          <button onClick={() => openEdit(c)} style={{ background: 'none', border: 'none', color: 'var(--fg-dimmer)', fontSize: 13, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <IconPlus size={12} /> Add phone
+                          </button>
+                        )}
+                      </td>
+                      <td style={table.td}>
+                        {c.email ? (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <IconMail size={14} strokeWidth={1.5} />
+                            {c.email}
+                          </span>
+                        ) : (
+                          <button onClick={() => openEdit(c)} style={{ background: 'none', border: 'none', color: 'var(--fg-dimmer)', fontSize: 13, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <IconPlus size={12} /> Add email
+                          </button>
+                        )}
+                      </td>
                       <td style={table.td}>{c._count?.contacts ?? 0}</td>
                       <td style={{ ...table.td, color: 'var(--fg-dim)', fontSize: 12 }}>{formatDate(c.createdAt)}</td>
-                      <td style={table.td}><div style={{ display: 'flex', gap: 8 }}>
-                        <button style={buttons.small} onClick={() => openEdit(c)}>Edit</button>
-                        <button style={buttons.danger} onClick={() => handleDelete(c)}>Delete</button>
-                      </div></td>
+                      <td style={table.td}>
+                        <RowActions onEdit={() => openEdit(c)} onDelete={() => handleDelete(c)} />
+                      </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </div>
       ) : (
         /* ── Card Grid View ── */
@@ -236,9 +292,11 @@ function CompaniesContent() {
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                     <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--fg)' }}>{c.name}</div>
                     <div style={{
-                      width: 36, height: 36, borderRadius: 8, backgroundColor: 'var(--bg-soft)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0,
-                    }}>🏢</div>
+                      width: 36, height: 36, borderRadius: 8, backgroundColor: 'var(--panel-elevated)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--blue)', flexShrink: 0,
+                    }}>
+                      <IconBuilding size={18} strokeWidth={1.5} />
+                    </div>
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--fg-dim)', marginBottom: 12 }}>{c.industry || 'No industry'}</div>
                   <div style={{ display: 'flex', gap: 16, marginTop: 'auto' }}>
@@ -268,7 +326,7 @@ function CompaniesContent() {
       {/* ── New/Edit Modal ── */}
       {modalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }} onClick={() => setModalOpen(false)}>
-          <div style={{ ...panel.container, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...panel.container, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', boxShadow: 'var(--shadow-lg)' }} onClick={(e) => e.stopPropagation()}>
             <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{editingCompany ? 'Edit Company' : 'New Company'}</h2>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <label style={forms.group}>

@@ -2,9 +2,10 @@
 
 // ============================================================================
 // File: src/app/dashboard/page.tsx
-// Phase 3: Modern sales command center dashboard.
-// KPI cards, recent activity feed, my tasks widget, deals pipeline summary,
-// quick actions panel. Fully responsive.
+// Description: Modern sales command center dashboard.
+//              KPI cards, recent activity feed, my tasks widget, deals
+//              pipeline summary, quick actions panel.
+//              Phase 1-3 UI/UX: SVG icons, empty state CTAs, depth shadows.
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
@@ -12,8 +13,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ProtectedLayout from '../components/ProtectedLayout'
 import Spinner from '../components/Spinner'
+import {
+  IconBuilding, IconUsers, IconDiamond, IconCheckSquare,
+  IconActivity, IconMail, IconPhone, IconPlus,
+  IconTrendingUp, IconTrendingDown,
+} from '../components/Icons'
 import { apiFetch } from '../lib/api'
-import { layout, panel, typeography, statusBadge, buttons, forms } from '../lib/styles'
+import { layout, panel, typeography, statusBadge, statusDot, buttons } from '../lib/styles'
 import type { Activity, Task, Deal, PipelineStage, User } from '../lib/types'
 
 const formatDate = (d?: string) => {
@@ -32,12 +38,12 @@ const activityColor: Record<string, string> = {
   TASK: 'var(--cyan)',
 }
 
-const activityEmoji: Record<string, string> = {
-  CALL: '📞',
-  EMAIL: '✉️',
-  NOTE: '📝',
-  MEETING: '🤝',
-  TASK: '☑️',
+const activityIconMap: Record<string, React.FC<{ size?: number }>> = {
+  CALL: IconPhone,
+  EMAIL: IconMail,
+  NOTE: IconActivity,
+  MEETING: IconUsers,
+  TASK: IconCheckSquare,
 }
 
 const priorityColor: Record<string, string> = {
@@ -80,8 +86,8 @@ interface TasksResponse {
   })[]
 }
 
-function KPICard({ icon, label, value, color, trend }: {
-  icon: string
+function KPICard({ icon: Icon, label, value, color, trend }: {
+  icon: React.FC<{ size?: number; strokeWidth?: number }>
   label: string
   value: string | number
   color: string
@@ -109,9 +115,8 @@ function KPICard({ icon, label, value, color, trend }: {
           width: 40, height: 40, borderRadius: 10,
           backgroundColor: `${color}22`, color,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 20,
         }}>
-          {icon}
+          <Icon size={20} strokeWidth={1.5} />
         </div>
         {trend && (
           <span style={{
@@ -119,11 +124,11 @@ function KPICard({ icon, label, value, color, trend }: {
             color: trend === 'up' ? 'var(--emerald)' : 'var(--rust)',
             display: 'flex', alignItems: 'center', gap: 2,
           }}>
-            {trend === 'up' ? '↑' : '↓'}
+            {trend === 'up' ? <IconTrendingUp size={14} /> : <IconTrendingDown size={14} />}
           </span>
         )}
       </div>
-      <div style={{ fontSize: 32, fontWeight: 800, color, lineHeight: 1.1, position: 'relative' }}>{value}</div>
+      <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: '-0.02em', color, lineHeight: 1.1, position: 'relative' }}>{value}</div>
       <div style={{ color: 'var(--fg-dim)', fontSize: 13, fontWeight: 500, position: 'relative' }}>{label}</div>
     </div>
   )
@@ -131,24 +136,21 @@ function KPICard({ icon, label, value, color, trend }: {
 
 function ActivityFeedItem({ a }: { a: DashboardData['recentActivities'][0] }) {
   const color = activityColor[a.type] || 'var(--gold)'
-  const icon = activityEmoji[a.type] || '📋'
+  const ActivityIcon = activityIconMap[a.type] || IconActivity
   return (
     <Link href={a.company ? `/companies/${a.company.id}` : '#'} style={{ textDecoration: 'none' }}>
-      <div style={{
+      <div className="vega-table-row" style={{
         display: 'flex', gap: 12, padding: '12px 0',
         borderBottom: '1px solid var(--panel-border)',
-        transition: 'background .15s',
-      }}
-        onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
-        onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
-      >
+        borderRadius: 6,
+      }}>
         <div style={{
           width: 32, height: 32, borderRadius: '50%',
           backgroundColor: `${color}22`, color,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, flexShrink: 0,
+          flexShrink: 0,
         }}>
-          {icon}
+          <ActivityIcon size={16} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -194,7 +196,10 @@ function MyTaskItem({ task, onToggle }: {
           {task.title}
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-          <span style={statusBadge(priorityColor[task.priority])}>{task.priority}</span>
+          <span style={statusBadge(priorityColor[task.priority])}>
+            <span style={statusDot(priorityColor[task.priority])} />
+            {task.priority}
+          </span>
           <span style={{
             fontSize: 12,
             color: isOverdue ? 'var(--rust)' : 'var(--fg-dim)',
@@ -216,7 +221,6 @@ function PipelineBar({ stage, deals }: {
   const count = stageDeals.length
   const totalValue = stageDeals.reduce((sum, d) => sum + (d.value || 0), 0)
   const color = stage.color || 'var(--gold)'
-  const maxCount = 1 // will be relative
 
   return (
     <div style={{ marginBottom: 12 }}>
@@ -243,11 +247,11 @@ function PipelineBar({ stage, deals }: {
 
 function QuickActionPanel({ router }: { router: ReturnType<typeof useRouter> }) {
   const actions = [
-    { label: 'Add Company', icon: '🏢', href: '/companies' },
-    { label: 'Add Contact', icon: '👤', href: '/contacts' },
-    { label: 'Log Call', icon: '📞', href: '/activities' },
-    { label: 'Create Task', icon: '☑️', href: '/tasks' },
-    { label: 'Send Email', icon: '✉️', href: '/inbox' },
+    { label: 'Add Company', icon: IconBuilding, href: '/companies' },
+    { label: 'Add Contact', icon: IconUsers, href: '/contacts' },
+    { label: 'Log Call', icon: IconPhone, href: '/activities' },
+    { label: 'Create Task', icon: IconCheckSquare, href: '/tasks' },
+    { label: 'Send Email', icon: IconMail, href: '/inbox' },
   ]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -267,7 +271,7 @@ function QuickActionPanel({ router }: { router: ReturnType<typeof useRouter> }) 
             fontWeight: 500,
           }}
         >
-          <span style={{ fontSize: 18 }}>{a.icon}</span>
+          <a.icon size={18} strokeWidth={1.5} />
           {a.label}
         </button>
       ))}
@@ -296,11 +300,9 @@ function DashboardContent() {
       setDealsData(dealsRes)
       const user = meRes.user
       setCurrentUser(user)
-      // Filter to tasks assigned to current user, not completed
       const assigned = (tasksRes.data || []).filter(
         (t) => t.assignedToId === user.id && t.status !== 'COMPLETED' && t.status !== 'CANCELLED'
       )
-      // Sort by due date (nulls last)
       assigned.sort((a, b) => {
         if (!a.dueDate && !b.dueDate) return 0
         if (!a.dueDate) return 1
@@ -315,9 +317,7 @@ function DashboardContent() {
     }
   }, [])
 
-  useEffect(() => {
-    load()
-  }, [load])
+  useEffect(() => { load() }, [load])
 
   const handleToggleTask = async (taskId: string) => {
     const task = myTasks.find((t) => t.id === taskId)
@@ -359,7 +359,7 @@ function DashboardContent() {
       <h1 style={typeography.title}>Dashboard</h1>
 
       {error && (
-        <div style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: 'var(--rust)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>
+        <div style={{ backgroundColor: 'rgba(184,80,74,0.12)', color: 'var(--rust)', border: '1px solid rgba(184,80,74,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>
           {error}
         </div>
       )}
@@ -371,10 +371,10 @@ function DashboardContent() {
         gap: 16,
         marginBottom: 24,
       }}>
-        <KPICard icon="🏢" label="Total Companies" value={counts.companies} color="var(--blue)" />
-        <KPICard icon="👤" label="Total Contacts" value={counts.contacts} color="var(--emerald)" />
-        <KPICard icon="💠" label="Open Deals Value" value={formatCurrency(openDealsValue)} color="var(--gold)" />
-        <KPICard icon="☑️" label="Open Tasks" value={counts.pendingTasks || counts.tasks} color="var(--cyan)" />
+        <KPICard icon={IconBuilding} label="Total Companies" value={counts.companies} color="var(--blue)" />
+        <KPICard icon={IconUsers} label="Total Contacts" value={counts.contacts} color="var(--emerald)" />
+        <KPICard icon={IconDiamond} label="Open Deals Value" value={formatCurrency(openDealsValue)} color="var(--gold)" />
+        <KPICard icon={IconCheckSquare} label="Open Tasks" value={counts.pendingTasks || counts.tasks} color="var(--cyan)" />
       </div>
 
       {/* ── Row 2: Recent Activity + My Tasks ── */}
@@ -393,11 +393,17 @@ function DashboardContent() {
           {recentActivities.length > 0 ? (
             recentActivities.slice(0, 10).map((a) => <ActivityFeedItem key={a.id} a={a} />)
           ) : (
-            <p style={{ color: 'var(--fg-dim)', padding: '20px 0', textAlign: 'center' }}>No recent activity.</p>
+            <div className="vega-empty-state">
+              <IconActivity size={32} strokeWidth={1.5} />
+              <p className="vega-empty-state-text" style={{ marginTop: 12 }}>No recent activity yet.</p>
+              <Link href="/activities" style={{ ...buttons.small, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <IconPlus size={14} /> Log activity
+              </Link>
+            </div>
           )}
         </div>
 
-        {/* My Tasks */}
+        {/* My Tasks — with empty state CTA */}
         <div className="panel-container" style={panel.container}>
           <div style={{ ...layout.header, marginBottom: 12 }}>
             <h2 style={{ ...typeography.subtitle, margin: 0 }}>My Tasks</h2>
@@ -406,7 +412,13 @@ function DashboardContent() {
           {myTasks.length > 0 ? (
             myTasks.map((t) => <MyTaskItem key={t.id} task={t} onToggle={handleToggleTask} />)
           ) : (
-            <p style={{ color: 'var(--fg-dim)', padding: '20px 0', textAlign: 'center' }}>No open tasks assigned to you.</p>
+            <div className="vega-empty-state">
+              <IconCheckSquare size={32} strokeWidth={1.5} />
+              <p className="vega-empty-state-text" style={{ marginTop: 12 }}>No open tasks — you're all caught up.</p>
+              <Link href="/tasks" style={{ ...buttons.small, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <IconPlus size={14} /> Create a task
+              </Link>
+            </div>
           )}
         </div>
       </div>
@@ -417,16 +429,30 @@ function DashboardContent() {
         gridTemplateColumns: '1.4fr 1fr',
         gap: 16,
       }}>
-        {/* Deals Pipeline Summary */}
+        {/* Deals Pipeline Summary — with empty state CTA */}
         <div className="panel-container" style={panel.container}>
           <div style={{ ...layout.header, marginBottom: 16 }}>
             <h2 style={{ ...typeography.subtitle, margin: 0 }}>Deals Pipeline</h2>
             <Link href="/deals" style={{ color: 'var(--gold)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>View board →</Link>
           </div>
-          {stages.length > 0 ? (
+          {stages.length > 0 && allDeals.length > 0 ? (
             stages.map((stage) => <PipelineBar key={stage.id} stage={stage} deals={allDeals} />)
+          ) : stages.length > 0 ? (
+            <div className="vega-empty-state">
+              <IconDiamond size={32} strokeWidth={1.5} />
+              <p className="vega-empty-state-text" style={{ marginTop: 12 }}>No deals yet — create your first deal to start tracking.</p>
+              <Link href="/deals" style={{ ...buttons.small, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <IconPlus size={14} /> Create your first deal
+              </Link>
+            </div>
           ) : (
-            <p style={{ color: 'var(--fg-dim)', padding: '20px 0', textAlign: 'center' }}>No pipeline stages configured.</p>
+            <div className="vega-empty-state">
+              <IconDiamond size={32} strokeWidth={1.5} />
+              <p className="vega-empty-state-text" style={{ marginTop: 12 }}>No pipeline stages configured.</p>
+              <Link href="/settings" style={{ ...buttons.small, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                Configure pipeline
+              </Link>
+            </div>
           )}
         </div>
 

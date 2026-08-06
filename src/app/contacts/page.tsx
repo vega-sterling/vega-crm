@@ -2,14 +2,20 @@
 
 // ============================================================================
 // File: src/app/contacts/page.tsx
-// Phase 3: Enhanced contacts list with search bar, company filter, sort,
-// table/card grid toggle. Fully responsive.
+// Description: Enhanced contacts list with search bar, company filter, sort,
+//              table/card grid toggle, pagination, and hover row actions.
+//              Phase 1-3 UI/UX: SVG icons, avatar initials, hover-only delete
+//              via ⋯ menu, pagination, inline "Add email/phone" CTAs.
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import ProtectedLayout from '../components/ProtectedLayout'
 import Spinner from '../components/Spinner'
+import Avatar from '../components/Avatar'
+import RowActions from '../components/RowActions'
+import Pagination from '../components/Pagination'
+import { IconSearch, IconMail, IconPhone, IconPlus } from '../components/Icons'
 import { apiFetch } from '../lib/api'
 import { layout, panel, typeography, forms, buttons, table } from '../lib/styles'
 import type { Contact, Company, Tenant } from '../lib/types'
@@ -21,6 +27,8 @@ const formatDate = (d?: string) => {
 
 type ViewMode = 'table' | 'card'
 type SortMode = 'name-asc' | 'name-desc' | 'recent'
+
+const PAGE_SIZE = 10
 
 interface ContactListItem extends Contact {
   company?: { id: string; name: string } | null
@@ -40,6 +48,7 @@ function ContactsContent() {
   const [companyFilter, setCompanyFilter] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('name-asc')
   const [viewMode, setViewMode] = useState<ViewMode>('table')
+  const [page, setPage] = useState(1)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editingContact, setEditingContact] = useState<ContactListItem | null>(null)
@@ -68,6 +77,9 @@ function ContactsContent() {
 
   useEffect(() => { load() }, [load])
 
+  // Reset page when filters change
+  useEffect(() => { setPage(1) }, [search, companyFilter, sortMode])
+
   // Filtered + sorted contacts
   const filtered = useMemo(() => {
     let result = [...contacts]
@@ -90,6 +102,13 @@ function ContactsContent() {
     }
     return result
   }, [contacts, search, companyFilter, sortMode])
+
+  // Paginated slice
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paginated = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return filtered.slice(start, start + PAGE_SIZE)
+  }, [filtered, page])
 
   const openNew = () => {
     setEditingContact(null)
@@ -158,17 +177,24 @@ function ContactsContent() {
               color: viewMode === 'card' ? 'var(--gold)' : 'var(--fg-dim)', border: 'none',
             }}>Cards</button>
           </div>
-          <button className="btn-touch" style={buttons.primary} onClick={openNew}>+ New Contact</button>
+          <button className="btn-touch" style={{ ...buttons.primary, display: 'flex', alignItems: 'center', gap: 6 }} onClick={openNew}>
+            <IconPlus size={16} /> New Contact
+          </button>
         </div>
       </div>
 
       {error && (
-        <div style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: 'var(--rust)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>{error}</div>
+        <div style={{ backgroundColor: 'rgba(184,80,74,0.12)', color: 'var(--rust)', border: '1px solid rgba(184,80,74,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>{error}</div>
       )}
 
       {/* ── Toolbar: Search + Company Filter + Sort ── */}
       <div className="list-toolbar" style={toolbarStyle}>
-        <input className="form-input" style={{ ...forms.input, flex: 1, minWidth: 200 }} placeholder="Search by name, email, or company…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-dim)', display: 'flex', alignItems: 'center' }}>
+            <IconSearch size={16} strokeWidth={1.5} />
+          </span>
+          <input className="form-input" style={{ ...forms.input, paddingLeft: 36 }} placeholder="Search by name, email, or company…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
         <select className="form-select" style={selectStyle} value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)}>
           <option value="">All Companies</option>
           {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -197,31 +223,64 @@ function ContactsContent() {
                   <th style={table.th}>Email</th>
                   <th style={table.th}>Phone</th>
                   <th style={table.th}>Created</th>
-                  <th style={table.th}></th>
+                  <th style={{ ...table.th, width: 120 }}></th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={7} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center' }}>No contacts found.</td></tr>
+                {paginated.length === 0 ? (
+                  <tr><td colSpan={7} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center', padding: 32 }}>No contacts found.</td></tr>
                 ) : (
-                  filtered.map((c) => (
-                    <tr key={c.id} style={table.tr}>
-                      <td style={table.td}><Link href={`/contacts/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)' }}>{c.firstName} {c.lastName}</Link></td>
+                  paginated.map((c) => (
+                    <tr key={c.id} className="vega-table-row" style={table.tr}>
+                      <td style={table.td}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <Avatar name={`${c.firstName} ${c.lastName}`} size={32} />
+                          <Link href={`/contacts/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)' }}>{c.firstName} {c.lastName}</Link>
+                        </div>
+                      </td>
                       <td style={table.td}>{c.title || '—'}</td>
                       <td style={table.td}>{c.company?.name || '—'}</td>
-                      <td style={table.td}>{c.email || '—'}</td>
-                      <td style={table.td}>{c.phone || '—'}</td>
+                      <td style={table.td}>
+                        {c.email ? (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <IconMail size={14} strokeWidth={1.5} />
+                            {c.email}
+                          </span>
+                        ) : (
+                          <button onClick={() => openEdit(c)} style={{ background: 'none', border: 'none', color: 'var(--fg-dimmer)', fontSize: 13, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <IconPlus size={12} /> Add email
+                          </button>
+                        )}
+                      </td>
+                      <td style={table.td}>
+                        {c.phone ? (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <IconPhone size={14} strokeWidth={1.5} />
+                            {c.phone}
+                          </span>
+                        ) : (
+                          <button onClick={() => openEdit(c)} style={{ background: 'none', border: 'none', color: 'var(--fg-dimmer)', fontSize: 13, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <IconPlus size={12} /> Add phone
+                          </button>
+                        )}
+                      </td>
                       <td style={{ ...table.td, color: 'var(--fg-dim)', fontSize: 12 }}>{formatDate(c.createdAt)}</td>
-                      <td style={table.td}><div style={{ display: 'flex', gap: 8 }}>
-                        <button style={buttons.small} onClick={() => openEdit(c)}>Edit</button>
-                        <button style={buttons.danger} onClick={() => handleDelete(c)}>Delete</button>
-                      </div></td>
+                      <td style={table.td}>
+                        <RowActions onEdit={() => openEdit(c)} onDelete={() => handleDelete(c)} />
+                      </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </div>
       ) : (
         /* ── Card Grid View ── */
@@ -235,13 +294,7 @@ function ContactsContent() {
               <Link key={c.id} href={`/contacts/${c.id}`} style={{ textDecoration: 'none' }}>
                 <div className="panel-container" style={{ ...panel.container, height: '100%', cursor: 'pointer' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
-                    <div style={{
-                      width: 44, height: 44, borderRadius: '50%', backgroundColor: 'var(--bg-soft)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 18, fontWeight: 700, color: 'var(--gold)', flexShrink: 0,
-                    }}>
-                      {c.firstName?.[0] || '?'}{c.lastName?.[0] || ''}
-                    </div>
+                    <Avatar name={`${c.firstName} ${c.lastName}`} size={44} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--fg)' }}>{c.firstName} {c.lastName}</div>
                       <div style={{ fontSize: 13, color: 'var(--fg-dim)' }}>{c.title || 'No title'}</div>
@@ -251,8 +304,8 @@ function ContactsContent() {
                     {c.company?.name || 'No company'}
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--fg-dim)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {c.email && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✉️ {c.email}</span>}
-                    {c.phone && <span>📞 {c.phone}</span>}
+                    {c.email && <span style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><IconMail size={14} /> {c.email}</span>}
+                    {c.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconPhone size={14} /> {c.phone}</span>}
                   </div>
                   <div style={{ marginTop: 12, fontSize: 12, color: 'var(--fg-dimmer)', borderTop: '1px solid var(--panel-border)', paddingTop: 8 }}>
                     Added {formatDate(c.createdAt)}
@@ -267,7 +320,7 @@ function ContactsContent() {
       {/* ── New/Edit Modal ── */}
       {modalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }} onClick={() => setModalOpen(false)}>
-          <div style={{ ...panel.container, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...panel.container, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', boxShadow: 'var(--shadow-lg)' }} onClick={(e) => e.stopPropagation()}>
             <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{editingContact ? 'Edit Contact' : 'New Contact'}</h2>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <label style={forms.group}><span style={forms.label}>Tenant</span>

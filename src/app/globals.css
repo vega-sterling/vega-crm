@@ -2,31 +2,59 @@
    Vega CRM — Global Styles
    Dark (default) and Light themes via [data-theme] attribute
    CSS variables consumed by inline styles throughout the app
+
+   Phase 2 UI/UX improvements:
+   - Curated color palette (deep gold, muted slate blue, sage, terracotta)
+   - Dark mode: #0f1117 base, #1a1d27 cards, #252830 hover
+   - Radial gradient backgrounds instead of flat black
+   - Card shadows for depth, border-glow on hover
+   - Typography: letter-spacing -0.02em on headings
    ============================================================================ */
 
 :root {
-  /* Dark theme (default) */
-  --bg: #0a0b0f;
-  --bg-soft: #12141a;
-  --panel: #1a1d26;
+  /* Dark theme (default) — refined palette */
+  --bg: #0f1117;
+  --bg-soft: #1a1d27;
+  --bg-gradient: radial-gradient(ellipse at top, #1a1d27 0%, #0f1117 60%);
+  --panel: #1a1d27;
   --panel-border: #2a2e3a;
   --panel-border-hot: #3a3e4a;
-  --panel-elevated: #22252f;
+  --panel-elevated: #252830;
   --fg: #e8e8ec;
   --fg-dim: #8b8d98;
   --fg-dimmer: #5a5c68;
-  --gold: #c9a96e;
+
+  /* Curated accent palette */
+  --gold: #b8924a;           /* Primary — deep gold */
   --gold-soft: #d4b883;
-  --emerald: #4ade80;
-  --rust: #e57373;
-  --blue: #60a5fa;
-  --cyan: #22d3ee;
-  --violet: #a78bfa;
+  --emerald: #5a8a5a;        /* Success — sage green */
+  --rust: #b8504a;           /* Danger — muted terracotta */
+  --blue: #4a6b8a;           /* Secondary — muted slate blue */
+  --cyan: #4a8a8a;
+  --violet: #7a6b9a;
+  --amber: #c4924a;          /* Warning — warm amber */
+  --grey: #6a6c78;           /* Neutral — for CANCELLED status */
+
+  /* Shadows for depth */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.08);
+  --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 20px rgba(0,0,0,0.15), 0 3px 6px rgba(0,0,0,0.08);
+
+  /* Status badge colors */
+  --status-active: #5a8a5a;
+  --status-cancelled: #6a6c78;
+  --status-hold: #c4924a;
+  --status-contaminated: #b8504a;
+  --status-open: #4a6b8a;
+  --status-won: #5a8a5a;
+  --status-lost: #b8504a;
 }
 
 [data-theme="light"] {
   --bg: #f8f9fb;
   --bg-soft: #f0f1f4;
+  --bg-gradient: radial-gradient(ellipse at top, #f0f1f4 0%, #f8f9fb 60%);
   --panel: #ffffff;
   --panel-border: #e0e1e6;
   --panel-border-hot: #c0c1c6;
@@ -34,13 +62,29 @@
   --fg: #1a1d26;
   --fg-dim: #6a6c78;
   --fg-dimmer: #9a9ca8;
+
   --gold: #8a7440;
   --gold-soft: #a88c52;
-  --emerald: #16a34a;
-  --rust: #dc2626;
-  --blue: #2563eb;
-  --cyan: #0891b2;
-  --violet: #7c3aed;
+  --emerald: #4a7a4a;
+  --rust: #b8504a;
+  --blue: #4a6b8a;
+  --cyan: #4a8a8a;
+  --violet: #7a6b9a;
+  --amber: #b8864a;
+  --grey: #8a8c98;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.03);
+  --shadow-lg: 0 10px 20px rgba(0,0,0,0.08), 0 3px 6px rgba(0,0,0,0.04);
+
+  --status-active: #4a7a4a;
+  --status-cancelled: #8a8c98;
+  --status-hold: #b8864a;
+  --status-contaminated: #b8504a;
+  --status-open: #4a6b8a;
+  --status-won: #4a7a4a;
+  --status-lost: #b8504a;
 }
 
 * {
@@ -52,10 +96,30 @@
 html,
 body {
   background-color: var(--bg);
+  background-image: var(--bg-gradient);
+  background-attachment: fixed;
   color: var(--fg);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+/* Typography upgrades */
+h1 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+h2 {
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+h3 {
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
 }
 
 a {
@@ -91,6 +155,159 @@ input:focus, select:focus, textarea:focus {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--panel-border-hot);
+}
+
+/* ============================================================================
+   Component styles — cards, tables, avatars, dropdowns, pagination
+   ============================================================================ */
+
+/* Panel containers — depth shadows + border-glow on hover */
+.panel-container {
+  box-shadow: var(--shadow);
+  transition: box-shadow .2s, border-color .2s;
+}
+.panel-container:hover {
+  border-color: var(--panel-border-hot) !important;
+}
+
+/* KPI cards — subtle hover lift */
+.kpi-card:hover {
+  box-shadow: var(--shadow-md) !important;
+  border-color: var(--panel-border-hot) !important;
+}
+
+/* Table rows — hover state with background change */
+.vega-table-row {
+  transition: background .15s;
+}
+.vega-table-row:hover {
+  background-color: var(--panel-elevated);
+}
+
+/* Row actions — hidden by default, revealed on row hover */
+.vega-row-actions {
+  opacity: 0;
+  transition: opacity .15s;
+}
+.vega-table-row:hover .vega-row-actions {
+  opacity: 1;
+}
+/* Always show on touch devices */
+@media (max-width: 768px) {
+  .vega-row-actions {
+    opacity: 1 !important;
+  }
+}
+
+/* Avatar — colored initials circle */
+.vega-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 600;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* Dropdown menu — for row actions ⋯ button */
+.vega-dropdown {
+  position: relative;
+}
+.vega-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background-color: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  min-width: 160px;
+  padding: 4px;
+  z-index: 50;
+}
+.vega-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.vega-dropdown-item:hover {
+  background-color: var(--panel-elevated);
+}
+.vega-dropdown-item.danger {
+  color: var(--rust);
+}
+.vega-dropdown-item.danger:hover {
+  background-color: rgba(184,80,74,0.12);
+}
+
+/* Pagination controls */
+.vega-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0 0;
+  margin-top: 8px;
+  border-top: 1px solid var(--panel-border);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.vega-page-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background-color: transparent;
+  color: var(--fg-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.vega-page-btn:hover:not(:disabled):not(.active) {
+  border-color: var(--panel-border-hot);
+  color: var(--fg);
+  background-color: var(--panel-elevated);
+}
+.vega-page-btn.active {
+  background-color: var(--gold);
+  color: var(--bg);
+  border-color: var(--gold);
+}
+.vega-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Empty state — centered call-to-action */
+.vega-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--fg-dim);
+}
+.vega-empty-state-text {
+  font-size: 14px;
+  color: var(--fg-dim);
+  margin: 0;
 }
 
 /* ============================================================================

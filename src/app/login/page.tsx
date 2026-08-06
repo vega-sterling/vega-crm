@@ -1,5 +1,12 @@
 'use client'
 
+// ============================================================================
+// File: src/app/login/page.tsx
+// Description: Login page with email/password + optional 2FA TOTP.
+//              Phase 1-3 UI/UX: text logo, "Forgot Password?" link,
+//              refined typography, depth shadows, radial gradient background.
+// ============================================================================
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { apiFetch } from '../lib/api'
@@ -60,6 +67,7 @@ export default function LoginPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          backgroundImage: 'var(--bg-gradient)',
           backgroundColor: 'var(--bg)',
         }}
       >
@@ -75,11 +83,13 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundImage: 'var(--bg-gradient)',
         backgroundColor: 'var(--bg)',
         padding: 24,
       }}
     >
       <div
+        className="panel-container"
         style={{
           width: '100%',
           maxWidth: 400,
@@ -87,31 +97,20 @@ export default function LoginPage() {
           border: '1px solid var(--panel-border)',
           borderRadius: 16,
           padding: 32,
+          boxShadow: 'var(--shadow-lg)',
         }}
       >
+        {/* Text logo — no box */}
         <div style={{ marginBottom: 24 }}>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 9,
-              backgroundColor: 'var(--gold)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--bg)',
-              fontWeight: 800,
-              fontSize: 18,
-            }}
-          >
-            V
-          </div>
+          <span style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--fg)' }}>
+            VEGA<span style={{ color: 'var(--gold)' }}> CRM</span>
+          </span>
         </div>
 
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', margin: '0 0 6px' }}>
           {needsTotp ? 'Two-factor authentication' : 'Sign in'}
         </h1>
-        <p style={{ color: 'var(--fg-dim)', margin: '0 0 24px', fontSize: 14 }}>
+        <p style={{ color: 'var(--fg-dim)', margin: '0 0 24px', fontSize: 14, fontWeight: 400 }}>
           {needsTotp
             ? 'Enter the 6-digit code from your authenticator app.'
             : 'Enter your credentials to continue.'}
@@ -120,9 +119,9 @@ export default function LoginPage() {
         {error && (
           <div
             style={{
-              backgroundColor: 'rgba(239,68,68,0.12)',
-              color: 'var(--error)',
-              border: '1px solid rgba(239,68,68,0.3)',
+              backgroundColor: 'rgba(184,80,74,0.12)',
+              color: 'var(--rust)',
+              border: '1px solid rgba(184,80,74,0.3)',
               borderRadius: 8,
               padding: '10px 12px',
               marginBottom: 16,
@@ -214,7 +213,7 @@ export default function LoginPage() {
                 maxLength={6}
                 required
                 value={totpCode}
-                onChange={(e) => setTotpCode(e.target.value.replace(/\\D/g, ''))}
+                onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
                 placeholder="000000"
                 style={{
                   width: '100%',
@@ -243,6 +242,8 @@ export default function LoginPage() {
               fontWeight: 700,
               fontSize: 15,
               opacity: loading ? 0.7 : 1,
+              cursor: 'pointer',
+              transition: 'opacity .2s',
             }}
           >
             {loading ? (
@@ -255,6 +256,27 @@ export default function LoginPage() {
               'Sign in'
             )}
           </button>
+
+          {/* Forgot Password link — below Sign In button */}
+          {!needsTotp && (
+            <div style={{ textAlign: 'center', marginTop: 4 }}>
+              <a
+                href="mailto:support@vega-sterling.com?subject=Password%20Reset%20Request"
+                style={{
+                  color: 'var(--fg-dim)',
+                  fontSize: 13,
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                  transition: 'color .2s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--fg-dim)')}
+              >
+                Forgot password?
+              </a>
+            </div>
+          )}
+
           {needsTotp && (
             <button
               type="button"
@@ -266,15 +288,13 @@ export default function LoginPage() {
                 border: 'none',
                 fontSize: 13,
                 marginTop: 4,
+                cursor: 'pointer',
               }}
             >
               ← Back to credentials
             </button>
           )}
         </form>
-        <p style={{ color: 'var(--fg-dim)', fontSize: 12, marginTop: 24, textAlign: 'center' }}>
-          &nbsp;
-        </p>
       </div>
     </div>
   )
