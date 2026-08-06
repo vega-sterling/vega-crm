@@ -36,3 +36,28 @@ earth.servers.onl {
 http://earth.servers.onl {
     redir https://earth.servers.onl{uri} permanent
 }
+# ============================================================================
+# MycoOS — Mushroom Cultivation SaaS (port 8443)
+# ============================================================================
+# HTTPS via the same earth.servers.onl cert
+# Reverse proxy to MycoOS Next.js app (mycoos-app:3000)
+# ============================================================================
+
+:8443 {
+    reverse_proxy mycoos-app:3000
+
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    encode gzip zstd
+
+    log {
+        output file /data/mycoos-access.log {
+            roll_size 100mb
+            roll_keep 5
+        }
+    }
+}
