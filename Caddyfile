@@ -55,3 +55,36 @@ earth.servers.onl:8443 {
 
     encode gzip zstd
 }
+
+# ============================================================================
+# MycoOS — Wildcard subdomain routing for tenant subdomains on port 8444
+# ============================================================================
+# Routes *.mycoos.earth.servers.onl to mycoos-app:3000
+# Uses the same LE cert as the main earth.servers.onl domain
+# ============================================================================
+
+mycoos.earth.servers.onl:8444 {
+    tls /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/earth.servers.onl/earth.servers.onl.crt /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/earth.servers.onl/earth.servers.onl.key
+
+    reverse_proxy mycoos-app:3000
+
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+    }
+
+    encode gzip zstd
+}
+
+*.mycoos.earth.servers.onl:8444 {
+    tls /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/earth.servers.onl/earth.servers.onl.crt /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/earth.servers.onl/earth.servers.onl.key
+
+    reverse_proxy mycoos-app:3000
+
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+    }
+
+    encode gzip zstd
+}
