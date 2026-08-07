@@ -2,11 +2,19 @@
 
 // ============================================================================
 // File: src/app/deals/page.tsx
-// Description: Kanban board with drag-and-drop between pipeline stages.
+// Description: Deal Pipeline — Kanban board + List view with bulk actions.
+//
+//              Kanban view: drag-and-drop between pipeline stages.
 //              Each deal card shows company name, deal value, contact name,
 //              probability badge. Inline "Add Deal" form.
-//              Phase 3 UI/UX: column totals at top of each stage, SVG icons,
+//              Column totals at top of each stage, SVG icons,
 //              refined color palette, depth shadows, empty state CTA.
+//
+//              List view (Phase 6): sortable, filterable table with
+//              checkboxes for bulk operations — Move Stage, Reassign,
+//              Export CSV, Delete. Follows HubSpot/Pipedrive bulk action
+//              patterns: select-all checkbox, contextual action bar,
+//              clear feedback. Responsive: table → cards on mobile.
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
@@ -14,9 +22,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ProtectedLayout from '../components/ProtectedLayout'
 import Spinner from '../components/Spinner'
-import { IconPlus, IconDiamond } from '../components/Icons'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { IconPlus, IconDiamond, IconKanban, IconClipboard, IconTrash, IconArrowLeft } from '../components/Icons'
 import { apiFetch } from '../lib/api'
-import { layout, panel, typeography, forms, buttons, statusBadge, statusDot } from '../lib/styles'
+import { layout, panel, typeography, forms, buttons, statusBadge, statusDot, table } from '../lib/styles'
 import type { Deal, PipelineStage, Company, Contact, User, Tenant } from '../lib/types'
 
 const currencyFmt = (n: number, currency = 'USD') =>
@@ -31,6 +40,9 @@ interface DealsResponse {
     assignee?: { id: string; name: string } | null
   })[]
 }
+
+type SortField = 'title' | 'value' | 'probability' | 'company' | 'stage' | 'assignee' | 'updatedAt'
+type SortDir = 'asc' | 'desc'
 
 function DealsContent() {
   const router = useRouter()
@@ -47,6 +59,25 @@ function DealsContent() {
   const [submitting, setSubmitting] = useState(false)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverStage, setDragOverStage] = useState<string | null>(null)
+
+  // ── View mode: Kanban | List ──
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
+
+  // ── List view: selection, sorting, filtering ──
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [sortField, setSortField] = useState<SortField>('updatedAt')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterStageId, setFilterStageId] = useState('')
+  const [filterAssigneeId, setFilterAssigneeId] = useState('')
+
+  // ── Bulk action UI state ──
+  const [bulkAction, setBulkAction] = useState<'moveStage' | 'reassign' | 'delete' | null>(null)
+  const [bulkStageId, setBulkStageId] = useState('')
+  const [bulkAssigneeId, setBulkAssigneeId] = useState('')
+  const [bulkSubmitting, setBulkSubmitting] = useState(false)
+  const [bulkResult, setBulkResult] = useState('')
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
 
   const [form, setForm] = useState({
     title: '', companyId: '', contactId: '', tenantId: '',
@@ -81,6 +112,175 @@ function DealsContent() {
   const totalValue = useMemo(() =>
     (deals || []).reduce((sum, d) => sum + (d.value || 0), 0), [deals]
   )
+
+  // ── Filtered + sorted deals for list view ──
+  const filteredDeals = useMemo(() => {
+    let result = deals || []
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter(d =>
+        d.title?.toLowerCase().includes(q) ||
+        d.company?.name?.toLowerCase().includes(q) ||
+        d.contact?.firstName?.toLowerCase().includes(q) ||
+        d.contact?.lastName?.toLowerCase().includes(q) ||
+        d.assignee?.name?.toLowerCase().includes(q)
+      )
+    }
+    if (filterStageId) result = result.filter(d => d.stageId === filterStageId)
+    if (filterAssigneeId) result = result.filter(d => d.assignedToId === filterAssigneeId)
+
+    // Sort
+    result = [...result].sort((a, b) => {
+      let cmp = 0
+      switch (sortField) {
+        case 'title': cmp = (a.title || '').localeCompare(b.title || ''); break
+        case 'value': cmp = (a.value || 0) - (b.value || 0); break
+        case 'probability': cmp = (a.probability || 0) - (b.probability || 0); break
+        case 'company': cmp = (a.company?.name || '').localeCompare(b.company?.name || ''); break
+        case 'stage': cmp = (a.stage?.name || '').localeCompare(b.stage?.name || ''); break
+        case 'assignee': cmp = (a.assignee?.name || '').localeCompare(b.assignee?.name || ''); break
+        case 'updatedAt': cmp = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime(); break
+      }
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    return result
+  }, [deals, searchQuery, filterStageId, filterAssigneeId, sortField, sortDir])
+
+  const allVisibleIds = filteredDeals.map(d => d.id)
+  const allSelected = allVisibleIds.length > 0 && allVisibleIds.every(id => selectedIds.has(id))
+  const someSelected = allVisibleIds.some(id => selectedIds.has(id)) && !allSelected
+  const selectedCount = selectedIds.size
+
+  const toggleSelectAll = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (allSelected) {
+        allVisibleIds.forEach(id => next.delete(id))
+      } else {
+        allVisibleIds.forEach(id => next.add(id))
+      }
+      return next
+    })
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const clearSelection = () => {
+    setSelectedIds(new Set())
+    setBulkAction(null)
+    setBulkResult('')
+  }
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDir('asc')
+    }
+  }
+
+  // ── Bulk action handlers ──
+  const handleBulkMoveStage = async () => {
+    if (!bulkStageId || selectedCount === 0) return
+    setBulkSubmitting(true)
+    setBulkResult('')
+    try {
+      const result = await apiFetch<{ updated: number }>('/api/deals/bulk', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'moveStage', dealIds: [...selectedIds], stageId: bulkStageId }),
+      })
+      setBulkResult(`✓ Moved ${result.updated} deal${result.updated !== 1 ? 's' : ''} to new stage`)
+      // Refresh deals
+      await load()
+      setBulkAction(null)
+      setBulkStageId('')
+      setTimeout(() => clearSelection(), 2000)
+    } catch (err: any) {
+      setBulkResult(`✗ ${err.message || 'Failed to move deals'}`)
+    } finally {
+      setBulkSubmitting(false)
+    }
+  }
+
+  const handleBulkReassign = async () => {
+    if (!bulkAssigneeId || selectedCount === 0) return
+    setBulkSubmitting(true)
+    setBulkResult('')
+    try {
+      const result = await apiFetch<{ updated: number }>('/api/deals/bulk', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'reassign', dealIds: [...selectedIds], assignedToId: bulkAssigneeId }),
+      })
+      setBulkResult(`✓ Reassigned ${result.updated} deal${result.updated !== 1 ? 's' : ''}`)
+      await load()
+      setBulkAction(null)
+      setBulkAssigneeId('')
+      setTimeout(() => clearSelection(), 2000)
+    } catch (err: any) {
+      setBulkResult(`✗ ${err.message || 'Failed to reassign deals'}`)
+    } finally {
+      setBulkSubmitting(false)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    setConfirmBulkDelete(false)
+    setBulkSubmitting(true)
+    setBulkResult('')
+    try {
+      const result = await apiFetch<{ updated: number }>('/api/deals/bulk', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'delete', dealIds: [...selectedIds] }),
+      })
+      setBulkResult(`✓ Deleted ${result.updated} deal${result.updated !== 1 ? 's' : ''}`)
+      await load()
+      setBulkAction(null)
+      setTimeout(() => clearSelection(), 2000)
+    } catch (err: any) {
+      setBulkResult(`✗ ${err.message || 'Failed to delete deals'}`)
+    } finally {
+      setBulkSubmitting(false)
+    }
+  }
+
+  const handleBulkExport = () => {
+    const selected = (deals || []).filter(d => selectedIds.has(d.id))
+    if (selected.length === 0) return
+
+    const headers = ['Title', 'Company', 'Contact', 'Stage', 'Value', 'Currency', 'Probability', 'Status', 'Assignee', 'Expected Close', 'Created']
+    const rows = selected.map(d => [
+      `"${(d.title || '').replace(/"/g, '""')}"`,
+      `"${(d.company?.name || '').replace(/"/g, '""')}"`,
+      `"${d.contact ? `${d.contact.firstName} ${d.contact.lastName}` : ''}"`,
+      `"${(d.stage?.name || '').replace(/"/g, '""')}"`,
+      d.value || 0,
+      d.currency || 'USD',
+      `${d.probability || 0}%`,
+      d.status || 'OPEN',
+      `"${(d.assignee?.name || '').replace(/"/g, '""')}"`,
+      d.expectedCloseDate ? new Date(d.expectedCloseDate).toISOString().split('T')[0] : '',
+      new Date(d.createdAt).toISOString().split('T')[0],
+    ].join(','))
+
+    const csv = [headers.join(','), ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vega-deals-export-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    setBulkResult(`✓ Exported ${selected.length} deal${selected.length !== 1 ? 's' : ''} to CSV`)
+    setTimeout(() => { setBulkResult(''); setBulkAction(null) }, 3000)
+  }
 
   const openNew = () => {
     const tenantId = tenants[0]?.id || ''
@@ -157,9 +357,52 @@ function DealsContent() {
             Pipeline value {currencyFmt(totalValue)} · {(deals || []).length} deals · {stages.length} stages
           </div>
         </div>
-        <button className="btn-touch" style={{ ...buttons.primary, display: 'flex', alignItems: 'center', gap: 6 }} onClick={openNew}>
-          <IconPlus size={16} /> Add Deal
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {/* View toggle */}
+          <div style={{ display: 'flex', border: '1px solid var(--panel-border)', borderRadius: 8, overflow: 'hidden' }}>
+            <button
+              className="btn-touch"
+              onClick={() => setViewMode('kanban')}
+              style={{
+                padding: '8px 14px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: viewMode === 'kanban' ? 'var(--gold)' : 'var(--panel)',
+                color: viewMode === 'kanban' ? 'var(--bg)' : 'var(--fg-dim)',
+                transition: 'all .2s',
+              }}
+            >
+              <IconKanban size={16} /> Board
+            </button>
+            <button
+              className="btn-touch"
+              onClick={() => setViewMode('list')}
+              style={{
+                padding: '8px 14px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: viewMode === 'list' ? 'var(--gold)' : 'var(--panel)',
+                color: viewMode === 'list' ? 'var(--bg)' : 'var(--fg-dim)',
+                transition: 'all .2s',
+              }}
+            >
+              <IconClipboard size={16} /> List
+            </button>
+          </div>
+          <button className="btn-touch" style={{ ...buttons.primary, display: 'flex', alignItems: 'center', gap: 6 }} onClick={openNew}>
+            <IconPlus size={16} /> Add Deal
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -251,8 +494,348 @@ function DealsContent() {
         </div>
       )}
 
-      {/* ── Kanban Board ── */}
-      {stages.length > 0 ? (
+      {/* ── BULK ACTION BAR — appears when deals are selected ── */}
+      {viewMode === 'list' && selectedCount > 0 && (
+        <div
+          className="panel-container bulk-action-bar"
+          style={{
+            ...panel.compact,
+            position: 'sticky',
+            top: 72,
+            zIndex: 30,
+            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+            backgroundColor: 'var(--panel-elevated)',
+            borderColor: 'var(--gold)',
+            boxShadow: 'var(--shadow-md)',
+          }}
+        >
+          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--gold)', whiteSpace: 'nowrap' }}>
+            {selectedCount} selected
+          </span>
+
+          {/* Inline bulk action buttons */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button
+              className="btn-touch"
+              style={{ ...buttons.small, display: 'flex', alignItems: 'center', gap: 4 }}
+              onClick={() => { setBulkAction('moveStage'); setBulkResult('') }}
+            >
+              Move Stage
+            </button>
+            <button
+              className="btn-touch"
+              style={{ ...buttons.small, display: 'flex', alignItems: 'center', gap: 4 }}
+              onClick={() => { setBulkAction('reassign'); setBulkResult('') }}
+            >
+              Reassign
+            </button>
+            <button
+              className="btn-touch"
+              style={{ ...buttons.small, display: 'flex', alignItems: 'center', gap: 4 }}
+              onClick={handleBulkExport}
+            >
+              Export CSV
+            </button>
+            <button
+              className="btn-touch"
+              style={{ ...buttons.danger, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
+              onClick={() => setConfirmBulkDelete(true)}
+            >
+              <IconTrash size={14} /> Delete
+            </button>
+          </div>
+
+          {/* Inline Move Stage controls */}
+          {bulkAction === 'moveStage' && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <select
+                className="form-select"
+                style={{ ...forms.select, width: 'auto', minWidth: 180, padding: '6px 10px', fontSize: 13 }}
+                value={bulkStageId}
+                onChange={(e) => setBulkStageId(e.target.value)}
+              >
+                <option value="">Select target stage…</option>
+                {stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <button
+                className="btn-touch"
+                style={{ ...buttons.primary, padding: '6px 14px', fontSize: 13, opacity: (!bulkStageId || bulkSubmitting) ? 0.5 : 1 }}
+                disabled={!bulkStageId || bulkSubmitting}
+                onClick={handleBulkMoveStage}
+              >
+                {bulkSubmitting ? 'Moving…' : 'Apply'}
+              </button>
+              <button className="btn-touch" style={buttons.secondary} onClick={() => { setBulkAction(null); setBulkStageId('') }}>
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {/* Inline Reassign controls */}
+          {bulkAction === 'reassign' && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <select
+                className="form-select"
+                style={{ ...forms.select, width: 'auto', minWidth: 180, padding: '6px 10px', fontSize: 13 }}
+                value={bulkAssigneeId}
+                onChange={(e) => setBulkAssigneeId(e.target.value)}
+              >
+                <option value="">Select new owner…</option>
+                {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+              <button
+                className="btn-touch"
+                style={{ ...buttons.primary, padding: '6px 14px', fontSize: 13, opacity: (!bulkAssigneeId || bulkSubmitting) ? 0.5 : 1 }}
+                disabled={!bulkAssigneeId || bulkSubmitting}
+                onClick={handleBulkReassign}
+              >
+                {bulkSubmitting ? 'Assigning…' : 'Apply'}
+              </button>
+              <button className="btn-touch" style={buttons.secondary} onClick={() => { setBulkAction(null); setBulkAssigneeId('') }}>
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {/* Clear selection + result feedback */}
+          <button
+            onClick={clearSelection}
+            style={{
+              background: 'transparent', border: 'none', color: 'var(--fg-dim)', cursor: 'pointer',
+              fontSize: 13, marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4,
+              padding: '4px 8px', borderRadius: 6,
+            }}
+            className="btn-touch"
+          >
+            Clear
+          </button>
+
+          {bulkResult && (
+            <div style={{
+              width: '100%',
+              fontSize: 13,
+              fontWeight: 600,
+              color: bulkResult.startsWith('✓') ? 'var(--emerald)' : 'var(--rust)',
+              padding: '8px 0 0',
+            }}>
+              {bulkResult}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── LIST VIEW ── */}
+      {viewMode === 'list' && (
+        <>
+          {/* Filter bar */}
+          <div className="list-toolbar" style={{
+            ...panel.compact,
+            display: 'flex',
+            gap: 12,
+            alignItems: 'center',
+            marginBottom: 16,
+            flexWrap: 'wrap',
+          }}>
+            <input
+              className="form-input"
+              style={{ ...forms.input, width: 'auto', minWidth: 220, flex: 1 }}
+              placeholder="Search deals…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <select
+              className="form-select"
+              style={{ ...forms.select, width: 'auto', minWidth: 140 }}
+              value={filterStageId}
+              onChange={(e) => setFilterStageId(e.target.value)}
+            >
+              <option value="">All stages</option>
+              {stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <select
+              className="form-select"
+              style={{ ...forms.select, width: 'auto', minWidth: 140 }}
+              value={filterAssigneeId}
+              onChange={(e) => setFilterAssigneeId(e.target.value)}
+            >
+              <option value="">All assignees</option>
+              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+            <span style={{ color: 'var(--fg-dim)', fontSize: 13, whiteSpace: 'nowrap' }}>
+              {filteredDeals.length} deal{filteredDeals.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          {/* Desktop table view */}
+          <div className="panel-container list-table-view" style={{ ...panel.container, padding: 0, overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={table.table}>
+                <thead>
+                  <tr>
+                    <th style={{ ...table.th, width: 40, paddingLeft: 16 }}>
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        ref={(el) => { if (el) el.indeterminate = someSelected }}
+                        onChange={toggleSelectAll}
+                        style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--gold)' }}
+                        aria-label="Select all deals"
+                      />
+                    </th>
+                    <SortableTh field="title" sortField={sortField} sortDir={sortDir} onSort={handleSort} style={{ paddingLeft: 0 }}>
+                      Deal
+                    </SortableTh>
+                    <SortableTh field="company" sortField={sortField} sortDir={sortDir} onSort={handleSort}>
+                      Company
+                    </SortableTh>
+                    <SortableTh field="value" sortField={sortField} sortDir={sortDir} onSort={handleSort}>
+                      Value
+                    </SortableTh>
+                    <SortableTh field="probability" sortField={sortField} sortDir={sortDir} onSort={handleSort}>
+                      Prob
+                    </SortableTh>
+                    <SortableTh field="stage" sortField={sortField} sortDir={sortDir} onSort={handleSort}>
+                      Stage
+                    </SortableTh>
+                    <SortableTh field="assignee" sortField={sortField} sortDir={sortDir} onSort={handleSort}>
+                      Owner
+                    </SortableTh>
+                    <SortableTh field="updatedAt" sortField={sortField} sortDir={sortDir} onSort={handleSort}>
+                      Updated
+                    </SortableTh>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredDeals.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} style={{ ...table.td, textAlign: 'center', padding: 40, color: 'var(--fg-dimmer)' }}>
+                        No deals match your filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredDeals.map((deal) => {
+                      const stageColor = deal.stage?.color || 'var(--gold)'
+                      const isSelected = selectedIds.has(deal.id)
+                      return (
+                        <tr
+                          key={deal.id}
+                          style={{
+                            ...table.tr,
+                            cursor: 'pointer',
+                            backgroundColor: isSelected ? 'rgba(184,146,74,0.08)' : 'transparent',
+                          }}
+                          onClick={(e) => {
+                            // Only navigate if clicking the row, not the checkbox
+                            if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                              router.push(`/deals/${deal.id}`)
+                            }
+                          }}
+                        >
+                          <td style={{ ...table.td, paddingLeft: 16 }} onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelect(deal.id)}
+                              style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--gold)' }}
+                              aria-label={`Select ${deal.title}`}
+                            />
+                          </td>
+                          <td style={{ ...table.td, paddingLeft: 0, fontWeight: 600 }}>
+                            {deal.title}
+                            {deal.contact && (
+                              <div style={{ fontSize: 12, color: 'var(--fg-dim)', fontWeight: 400, marginTop: 2 }}>
+                                {deal.contact.firstName} {deal.contact.lastName}
+                              </div>
+                            )}
+                          </td>
+                          <td style={table.td}>{deal.company?.name || '—'}</td>
+                          <td style={{ ...table.td, fontWeight: 700, color: 'var(--gold)' }}>
+                            {currencyFmt(deal.value || 0, deal.currency)}
+                          </td>
+                          <td style={table.td}>
+                            <span style={{ fontSize: 13, fontWeight: 600 }}>{deal.probability || 0}%</span>
+                          </td>
+                          <td style={table.td}>
+                            <span style={statusBadge(stageColor)}>
+                              <span style={statusDot(stageColor)} />
+                              {deal.stage?.name || '—'}
+                            </span>
+                          </td>
+                          <td style={table.td}>{deal.assignee?.name || '—'}</td>
+                          <td style={{ ...table.td, color: 'var(--fg-dim)', fontSize: 13 }}>
+                            {new Date(deal.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile card view — same data, card layout */}
+          <div className="list-card-view" style={{ display: 'none', flexDirection: 'column', gap: 12 }}>
+            {filteredDeals.length === 0 ? (
+              <div className="panel-container" style={{ ...panel.container, textAlign: 'center', color: 'var(--fg-dimmer)' }}>
+                No deals match your filters.
+              </div>
+            ) : (
+              filteredDeals.map((deal) => {
+                const stageColor = deal.stage?.color || 'var(--gold)'
+                const isSelected = selectedIds.has(deal.id)
+                return (
+                  <div
+                    key={deal.id}
+                    className="panel-container"
+                    style={{
+                      ...panel.compact,
+                      borderLeft: `3px solid ${stageColor}`,
+                      backgroundColor: isSelected ? 'rgba(184,146,74,0.08)' : 'var(--panel)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(deal.id)}
+                        style={{ width: 20, height: 20, cursor: 'pointer', accentColor: 'var(--gold)', flexShrink: 0, marginTop: 2 }}
+                        aria-label={`Select ${deal.title}`}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }} onClick={() => router.push(`/deals/${deal.id}`)}>
+                        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{deal.title}</div>
+                        <div style={{ fontSize: 13, color: 'var(--fg-dim)', marginBottom: 8 }}>
+                          {deal.company?.name || '—'}
+                          {deal.contact && ` · ${deal.contact.firstName} ${deal.contact.lastName}`}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--gold)' }}>
+                            {currencyFmt(deal.value || 0, deal.currency)}
+                          </span>
+                          <span style={statusBadge(stageColor)}>
+                            <span style={statusDot(stageColor)} />
+                            {deal.stage?.name || '—'}
+                          </span>
+                          <span style={{ fontSize: 12, color: 'var(--fg-dim)' }}>
+                            {deal.probability || 0}% · {deal.assignee?.name || '—'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ── KANBAN BOARD ── */}
+      {viewMode === 'kanban' && stages.length > 0 && (
         <div className="kanban-board kanban-board-scroll" style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${stages.length}, minmax(280px, 1fr))`,
@@ -354,7 +937,10 @@ function DealsContent() {
             )
           })}
         </div>
-      ) : (
+      )}
+
+      {/* Kanban empty state */}
+      {viewMode === 'kanban' && stages.length === 0 && (
         <div className="panel-container vega-empty-state" style={{ ...panel.container, textAlign: 'center' }}>
           <IconDiamond size={32} strokeWidth={1.5} />
           <p className="vega-empty-state-text" style={{ marginTop: 12 }}>No pipeline stages configured.</p>
@@ -364,8 +950,8 @@ function DealsContent() {
         </div>
       )}
 
-      {/* Empty state when stages exist but no deals */}
-      {stages.length > 0 && (deals || []).length === 0 && (
+      {/* Kanban empty deals */}
+      {viewMode === 'kanban' && stages.length > 0 && (deals || []).length === 0 && (
         <div className="panel-container vega-empty-state" style={{ ...panel.container, textAlign: 'center', marginTop: 24 }}>
           <IconDiamond size={32} strokeWidth={1.5} />
           <p className="vega-empty-state-text" style={{ marginTop: 12 }}>No deals yet — create your first deal to start tracking.</p>
@@ -374,7 +960,53 @@ function DealsContent() {
           </button>
         </div>
       )}
+
+      {/* ── Bulk delete confirmation ── */}
+      <ConfirmDialog
+        open={confirmBulkDelete}
+        title={`Delete ${selectedCount} deal${selectedCount !== 1 ? 's' : ''}?`}
+        message={`This will permanently delete ${selectedCount} deal${selectedCount !== 1 ? 's' : ''} and all their associated activities. This action cannot be undone.`}
+        confirmLabel="Delete All"
+        onCancel={() => setConfirmBulkDelete(false)}
+        onConfirm={handleBulkDelete}
+      />
     </div>
+  )
+}
+
+// ── Sortable table header helper ──
+function SortableTh({
+  field,
+  sortField,
+  sortDir,
+  onSort,
+  children,
+  style,
+}: {
+  field: SortField
+  sortField: SortField
+  sortDir: SortDir
+  onSort: (f: SortField) => void
+  children: React.ReactNode
+  style?: React.CSSProperties
+}) {
+  const isActive = sortField === field
+  return (
+    <th
+      style={{ ...table.th, cursor: 'pointer', userSelect: 'none', ...style }}
+      onClick={() => onSort(field)}
+    >
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        {children}
+        <span style={{
+          fontSize: 10,
+          opacity: isActive ? 1 : 0.3,
+          transition: 'opacity .15s',
+        }}>
+          {isActive ? (sortDir === 'asc' ? '▲' : '▼') : '▼'}
+        </span>
+      </span>
+    </th>
   )
 }
 

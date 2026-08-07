@@ -804,4 +804,64 @@ input:focus, select:focus, textarea:focus {
   .recent-sidebar {
     margin-bottom: 16px;
   }
+}/* ============================================================================ */
+/* PHASE 6 CSS — Deal List View, Bulk Actions, Responsive Table→Card            */
+/* ============================================================================ */
+
+/* Bulk action bar — sticky contextual bar when deals are selected */
+.bulk-action-bar {
+  animation: slideDown .2s ease-out;
+}
+@keyframes slideDown {
+  from { transform: translateY(-8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* List table — checkbox column should not wrap */
+.list-table-view th:first-child,
+.list-table-view td:first-child {
+  white-space: nowrap;
+}
+
+/* List table — hover effect on rows */
+.list-table-view tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Mobile: bulk action bar should wrap nicely */
+@media (max-width: 768px) {
+  .bulk-action-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    top: 64px !important;
+  }
+  .bulk-action-bar > span:first-child {
+    font-size: 15px !important;
+  }
+  /* Make bulk action buttons full-width on mobile */
+  .bulk-action-bar > div {
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+}
+
+/* Tablet: reduce list table column widths */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .list-table-view {
+    font-size: 13px !important;
+  }
+}
+
+/* Touch targets: checkboxes get bigger on mobile */
+@media (max-width: 768px) {
+  .list-card-view input[type="checkbox"] {
+    width: 22px !important;
+    height: 22px !important;
+  }
+}
+
+/* Select-all checkbox indeterminate state color */
+input[type="checkbox"] {
+  accent-color: var(--gold);
 }
