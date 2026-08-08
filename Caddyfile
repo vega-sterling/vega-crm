@@ -88,3 +88,24 @@ mycoos.earth.servers.onl:8444 {
 
     encode gzip zstd
 }
+
+# ============================================================================
+# Velanra Care — Healing Center Patient Management (HTTPS on port 8445)
+# ============================================================================
+# HIPAA-compliant multi-tenant SaaS for Colorado natural medicine healing centers
+# ============================================================================
+
+earth.servers.onl:8445 {
+    tls /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/earth.servers.onl/earth.servers.onl.crt /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/earth.servers.onl/earth.servers.onl.key
+
+    reverse_proxy velanra-care:3000
+
+    header {
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    }
+
+    encode gzip zstd
+}
