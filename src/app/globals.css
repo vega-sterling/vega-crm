@@ -865,3 +865,49 @@ input:focus, select:focus, textarea:focus {
 input[type="checkbox"] {
   accent-color: var(--gold);
 }
+
+/* ============================================================================ */
+/* PHASE 7 CSS — Email Thread View in Timeline                                  */
+/* ============================================================================ */
+
+/* Email thread card — collapsible thread in timeline */
+.email-thread-card {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.email-thread-card:hover {
+  background-color: var(--panel-elevated);
+}
+
+/* Email thread expanded body — don't inherit card hover/click */
+.email-thread-card [data-reply-zone] {
+  cursor: default;
+}
+
+/* Reply textarea — responsive */
+.email-thread-reply {
+  width: 100%;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Mobile: email thread reply gets bigger touch targets */
+@media (max-width: 768px) {
+  .email-thread-reply {
+    font-size: 16px !important;
+    min-height: 100px !important;
+  }
+
+  /* Email thread card — full width, slightly reduced padding */
+  .email-thread-card {
+    padding: 12px !important;
+  }
+
+  /* Email body in expanded thread — slightly larger text for readability */
+  .email-thread-card [data-reply-zone] > div > div:last-child {
+    font-size: 15px !important;
+  }
+}
+
+/* Tablet: nothing special needed — inherits desktop styles */

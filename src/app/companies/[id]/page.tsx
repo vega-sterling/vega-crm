@@ -13,9 +13,11 @@ import ActivityCard from '../../components/ActivityCard'
 import PropertyQuickEdit from '../../components/PropertyQuickEdit'
 import { ContactsCard, DealsCard, TasksCard } from '../../components/AssociationCards'
 import { usePinnedNote } from '../../components/PinnedNotes'
+import EmailThreadCard from '../../components/EmailThreadCard'
 import { apiFetch } from '../../lib/api'
 import { layout, panel, typeography, forms, buttons, table, statusBadge } from '../../lib/styles'
-import type { Company, Contact, Activity, Task, Deal, Tenant, User } from '../../lib/types'
+import type { Company, Contact, Activity, Task, Deal, Tenant, User, EmailMessage } from '../../lib/types'
+import { groupEmailsByThread } from '../../lib/emailThreads'
 
 interface CompanyDetail extends Company {
   _count?: { contacts: number }
@@ -28,6 +30,7 @@ interface TaskListResponse { data: Task[] }
 interface DealListResponse { data: Deal[] }
 interface TenantListResponse { data: Tenant[] }
 interface UserListResponse { data: User[] }
+interface EmailListResponse { data: EmailMessage[] }
 
 const formatDate = (d?: string) => {
   if (!d) return '—'
@@ -47,6 +50,7 @@ function CompanyDetailContent() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [deals, setDeals] = useState<Deal[]>([])
+  const [emails, setEmails] = useState<EmailMessage[]>([])
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -71,12 +75,13 @@ function CompanyDetailContent() {
 
   const load = useCallback(async () => {
     try {
-      const [companyRes, contactsRes, activitiesRes, tasksRes, dealsRes, tenantsRes, usersRes, meRes, googleRes] = await Promise.all([
+      const [companyRes, contactsRes, activitiesRes, tasksRes, dealsRes, emailsRes, tenantsRes, usersRes, meRes, googleRes] = await Promise.all([
         apiFetch<CompanyDetail>(`/api/companies/${companyId}`),
         apiFetch<ContactListResponse>(`/api/contacts?companyId=${companyId}`),
         apiFetch<ActivityListResponse>(`/api/activities?companyId=${companyId}&limit=100`),
         apiFetch<TaskListResponse>(`/api/tasks?companyId=${companyId}&limit=100`),
         apiFetch<DealListResponse>(`/api/deals?companyId=${companyId}`).catch(() => ({ data: [] as Deal[] })),
+        apiFetch<EmailListResponse>(`/api/email/messages?companyId=${companyId}&limit=100`).catch(() => ({ data: [] as EmailMessage[] })),
         apiFetch<TenantListResponse>('/api/admin/tenants'),
         apiFetch<UserListResponse>('/api/admin/users?limit=100').catch(() => ({ data: [] as User[] })),
         apiFetch<User>('/api/auth/me').catch(() => null),
@@ -87,6 +92,7 @@ function CompanyDetailContent() {
       setActivities(activitiesRes.data || [])
       setTasks(tasksRes.data || [])
       setDeals(dealsRes.data || [])
+      setEmails(emailsRes.data || [])
       setTenants(tenantsRes.data || [])
       setUsers(usersRes.data || [])
       setCurrentUser(meRes)
@@ -100,25 +106,41 @@ function CompanyDetailContent() {
 
   useEffect(() => { load() }, [load])
 
+  // Email threads grouped by threadId
+  const emailThreads = useMemo(() => groupEmailsByThread(emails), [emails])
+
+  // Unified timeline: activities + email threads
+  type UnifiedItem =
+    | { kind: 'activity'; type: Activity['type']; data: Activity; sortKey: string }
+    | { kind: 'emailThread'; type: 'EMAIL'; data: { threadId: string; emails: EmailMessage[]; latestCreatedAt: string }; sortKey: string }
+
+  const unifiedTimeline = useMemo(() => {
+    const items: UnifiedItem[] = []
+    activities.forEach(a => items.push({ kind: 'activity', type: a.type, data: a, sortKey: a.createdAt }))
+    emailThreads.forEach(thread => items.push({ kind: 'emailThread', type: 'EMAIL', data: thread, sortKey: thread.latestCreatedAt }))
+    items.sort((a, b) => new Date(b.sortKey).getTime() - new Date(a.sortKey).getTime())
+    return items
+  }, [activities, emailThreads])
+
   // Timeline filter counts
   const filterCounts = useMemo(() => {
     const counts: Record<TimelineFilter, number> = { ALL: 0, NOTE: 0, CALL: 0, EMAIL: 0, TASK: 0, MEETING: 0 }
-    activities.forEach((a) => {
+    unifiedTimeline.forEach((item) => {
       counts.ALL++
-      if (a.type in counts) counts[a.type as TimelineFilter]++
+      if (item.type in counts) counts[item.type as TimelineFilter]++
     })
     return counts
-  }, [activities])
+  }, [unifiedTimeline])
 
-  const filteredActivities = useMemo(() => {
-    if (timelineFilter === 'ALL') return activities
-    return activities.filter((a) => a.type === timelineFilter)
-  }, [activities, timelineFilter])
+  const filteredTimeline = useMemo(() => {
+    if (timelineFilter === 'ALL') return unifiedTimeline
+    return unifiedTimeline.filter(item => item.type === timelineFilter)
+  }, [unifiedTimeline, timelineFilter])
 
   // Pinned activity (if it exists in the current list)
   const pinnedActivity = pinnedId ? activities.find(a => a.id === pinnedId) : null
   // Non-pinned activities for the main timeline
-  const timelineActivities = filteredActivities.filter(a => a.id !== pinnedId)
+  const timelineItems = filteredTimeline.filter(item => !(item.kind === 'activity' && item.data.id === pinnedId))
 
   const handlePinToggle = (id: string) => {
     if (pinnedId === id) {
@@ -181,7 +203,14 @@ function CompanyDetailContent() {
     setSubmitting(true)
     try {
       await apiFetch('/api/email/send', {
-        method: 'POST', body: JSON.stringify({ to: emailForm.to, subject: emailForm.subject, body: emailForm.body, companyId }),
+        method: 'POST',
+        body: JSON.stringify({
+          tenantId: company.tenantId,
+          to: [emailForm.to],
+          subject: emailForm.subject,
+          body: emailForm.body,
+          companyId,
+        }),
       })
       setEmailModal(false)
       setEmailForm({ to: '', subject: '', body: '' })
@@ -341,23 +370,37 @@ function CompanyDetailContent() {
 
               {/* Activity Timeline */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {timelineActivities.length === 0 ? (
+                {timelineItems.length === 0 ? (
                   <div className="panel-container" style={panel.container}>
                     <p style={{ color: 'var(--fg-dim)' }}>
                       {timelineFilter === 'ALL' ? 'No activity logged yet.' : `No ${timelineFilter.toLowerCase()}s to show.`}
                     </p>
                   </div>
                 ) : (
-                  timelineActivities.map((a) => (
-                    <ActivityCard
-                      key={a.id}
-                      activity={a}
-                      users={users}
-                      onPin={handlePinToggle}
-                      onEdit={handleEditActivity}
-                      onDelete={handleDeleteActivity}
-                    />
-                  ))
+                  timelineItems.map((item) => {
+                    if (item.kind === 'activity') {
+                      return (
+                        <ActivityCard
+                          key={item.data.id}
+                          activity={item.data}
+                          users={users}
+                          onPin={handlePinToggle}
+                          onEdit={handleEditActivity}
+                          onDelete={handleDeleteActivity}
+                        />
+                      )
+                    }
+                    // Email thread
+                    return (
+                      <EmailThreadCard
+                        key={`thread-${item.data.threadId}`}
+                        emails={item.data.emails}
+                        companyId={companyId}
+                        tenantId={company.tenantId}
+                        onReplied={load}
+                      />
+                    )
+                  })
                 )}
               </div>
             </div>

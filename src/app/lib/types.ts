@@ -273,17 +273,26 @@ export interface EmailMessage {
   companyId?: string | null
   contactId?: string | null
   dealId?: string | null
-  threadId: string
-  messageId: string
-  direction: 'INBOUND' | 'OUTBOUND'
+  threadId?: string | null
+  messageId?: string | null
+  direction: string  // 'outbound' or 'inbound' in DB
   fromEmail: string
-  toEmail: string
-  ccEmail?: string | null
+  toEmails: string[]
+  ccEmails?: string[]
   subject: string
-  body: string
+  bodyText?: string | null
+  bodyHtml?: string | null
   isRead: boolean
+  isReplied?: boolean
+  sentAt?: string | null
+  receivedAt?: string | null
   syncedAt?: string | null
   createdAt: string
+  // Relations (populated by API includes)
+  user?: { id: string; name: string } | null
+  contact?: { id: string; firstName: string; lastName: string; email: string } | null
+  company?: { id: string; name: string } | null
+  deal?: { id: string; title: string } | null
 }
 
 export interface EmailTemplate {

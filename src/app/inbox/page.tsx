@@ -15,6 +15,7 @@ import { layout, panel, typeography, forms, buttons, statusBadge } from "../lib/
 
 interface EmailMessage {
   id: string;
+  tenantId: string;
   direction: string;
   fromEmail: string;
   toEmails: string[];
@@ -29,6 +30,7 @@ interface EmailMessage {
   contact?: { id: string; firstName: string; lastName: string; email: string } | null;
   dealId: string | null;
   deal?: { id: string; title: string } | null;
+  threadId?: string | null;
 }
 
 type FilterType = "all" | "inbound" | "outbound" | "unread";
@@ -107,11 +109,12 @@ export default function InboxPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          to: replyTo,
+          to: [replyTo],
           subject: `Re: ${selectedEmail.subject}`,
           body: replyText,
           contactId: selectedEmail.contactId,
           dealId: selectedEmail.dealId,
+          tenantId: selectedEmail.tenantId,
         }),
       });
       setReplyStatus("✓ Reply sent");
