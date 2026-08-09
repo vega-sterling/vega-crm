@@ -1,5 +1,126 @@
 # Vega CRM — Changelog
 
+## 2026-08-09 — Phase 8: Workflow Automation Builder (Priority 6 Started)
+
+### Added
+- **Workflow Automation Builder Page** (`/workflows`) — Pipedrive/Close-style visual flow builder for CRM automation:
+  - **List View** — card-based workflow list with trigger icons, status badges, condition/action counts, execution counts
+  - Search + filter by status (all/active/inactive)
+  - Empty state with "Create your first workflow" CTA
+  - Per-workflow actions: Test Run, Edit, Pause/Activate toggle, Delete (with confirmation)
+  - Summary header showing total workflow count and active count
+
+- **Visual Flow Builder** — inline 3-step card-based editor following Pipedrive/Close CRM patterns:
+  - **Step 1: WHEN (Trigger)** — blue-bordered card with trigger type dropdown (5 triggers: Deal Stage Change, Deal Created, New Contact, Task Assigned, Email Received)
+  - **Step 2: IF (Conditions)** — amber-bordered card with inline condition rows (field dropdown + operator dropdown + value input); multiple conditions supported; "+ Add condition" button
+  - **Step 3: THEN (Actions)** — emerald-bordered card with stacked action cards; each action has type selector + type-specific config fields (task title/priority/due days, email to/subject/body, user assignment, deal stage, tag)
+  - Visual connectors between steps (vertical lines)
+  - Color-coded step headers with numbered badges and icons
+  - Settings bar with name, tenant, description, and active/inactive toggle
+  - Save bar at bottom with Cancel + Create/Update buttons
+
+- **Action-specific configuration panels**:
+  - CREATE_TASK: title, priority (HIGH/MEDIUM/LOW), due-in-days
+  - SEND_EMAIL: to (email or field reference), subject with variable hints, body textarea, optional template ID
+  - ASSIGN_USER: user ID, entity type (deal/contact/task)
+  - MOVE_DEAL: target stage ID
+  - ADD_TAG: tag name
+
+- **Sidebar navigation** — "Workflows" added to Administration section in AppShell
+
+- **Responsive CSS** — Phase 8 styles added to globals.css:
+  - Desktop: full inline card layout with actions on the right
+  - Tablet (768-1024px): reduced padding on flow step cards
+  - Phone (<768px): workflow card actions stack below content with full-width buttons, condition rows stack vertically, flow connectors shorten
+  - Small phone (<480px): action buttons become full-width stacked
+
+### Fixed
+- **Changelog cleanup** — removed duplicate Phase 7 entry and broken Phase 5 stub from previous session; consolidated into clean chronological order
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded with no TypeScript errors (Next.js 16.3.0, Turbopack)
+- ✅ Workflows page renders: HTTP 200
+- ✅ All 6 existing authenticated pages return HTTP 200 (dashboard, companies, contacts, deals, tasks, activities)
+- ✅ Workflows API GET: 200 — returns empty data array (no workflows yet)
+- ✅ Workflows API POST (create): 201 — creates workflow with trigger, conditions, actions correctly stored
+- ✅ Workflows API GET (list after create): 200 — returns created workflow with tenant, creator, execution count
+- ✅ Workflows API GET (by ID): 200 — returns single workflow
+- ✅ Workflows API PUT (update): 200 — name and isActive updated correctly
+- ✅ Workflows API DELETE: 200 — returns {success: true}; follow-up GET returns 404 (confirmed deleted)
+- ✅ Workflows API POST (execute/test): 200 — returns evaluation results (0 evaluated for inactive workflow)
+- ✅ Workflows API error handling: empty actions → 422, invalid trigger type → 422
+- ✅ No runtime errors in container logs after all tests
+- ✅ Test data created, verified, and cleaned up (test workflow deleted)
+
+### Files Changed
+- src/app/workflows/page.tsx — NEW (workflow automation builder page with list + visual flow editor)
+- src/app/components/AppShell.tsx — MODIFIED (added "Workflows" to Administration nav)
+- src/app/globals.css — MODIFIED (Phase 8 CSS: workflow card responsive, flow step responsive, condition/action row stacking)
+- CHANGELOG.md — MODIFIED (added Phase 8 entry, cleaned up duplicate Phase 7 and broken Phase 5 entries)
+
+## 2026-08-08 — Phase 7: Email Thread View in Timeline + Template Picker (Priority 5 Started)
+
+### Added
+- **EmailThreadCard component** — HubSpot-style collapsible email thread view for contact/company timelines:
+  - Groups emails by threadId into collapsible threads (newest first)
+  - Collapsed view: envelope icon, EMAIL badge, subject, message count, date, unread indicator
+  - Expanded view: all thread messages oldest→newest with direction arrows (outbound / inbound)
+  - Each message shows From, To, Cc, date, and full body text (with HTML stripped for display)
+  - Inline reply composer with textarea + Reply button (Ctrl/Cmd+Enter shortcut)
+  - Smart reply recipient detection (picks most recent inbound sender)
+  - Subject auto-prefixed with Re: (avoids double-prefix)
+  - Error feedback on send failure
+
+- **Email thread grouping utility** (src/app/lib/emailThreads.ts):
+  - groupEmailsByThread(emails) groups EmailMessage[] by threadId
+  - Emails without threadId get singleton groups (solo-{id})
+  - Groups sorted by latestCreatedAt descending
+
+- **Template picker in email composer** (contact page):
+  - Dropdown shows available email templates from the tenant
+  - Selecting a template fills subject + body with variables replaced
+  - Variables supported: {contact.firstName}, {contact.lastName}, {contact.email}, {contact.phone}, {contact.title}, {company.name}, {company.industry}
+
+- **Email loading on company page** — company page now loads and displays email threads in the timeline (previously did not load emails at all)
+
+### Fixed
+- **Contact page API URL bug** — was calling /api/email?contactId=X (non-existent endpoint, silently returned empty). Now correctly calls /api/email/messages?contactId=X
+- **EmailMessage TypeScript type** — updated to match actual Prisma schema (toEmails: string[] instead of toEmail: string, bodyText/bodyHtml instead of body, threadId/messageId optional, added isReplied/sentAt/receivedAt and relation fields)
+- **Email send API call format** — contact page was sending { to: "string" } but API expects { to: ["string"], tenantId }. Fixed on both contact and company pages.
+- **Company page email send** — same fix: now sends proper array format + tenantId
+- **Inbox reply** — same fix: to now wrapped in array, tenantId added, threadId added to interface
+
+### Responsive
+- Email thread cards use panel-container class (inherited responsive padding)
+- Reply textarea gets 16px font and 100px min-height on mobile (44px+ touch targets)
+- Email body text slightly larger on mobile for readability (15px)
+- Thread card padding reduced to 12px on mobile
+
+### QA Results
+- Health check: 307 redirect to /login (healthy)
+- Build succeeded with no errors (Next.js 16.3.0, Turbopack)
+- Email messages API: 200 — returns 2 test emails in same thread with correct fields (toEmails array, threadId, direction)
+- Email templates API: 200 — returns templates list
+- Email templates API POST: 201 — creates template with variables
+- Email send API: 405 on GET (POST-only, correct)
+- Contact page: 200, no runtime errors, template selector present
+- Company page: 200, no runtime errors
+- Inbox page: 200, no runtime errors
+- Templates page: 200, no runtime errors
+- No errors in container logs after all tests
+- Test data (2 test emails) created, verified, and cleaned up
+- Test template "Welcome Follow-up" created as seed data (with {contact.firstName} and {company.name} variables)
+
+### Files Changed
+- src/app/components/EmailThreadCard.tsx — NEW (email thread card component)
+- src/app/lib/emailThreads.ts — NEW (email thread grouping utility)
+- src/app/lib/types.ts — MODIFIED (fixed EmailMessage interface to match Prisma schema)
+- src/app/contacts/[id]/page.tsx — MODIFIED (fixed API URL, added thread grouping, EmailThreadCard, template picker, fixed email send format)
+- src/app/companies/[id]/page.tsx — MODIFIED (added email loading, thread grouping, EmailThreadCard, fixed email send format)
+- src/app/inbox/page.tsx — MODIFIED (fixed reply send format, added tenantId + threadId to interface)
+- src/app/globals.css — MODIFIED (Phase 7 CSS: email thread card responsive styles)
+
 ## 2026-08-07 — Phase 6: Deal List View with Bulk Actions (Priority 4 Complete)
 
 ### Added
@@ -59,129 +180,3 @@
 - src/app/deals/page.tsx — REWRITTEN (added list view, bulk actions, view toggle)
 - src/app/globals.css — MODIFIED (Phase 6 CSS: bulk action bar, responsive table→card)
 - src/middleware.ts — REMOVED (Next.js 16 proxy.ts conflict fix)
-
-## 2026-08-06 — Phase 5: Breadcrumb Navigation + Recently Viewed Records
-
-### Added
-## 2026-08-08 — Phase 7: Email Thread View in Timeline + Template Picker (Priority 5 Started)
-
-### Added
-- **EmailThreadCard component** — HubSpot-style collapsible email thread view for contact/company timelines:
-  - Groups emails by threadId into collapsible threads (newest first)
-  - Collapsed view: ✉️ icon, EMAIL badge, subject, message count, date, unread indicator
-  - Expanded view: all thread messages oldest→newest with direction arrows (↗ outbound / ↘ inbound)
-  - Each message shows From, To, Cc, date, and full body text (with HTML stripped for display)
-  - Inline reply composer with textarea + Reply button (Ctrl/Cmd+Enter shortcut)
-  - Smart reply recipient detection (picks most recent inbound sender)
-  - Subject auto-prefixed with Re: (avoids double-prefix)
-  - Error feedback on send failure
-
-- **Email thread grouping utility** ():
-  -  — groups EmailMessage[] by threadId
-  - Emails without threadId get singleton groups (solo-{id})
-  - Groups sorted by latestCreatedAt descending
-
-- **Template picker in email composer** (contact page):
-  - Dropdown shows available email templates from the tenant
-  - Selecting a template fills subject + body with variables replaced
-  - Variables supported: {contact.firstName}, {contact.lastName}, {contact.email}, {contact.phone}, {contact.title}, {company.name}, {company.industry}
-
-- **Email loading on company page** — company page now loads and displays email threads in the timeline (previously didn't load emails at all)
-
-### Fixed
-- **Contact page API URL bug** — was calling  (non-existent endpoint, silently returned empty). Now correctly calls 
-- **EmailMessage TypeScript type** — updated to match actual Prisma schema (toEmails: string[] instead of toEmail: string, bodyText/bodyHtml instead of body, threadId/messageId optional, added isReplied/sentAt/receivedAt and relation fields)
-- **Email send API call format** — contact page was sending  but API expects . Fixed on both contact and company pages.
-- **Company page email send** — same fix: now sends proper array format + tenantId
-- **Inbox reply** — same fix:  now wrapped in array, tenantId added, threadId added to interface
-
-### Responsive
-- Email thread cards use  class (inherited responsive padding)
-- Reply textarea gets 16px font and 100px min-height on mobile (44px+ touch targets)
-- Email body text slightly larger on mobile for readability (15px)
-- Thread card padding reduced to 12px on mobile
-
-### QA Results
-- ✅ Health check: 307 redirect to /login (healthy)
-- ✅ Build succeeded with no errors (Next.js 16.3.0, Turbopack)
-- ✅ Email messages API: 200 — returns 2 test emails in same thread with correct fields (toEmails array, threadId, direction)
-- ✅ Email templates API: 200 — returns templates list
-- ✅ Email templates API POST: 201 — creates template with variables
-- ✅ Email send API: 405 on GET (POST-only, correct)
-- ✅ Contact page: 200, no runtime errors, template selector present
-- ✅ Company page: 200, no runtime errors
-- ✅ Inbox page: 200, no runtime errors
-- ✅ Templates page: 200, no runtime errors
-- ✅ No errors in container logs after all tests
-- ✅ Test data (2 test emails) created, verified, and cleaned up
-- ✅ Test template Welcome Follow-up created as seed data (with {contact.firstName} and {company.name} variables)
-
-### Files Changed
-- src/app/components/EmailThreadCard.tsx — NEW (email thread card component)
-- src/app/lib/emailThreads.ts — NEW (email thread grouping utility)
-- src/app/lib/types.ts — MODIFIED (fixed EmailMessage interface to match Prisma schema)
-- src/app/contacts/[id]/page.tsx — MODIFIED (fixed API URL, added thread grouping, EmailThreadCard, template picker, fixed email send format)
-- src/app/companies/[id]/page.tsx — MODIFIED (added email loading, thread grouping, EmailThreadCard, fixed email send format)
-- src/app/inbox/page.tsx — MODIFIED (fixed reply send format, added tenantId + threadId to interface)
-- src/app/globals.css — MODIFIED (Phase 7 CSS: email thread card responsive styles)
-## 2026-08-08 — Phase 7: Email Thread View in Timeline + Template Picker (Priority 5 Started)
-
-### Added
-- **EmailThreadCard component** — HubSpot-style collapsible email thread view for contact/company timelines:
-  - Groups emails by threadId into collapsible threads (newest first)
-  - Collapsed view: envelope icon, EMAIL badge, subject, message count, date, unread indicator
-  - Expanded view: all thread messages oldest-to-newest with direction arrows (outbound / inbound)
-  - Each message shows From, To, Cc, date, and full body text (with HTML stripped for display)
-  - Inline reply composer with textarea + Reply button (Ctrl/Cmd+Enter shortcut)
-  - Smart reply recipient detection (picks most recent inbound sender)
-  - Subject auto-prefixed with Re: (avoids double-prefix)
-  - Error feedback on send failure
-
-- **Email thread grouping utility** (src/app/lib/emailThreads.ts):
-  - groupEmailsByThread(emails) groups EmailMessage[] by threadId
-  - Emails without threadId get singleton groups (solo-{id})
-  - Groups sorted by latestCreatedAt descending
-
-- **Template picker in email composer** (contact page):
-  - Dropdown shows available email templates from the tenant
-  - Selecting a template fills subject + body with variables replaced
-  - Variables supported: {contact.firstName}, {contact.lastName}, {contact.email}, {contact.phone}, {contact.title}, {company.name}, {company.industry}
-
-- **Email loading on company page** — company page now loads and displays email threads in the timeline (previously did not load emails at all)
-
-### Fixed
-- **Contact page API URL bug** — was calling /api/email?contactId=X (non-existent endpoint, silently returned empty). Now correctly calls /api/email/messages?contactId=X
-- **EmailMessage TypeScript type** — updated to match actual Prisma schema (toEmails: string[] instead of toEmail: string, bodyText/bodyHtml instead of body, threadId/messageId optional, added isReplied/sentAt/receivedAt and relation fields)
-- **Email send API call format** — contact page was sending { to: "string" } but API expects { to: ["string"], tenantId }. Fixed on both contact and company pages.
-- **Company page email send** — same fix: now sends proper array format + tenantId
-- **Inbox reply** — same fix: to now wrapped in array, tenantId added, threadId added to interface
-
-### Responsive
-- Email thread cards use panel-container class (inherited responsive padding)
-- Reply textarea gets 16px font and 100px min-height on mobile (44px+ touch targets)
-- Email body text slightly larger on mobile for readability (15px)
-- Thread card padding reduced to 12px on mobile
-
-### QA Results
-- Health check: 307 redirect to /login (healthy)
-- Build succeeded with no errors (Next.js 16.3.0, Turbopack)
-- Email messages API: 200 — returns 2 test emails in same thread with correct fields (toEmails array, threadId, direction)
-- Email templates API: 200 — returns templates list
-- Email templates API POST: 201 — creates template with variables
-- Email send API: 405 on GET (POST-only, correct)
-- Contact page: 200, no runtime errors, template selector present
-- Company page: 200, no runtime errors
-- Inbox page: 200, no runtime errors
-- Templates page: 200, no runtime errors
-- No errors in container logs after all tests
-- Test data (2 test emails) created, verified, and cleaned up
-- Test template "Welcome Follow-up" created as seed data (with {contact.firstName} and {company.name} variables)
-
-### Files Changed
-- src/app/components/EmailThreadCard.tsx — NEW (email thread card component)
-- src/app/lib/emailThreads.ts — NEW (email thread grouping utility)
-- src/app/lib/types.ts — MODIFIED (fixed EmailMessage interface to match Prisma schema)
-- src/app/contacts/[id]/page.tsx — MODIFIED (fixed API URL, added thread grouping, EmailThreadCard, template picker, fixed email send format)
-- src/app/companies/[id]/page.tsx — MODIFIED (added email loading, thread grouping, EmailThreadCard, fixed email send format)
-- src/app/inbox/page.tsx — MODIFIED (fixed reply send format, added tenantId + threadId to interface)
-- src/app/globals.css — MODIFIED (Phase 7 CSS: email thread card responsive styles)

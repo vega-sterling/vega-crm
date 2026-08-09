@@ -64,6 +64,7 @@ const navSections = [
       { label: 'Tenants', href: '/admin/tenants' },
       { label: 'Lead Forms', href: '/admin/lead-forms' },
       { label: 'Lead Scoring', href: '/admin/lead-scoring' },
+      { label: 'Workflows', href: '/workflows' },
       { label: 'Integrations', href: '/admin/integrations' },
       { label: 'Settings', href: '/settings' },
     ],
