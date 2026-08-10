@@ -1,3 +1,83 @@
+## 2026-08-10 — Phase 9: Audit Log Viewer + Audit Logging Middleware (Priority 7 Started)
+
+### Added
+- **Audit Log Viewer** (`/admin/audit-logs`) — Salesforce/HubSpot-style compliance view for tracking all data modifications in Vega CRM:
+  - **Stats cards** — create/update/delete counts with percentage breakdowns at the top of the page
+  - **Filter bar** — filter by entity type (company, contact, deal, activity, task, user, tenant, workflow), action (create, update, delete), full-text search on entity/entityId, and date range (from/to)
+  - **Table view** (desktop/tablet) — columns: When (relative + absolute timestamp), User (name + email), Action (color-coded badge), Entity (icon + type + truncated ID), IP Address, Details (expandable)
+  - **Card view** (mobile <768px) — same information in touch-friendly card layout with 16px padding, tap to expand change details
+  - **Expandable rows** — click any row with changes to see the full before/after JSON diff
+  - **CSV export** — download filtered audit logs as CSV with all fields (timestamp, user, email, action, entity, entity ID, IP, changes JSON)
+  - **Pagination** — page numbers with item count display
+
+- **Audit Logging Utility** (`src/lib/audit.ts`):
+  - `logAudit()` — lightweight, non-blocking helper called after any data mutation
+  - IP address capture from `x-forwarded-for` / `x-real-ip` headers
+  - Error-swallowing design: audit logging never breaks the primary operation (errors logged to stderr)
+  - `buildDiff()` — before/after comparison utility for update operations
+
+- **Audit Logging Middleware** — wired into 12 API mutation routes:
+  - Companies: create, update, delete (soft-deactivate)
+  - Contacts: create, update, delete (soft-deactivate)
+  - Deals: create, update, delete (hard delete)
+  - Activities: create, delete (hard delete)
+  - Tasks: create, update, delete (hard delete)
+  - Users: create, update, delete (soft-deactivate for admins, hard delete for super admins)
+
+- **Audit Logs API** (`GET /api/admin/audit-logs`):
+  - Admin-only endpoint (requireAdmin)
+  - Pagination with configurable page/limit (max 200)
+  - Filtering: entity, action, userId, search, date range (from/to)
+  - Stats aggregation: groupBy action and entity counts
+  - Tenant admin restriction: non-super-admins only see audit logs from users in their accessible tenants
+  - Includes user relation (name, email, globalRole) for each entry
+
+- **Sidebar navigation** — "Audit Log" added to Administration section in AppShell
+
+### Responsive
+- **Desktop (>768px)**: Full table view with all columns, spacious layout, stats cards in grid
+- **Tablet (768-1024px)**: Table view with all columns (inherits desktop)
+- **Phone (<768px)**: Table hidden, cards shown — each audit entry becomes a touch-friendly card with action badge, entity icon, user name, timestamp, and expandable change details. 16px padding, 44px+ touch targets.
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded with no errors (Next.js 16.3.0, Turbopack, TypeScript strict)
+- ✅ Audit log page renders: HTTP 200
+- ✅ All 14 authenticated pages return HTTP 200 (dashboard, companies, contacts, deals, tasks, activities, admin/users, admin/tenants, admin/lead-forms, admin/lead-scoring, admin/integrations, workflows, settings, reports)
+- ✅ Audit API GET: 200 — returns paginated data with stats
+- ✅ Audit logging — company create: entry recorded with {name} changes ✅
+- ✅ Audit logging — company update: entry recorded with {name, phone} changes ✅
+- ✅ Audit logging — company delete: entry recorded with {deactivated: true} ✅
+- ✅ Audit logging — contact create: entry recorded with {firstName, lastName} ✅
+- ✅ Audit logging — deal create: entry recorded with {title} ✅
+- ✅ Audit logging — deal delete: entry recorded with {deleted: true} ✅
+- ✅ Audit API filter by action=create: 1 result (correct) ✅
+- ✅ Audit API filter by entity=company&action=delete: 1 result (correct) ✅
+- ✅ Audit API search "company": 3 results (correct) ✅
+- ✅ Audit API date range (from=today): 5 results (correct) ✅
+- ✅ Audit API pagination (limit=2): 2 items, total=5, pages=3 ✅
+- ✅ Audit API empty state: returns {data: [], stats: {byAction: [], byEntity: []}} ✅
+- ✅ No runtime errors in container logs after all tests
+- ✅ Test data created, verified, and cleaned up (test user deleted, test audit entries deleted)
+
+### Files Changed
+- src/lib/audit.ts — NEW (audit logging utility)
+- src/app/api/admin/audit-logs/route.ts — NEW (audit logs API endpoint)
+- src/app/admin/audit-logs/page.tsx — NEW (audit log viewer page)
+- src/app/api/companies/route.ts — MODIFIED (added audit logging to POST)
+- src/app/api/companies/[id]/route.ts — MODIFIED (added audit logging to PUT, DELETE)
+- src/app/api/contacts/route.ts — MODIFIED (added audit logging to POST)
+- src/app/api/contacts/[id]/route.ts — MODIFIED (added audit logging to PUT, DELETE)
+- src/app/api/deals/route.ts — MODIFIED (added audit logging to POST)
+- src/app/api/deals/[id]/route.ts — MODIFIED (added audit logging to PUT, DELETE)
+- src/app/api/activities/route.ts — MODIFIED (added audit logging to POST)
+- src/app/api/activities/[id]/route.ts — MODIFIED (added audit logging to DELETE)
+- src/app/api/tasks/route.ts — MODIFIED (added audit logging to POST)
+- src/app/api/tasks/[id]/route.ts — MODIFIED (added audit logging to PUT, DELETE)
+- src/app/api/admin/users/route.ts — MODIFIED (added audit logging to POST)
+- src/app/api/admin/users/[id]/route.ts — MODIFIED (added audit logging to PUT, DELETE)
+- src/app/components/AppShell.tsx — MODIFIED (added "Audit Log" to Administration nav)
+- src/app/globals.css — MODIFIED (Phase 9 CSS: audit table→card responsive, row hover)
 # Vega CRM — Changelog
 
 ## 2026-08-09 — Phase 8: Workflow Automation Builder (Priority 6 Started)
