@@ -14,6 +14,7 @@ import { ActivityType, ActivitySource } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
+import { logAudit } from '@/lib/audit';
 
 const ActivityCreateSchema = z.object({
   tenantId: z.cuid(),
@@ -153,5 +154,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     },
   });
 
+    await logAudit({ userId: session.userId!, action: 'create', entity: 'activity', entityId: activity.id, changes: { subject: activity.subject } });
   return NextResponse.json(activity, { status: 201 });
 }

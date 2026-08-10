@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
+import { logAudit } from '@/lib/audit';
 
 const CompanyUpdateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -93,6 +94,7 @@ export async function PUT(req: NextRequest, context: RouteContext): Promise<Next
     data: cleaned,
   });
 
+    await logAudit({ userId: session.userId!, action: 'update', entity: 'company', entityId: id, changes: cleaned || body });
   return NextResponse.json(updated);
 }
 
@@ -116,5 +118,6 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     data: { isActive: false },
   });
 
+    await logAudit({ userId: session.userId!, action: 'delete', entity: 'company', entityId: id, changes: { deactivated: true } });
   return NextResponse.json(updated);
 }

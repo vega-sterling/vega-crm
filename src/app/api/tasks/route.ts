@@ -14,6 +14,7 @@ import { TaskStatus, TaskPriority } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
+import { logAudit } from '@/lib/audit';
 
 const TaskCreateSchema = z.object({
   tenantId: z.cuid(),
@@ -135,5 +136,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     },
   });
 
+    await logAudit({ userId: session.userId!, action: 'create', entity: 'task', entityId: task.id, changes: { title: task.title } });
   return NextResponse.json(task, { status: 201 });
 }

@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
+import { logAudit } from '@/lib/audit';
 
 const ContactCreateSchema = z.object({
   companyId: z.cuid(),
@@ -138,5 +139,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     },
   });
 
+    await logAudit({ userId: session.userId!, action: 'create', entity: 'contact', entityId: contact.id, changes: { firstName: contact.firstName, lastName: contact.lastName } });
   return NextResponse.json(contact, { status: 201 });
 }

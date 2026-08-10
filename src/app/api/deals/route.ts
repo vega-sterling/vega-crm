@@ -13,6 +13,7 @@ import { DealStatus } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
+import { logAudit } from '@/lib/audit';
 
 const DealCreateSchema = z.object({
   tenantId: z.cuid(),
@@ -176,5 +177,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     },
   });
 
+    await logAudit({ userId: session.userId!, action: 'create', entity: 'deal', entityId: deal.id, changes: { title: deal.title } });
   return NextResponse.json(deal, { status: 201 });
 }

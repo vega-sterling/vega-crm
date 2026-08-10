@@ -1009,3 +1009,59 @@ input[type="checkbox"] {
     text-align: center !important;
   }
 }
+
+/* ============================================================================ */
+/* Phase 9 — Audit Log Viewer responsive styles                                   */
+/* ============================================================================ */
+
+/* Desktop (>768px): show table, hide mobile cards */
+.audit-table-desktop {
+  display: table !important;
+}
+.audit-cards-mobile {
+  display: none !important;
+}
+
+/* Audit row hover */
+.audit-row {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.audit-row:hover {
+  background: var(--panel-elevated, rgba(255,255,255,0.03));
+}
+
+/* Phone (<768px): hide table, show cards */
+@media (max-width: 768px) {
+  .audit-table-desktop {
+    display: none !important;
+  }
+  .audit-cards-mobile {
+    display: block !important;
+  }
+
+  .audit-card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  .audit-card:hover {
+    border-color: var(--gold, #b8924a);
+  }
+
+  .audit-card:active {
+    transform: scale(0.99);
+  }
+}
+
+/* Small phone (<480px): reduce filter bar padding */
+@media (max-width: 480px) {
+  .audit-card {
+    padding: 14px;
+  }
+}

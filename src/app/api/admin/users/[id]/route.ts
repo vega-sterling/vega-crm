@@ -14,6 +14,7 @@ import { GlobalRole } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireAdmin, requireSuperAdmin, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
+import { logAudit } from '@/lib/audit';
 
 const UserUpdateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -149,6 +150,7 @@ export async function PUT(req: NextRequest, context: RouteContext): Promise<Next
     },
   });
 
+    await logAudit({ userId: admin.userId!, action: 'update', entity: 'user', entityId: id, changes: data });
   return NextResponse.json(updated);
 }
 
@@ -177,9 +179,11 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
       where: { id },
       data: { isActive: false },
     });
+    await logAudit({ userId: admin.userId!, action: 'delete', entity: 'user', entityId: id, changes: { deactivated: true } });
     return NextResponse.json(deactivated);
   }
 
+  await logAudit({ userId: admin.userId!, action: 'delete', entity: 'user', entityId: id, changes: { deleted: true } });
   await prisma.user.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

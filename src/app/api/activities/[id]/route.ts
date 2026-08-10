@@ -13,6 +13,7 @@ import { ActivityType } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
+import { logAudit } from '@/lib/audit';
 
 const ActivityUpdateSchema = z.object({
   type: z.enum(['CALL', 'EMAIL', 'NOTE', 'TASK', 'MEETING']).optional(),
@@ -119,6 +120,7 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
   const activity = await getAllowedActivity(id, session);
   if (!activity) return errorResponse('Activity not found', 404);
 
+    await logAudit({ userId: session.userId!, action: 'delete', entity: 'activity', entityId: id, changes: { deleted: true } });
   await prisma.activity.delete({ where: { id } });
 
   return NextResponse.json({ success: true });

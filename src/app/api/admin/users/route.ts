@@ -15,6 +15,7 @@ import { GlobalRole } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireAdmin, requireSuperAdmin, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
+import { logAudit } from '@/lib/audit';
 
 const UserCreateSchema = z.object({
   email: z.email(),
@@ -156,5 +157,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     },
   });
 
+    await logAudit({ userId: admin.userId!, action: 'create', entity: 'user', entityId: user.id, changes: { name: user.name } });
   return NextResponse.json(user, { status: 201 });
 }

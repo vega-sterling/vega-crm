@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
 import { validateBody } from '@/lib/validation';
 
 const CompanyCreateSchema = z.object({
@@ -115,5 +116,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     },
   });
 
+    await logAudit({ userId: session.userId!, action: 'create', entity: 'company', entityId: company.id, changes: { name: company.name } });
   return NextResponse.json(company, { status: 201 });
 }

@@ -66,6 +66,7 @@ const navSections = [
       { label: 'Lead Scoring', href: '/admin/lead-scoring' },
       { label: 'Workflows', href: '/workflows' },
       { label: 'Integrations', href: '/admin/integrations' },
+      { label: 'Audit Log', href: '/admin/audit-logs' },
       { label: 'Settings', href: '/settings' },
     ],
   },

@@ -13,6 +13,7 @@ import { TaskStatus, TaskPriority } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
+import { logAudit } from '@/lib/audit';
 
 const TaskUpdateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -102,6 +103,7 @@ export async function PUT(req: NextRequest, context: RouteContext): Promise<Next
     },
   });
 
+    await logAudit({ userId: session.userId!, action: 'update', entity: 'task', entityId: id, changes: cleaned || body });
   return NextResponse.json(updated);
 }
 
@@ -120,6 +122,7 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
   const task = await getAllowedTask(id, session);
   if (!task) return errorResponse('Task not found', 404);
 
+    await logAudit({ userId: session.userId!, action: 'delete', entity: 'task', entityId: id, changes: { deleted: true } });
   await prisma.task.delete({ where: { id } });
 
   return NextResponse.json({ success: true });

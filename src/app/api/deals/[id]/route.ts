@@ -13,6 +13,7 @@ import { DealStatus } from "@prisma"
 import { prisma } from '@/lib/db';
 import { requireSession, getAccessibleTenantIds, errorResponse } from '@/lib/session';
 import { validateBody } from '@/lib/validation';
+import { logAudit } from '@/lib/audit';
 
 const DealUpdateSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -149,6 +150,7 @@ export async function PUT(req: NextRequest, context: RouteContext): Promise<Next
     },
   });
 
+    await logAudit({ userId: session.userId!, action: 'update', entity: 'deal', entityId: id, changes: cleaned || body });
   return NextResponse.json(updated);
 }
 
@@ -166,6 +168,7 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
   const deal = await getAllowedDeal(id, session);
   if (!deal) return errorResponse('Deal not found', 404);
 
+    await logAudit({ userId: session.userId!, action: 'delete', entity: 'deal', entityId: id, changes: { deleted: true } });
   await prisma.deal.delete({ where: { id } });
 
   return NextResponse.json({ success: true });
