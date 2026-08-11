@@ -1065,3 +1065,40 @@ input[type="checkbox"] {
     padding: 14px;
   }
 }
+
+/* ============================================================================ */
+/* Phase 10 — Data Management responsive styles                                  */
+/* ============================================================================ */
+
+/* Desktop (>768px): show mapping table, hide mobile cards */
+.data-mapping-table {
+  display: table !important;
+}
+.data-mapping-cards {
+  display: none !important;
+}
+
+/* Phone (<768px): hide table, show cards */
+@media (max-width: 768px) {
+  .data-mapping-table {
+    display: none !important;
+  }
+  .data-mapping-cards {
+    display: block !important;
+    padding: 8px !important;
+  }
+  .data-map-card {
+    background: var(--bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+}
+
+/* Small phone (<480px): ensure touch targets are 44px+ */
+@media (max-width: 480px) {
+  .data-map-card select {
+    min-height: 44px;
+  }
+}

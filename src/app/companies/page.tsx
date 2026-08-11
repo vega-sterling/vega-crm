@@ -170,6 +170,21 @@ function CompaniesContent() {
               color: viewMode === 'card' ? 'var(--gold)' : 'var(--fg-dim)', border: 'none',
             }}>Cards</button>
           </div>
+          <button className="btn-touch export-btn" style={{ ...buttons.secondary, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+            onClick={async () => {
+              try {
+                const res = await fetch('/api/export?entity=companies', { credentials: 'include' })
+                if (!res.ok) throw new Error('Export failed')
+                const blob = await res.blob()
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url; a.download = `companies-export-${new Date().toISOString().slice(0,10)}.csv`
+                document.body.appendChild(a); a.click(); document.body.removeChild(a)
+                URL.revokeObjectURL(url)
+              } catch (err) { alert('Export failed: ' + (err as Error).message) }
+            }}>
+            ⬇ Export
+          </button>
           <button className="btn-touch" style={{ ...buttons.primary, display: 'flex', alignItems: 'center', gap: 6 }} onClick={openNew}>
             <IconPlus size={16} /> New Company
           </button>

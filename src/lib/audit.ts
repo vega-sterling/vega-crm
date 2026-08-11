@@ -31,7 +31,7 @@ import { prisma } from './db';
 
 export interface AuditEntry {
   userId: string;
-  action: 'create' | 'update' | 'delete';
+  action: 'create' | 'update' | 'delete' | 'import' | 'export';
   entity: string;
   entityId: string;
   changes?: Record<string, unknown> | null;

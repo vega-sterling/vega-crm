@@ -1,3 +1,65 @@
+## 2026-08-11 — Phase 10: Data Export & Import (Priority 7 Continued)
+
+### Added
+- **Data Management Page** (`/admin/data`) — HubSpot/Salesforce-style data portability hub for exporting and importing CRM records:
+  - **Tab-based UI** — switch between Export Data and Import Data tabs
+  - **Export panel** — select entity (companies, contacts, deals, tasks, activities) → one-click CSV download
+  - **Import wizard** — 4-step guided workflow: Choose Entity → Upload & Map → Preview → Results
+  - **Entity selector cards** — visual cards with icons and descriptions for each importable entity
+  - **CSV template download** — download a blank template with correct headers for each entity type
+  - **Auto column mapping** — CSV column headers auto-matched to CRM fields using fuzzy matching
+  - **Manual mapping override** — dropdowns to map each CSV column to the correct CRM field or skip it
+  - **Required field validation** — visual badges show which required fields are mapped/unmapped
+  - **Duplicate handling** — three modes: Create new (ignore dupes), Skip duplicates, Update existing records
+  - **Dedup key selector** — choose which field to use for duplicate detection (email, name, etc.)
+  - **Data preview table** — see first 10 rows of mapped data before confirming import
+  - **Import results summary** — stat cards showing created/updated/skipped/failed counts
+  - **Error table** — row-by-row error messages with row numbers for troubleshooting
+  - **Step indicator** — visual progress bar showing current step in the import wizard
+
+- **Export API** (`GET /api/export`): Admin-only, 5 entity types, tenant-scoped, RFC 4180 CSV, audit logged
+- **Import API** (`POST /api/import`): Admin-only, 5 entity types, full CSV parser, column mapping, field validation, duplicate handling (create/skip/update), per-row error handling, 5000 row limit, audit logged
+- **Import API** (`GET /api/import`): Returns field definitions for mapping UI
+- **Export buttons** on Companies, Contacts, and Deals list pages — one-click CSV download
+- **Sidebar navigation** — "Data Management" added to Administration section
+- **Audit entry types** — extended to include 'import' and 'export' actions
+
+### Responsive
+- **Desktop (>768px)**: Full mapping table, spacious wizard layout
+- **Tablet (768-1024px)**: Same as desktop with reduced spacing
+- **Phone (<768px)**: Mapping table transforms to card layout — touch-friendly, 44px+ targets
+- **Small phone (<480px)**: Select dropdowns have 44px+ min height
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded with no errors (Next.js 16.3.0, Turbopack, TypeScript strict)
+- ✅ Data Management page renders: HTTP 200
+- ✅ All 11 authenticated pages return HTTP 200
+- ✅ Export API — all 5 entities: 200, returns valid CSV
+- ✅ Export API — invalid/missing entity: 400 with clear error
+- ✅ Import GET — field definitions: returns all 5 entities with complete field specs
+- ✅ Import POST — companies create: 2 records created successfully
+- ✅ Import POST — duplicate skip: 1 record skipped (correct)
+- ✅ Import POST — duplicate update: 1 record updated with new values (verified in DB)
+- ✅ Import POST — contacts with company linking: 2 records created, correctly linked
+- ✅ Import POST — missing required field: row failed with clear error
+- ✅ Import POST — invalid company link: row failed with "Company not found"
+- ✅ Import POST — empty CSV: 400 "CSV file has no data rows"
+- ✅ Import POST — invalid entity: 422 validation error
+- ✅ Audit logging: import and export actions recorded with proper entity names
+- ✅ No runtime errors in container logs after all tests
+- ✅ Test data created, verified, and cleaned up
+
+### Files Changed
+- src/app/api/export/route.ts — NEW (CSV export API endpoint)
+- src/app/api/import/route.ts — NEW (CSV import API endpoint with field definitions)
+- src/app/admin/data/page.tsx — NEW (Data Management page with export panel and import wizard)
+- src/app/components/AppShell.tsx — MODIFIED (added "Data Management" to Administration nav)
+- src/app/globals.css — MODIFIED (Phase 10 CSS: mapping table→card responsive)
+- src/app/companies/page.tsx — MODIFIED (added Export button to toolbar)
+- src/app/contacts/page.tsx — MODIFIED (added Export button to toolbar)
+- src/app/deals/page.tsx — MODIFIED (added Export button to toolbar)
+- src/lib/audit.ts — MODIFIED (extended AuditEntry action to include 'import' and 'export')
 ## 2026-08-10 — Phase 9: Audit Log Viewer + Audit Logging Middleware (Priority 7 Started)
 
 ### Added
