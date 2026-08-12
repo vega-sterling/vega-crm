@@ -321,4 +321,93 @@
 - src/app/api/deals/bulk/route.ts — NEW (bulk deals API endpoint)
 - src/app/deals/page.tsx — REWRITTEN (added list view, bulk actions, view toggle)
 - src/app/globals.css — MODIFIED (Phase 6 CSS: bulk action bar, responsive table→card)
-- src/middleware.ts — REMOVED (Next.js 16 proxy.ts conflict fix)
+- src/middleware.ts — REMOVED (Next.js 16 proxy.ts conflict fix)## 2026-08-12 — Phase 11: API Key Management for Integrations (Priority 7 Complete)
+
+### Added
+- **API Key Management Page** (`/admin/api-keys`) — Stripe/HubSpot-style API key management interface:
+  - **Key list table** — shows name, key prefix (masked), scopes, tenant, creator, last used (time + IP), expiry, status
+  - **Create key form** — inline form with name, scope selector (grouped checkboxes by resource), optional tenant scoping, optional expiry date
+  - **One-time key display** — plaintext key shown once at creation with copy button and security warning, then permanently masked
+  - **Revoke/Reactivate toggle** — inline toggle to deactivate or reactivate keys without deleting
+  - **Delete with confirmation** — permanently delete keys with ConfirmDialog
+  - **How-to guide section** — shows authentication method (x-api-key header), example curl command, and security best practices
+  - **Empty state** — friendly "No API Keys Yet" message with create button
+
+- **API Key Management API** (`/api/admin/api-keys`):
+  - `GET` — list all keys (admin only, tenant-scoped for non-super-admins)
+  - `POST` — create new key (generates `vga_<32 hex>` format, SHA-256 hashed, returns plaintext once)
+  - `PATCH` — update key (rename, toggle active, update scopes)
+  - `DELETE /api/admin/api-keys/[id]` — permanently delete key
+  - All actions audit logged
+
+- **API Key Authentication** (`src/lib/apiKeyAuth.ts`):
+  - Validates `x-api-key` header against stored SHA-256 hashes
+  - Checks key is active, not expired, and has required scope
+  - Updates `lastUsedAt` and `lastUsedIp` on each request (fire-and-forget)
+  - Returns authenticated key context with tenant scoping
+
+- **Public API v1 Endpoints** (`/api/v1/`):
+  - `GET /api/v1/companies` — list companies with pagination, tenant-scoped by key
+  - `GET /api/v1/contacts` — list contacts with pagination, tenant-scoped by key
+  - Both require `x-api-key` header with `read:companies` or `read:contacts` scope respectively
+  - Supports `?page=`, `?limit=`, `?search=` query params
+
+- **Prisma Schema** — added `ApiKey` model (additive, no existing tables modified):
+  - Fields: id, tenantId (nullable for all-tenant keys), name, keyHash (unique), keyPrefix, scopes (string array), createdBy, lastUsedAt, lastUsedIp, expiresAt, isActive, createdAt, updatedAt
+  - Relations: tenant (optional, cascade delete), creator (User, cascade delete)
+  - Indexes on tenantId, createdBy, keyHash
+
+- **Sidebar Navigation** — added "API Keys" and "Data Management" links to Administration section (fixes Phase 10 missing Data Management link)
+
+### Security Features
+- Keys are **SHA-256 hashed** at rest — plaintext never stored, shown only once at creation
+- **Scope-based authorization** — 14 fine-grained scopes across 7 resource groups
+- **Tenant isolation** — keys scoped to a tenant can only access that tenant's data
+- **Expiry support** — keys can have optional expiration dates
+- **Revocation** — keys can be deactivated without deletion (audit trail preserved)
+- **Timing-safe comparison** — prevents timing attacks on key verification
+- **Audit logging** — all key management actions logged with user, IP, and changes
+
+### Responsive
+- **Desktop (>1024px)**: Full table view with all columns, spacious layout
+- **Tablet (768-1024px)**: Table with reduced padding
+- **Phone (<768px)**: Table transforms to card layout — each key becomes a card with all info stacked
+- **Small phone (<480px)**: 44px+ touch targets on all buttons and checkboxes
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded with no errors (Next.js 16.3.0, Turbopack, TypeScript strict)
+- ✅ API Keys page renders: HTTP 200
+- ✅ Data Management page renders: HTTP 200
+- ✅ All 21 authenticated pages return HTTP 200
+- ✅ Admin API GET (list keys): 200 — returns keys with safe fields (no hashes)
+- ✅ Admin API POST (create key): 201 — returns plaintext key one-time only
+- ✅ Admin API PATCH (revoke): 200 — key deactivated, subsequently rejected by v1 API
+- ✅ Admin API PATCH (reactivate): 200 — key reactivated, works again
+- ✅ Admin API DELETE: 200 — key permanently deleted, subsequently returns 401
+- ✅ Admin API validation: empty name → 422, no scopes → 422, invalid scope → 422
+- ✅ Admin API past expiry date → 422
+- ✅ V1 API GET companies (valid key): 200 — returns real company data with tenant info
+- ✅ V1 API GET contacts (valid key): 200 — returns real contact data with company info
+- ✅ V1 API no key → 401 "Missing x-api-key header"
+- ✅ V1 API invalid key → 401 "Invalid or revoked API key"
+- ✅ V1 API bad format → 401 "Invalid API key format"
+- ✅ V1 API revoked key → 401
+- ✅ V1 API deleted key → 401
+- ✅ Last used tracking: lastUsedAt and lastUsedIp updated on each API call
+- ✅ Audit logging: create, update, delete actions all logged with user + IP + changes
+- ✅ Scope enforcement: keys with read:companies can access /v1/companies, keys without it would be rejected
+- ✅ No runtime errors in container logs after all tests
+- ✅ Test data created, verified, and cleaned up
+
+### Files Changed
+- prisma/schema.prisma — MODIFIED (added ApiKey model, relations on Tenant and User)
+- src/lib/apiKeys.ts — NEW (key generation, hashing, verification, scope definitions)
+- src/lib/apiKeyAuth.ts — NEW (API key authentication middleware for v1 endpoints)
+- src/app/api/admin/api-keys/route.ts — NEW (GET, POST, PATCH for key management)
+- src/app/api/admin/api-keys/[id]/route.ts — NEW (DELETE for permanent key deletion)
+- src/app/api/v1/companies/route.ts — NEW (public v1 API for companies)
+- src/app/api/v1/contacts/route.ts — NEW (public v1 API for contacts)
+- src/app/admin/api-keys/page.tsx — NEW (API Key Management admin page)
+- src/app/components/AppShell.tsx — MODIFIED (added API Keys + Data Management sidebar links)
+- src/app/globals.css — MODIFIED (Phase 11 CSS: responsive table→card for API keys)

@@ -66,6 +66,8 @@ const navSections = [
       { label: 'Lead Scoring', href: '/admin/lead-scoring' },
       { label: 'Workflows', href: '/workflows' },
       { label: 'Integrations', href: '/admin/integrations' },
+      { label: 'API Keys', href: '/admin/api-keys' },
+      { label: 'Data Management', href: '/admin/data' },
       { label: 'Audit Log', href: '/admin/audit-logs' },
       { label: 'Settings', href: '/settings' },
     ],

@@ -97,6 +97,7 @@ model Tenant {
   leadForms       LeadForm[]
   emailCampaigns  EmailCampaign[]
   smsMessages     SmsMessage[]
+  apiKeys         ApiKey[]
 
   @@map("tenants")
 }
@@ -156,6 +157,7 @@ model User {
   emailSequences EmailSequence[] @relation("SequenceCreator")
   auditLogs     AuditLog[]
   notifications  Notification[]
+  apiKeys        ApiKey[] @relation("ApiKeyCreator")
 
   @@map("users")
 }
@@ -1143,4 +1145,35 @@ model SmsMessage {
   @@index([tenantId])
   @@index([createdAt])
   @@map("sms_messages")
+}
+// ============================================================================
+// API_KEY — API keys for external integrations (Priority 7)
+// ============================================================================
+// Allows admins to generate scoped API keys for programmatic access.
+// Keys are hashed (SHA-256) — plaintext shown only once at creation time.
+// Scopes follow the pattern: read:resource, write:resource (e.g., read:companies).
+// ============================================================================
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  tenantId    String?                          // null = all accessible tenants (super_admin keys)
+  name        String                            // Human-readable label (e.g., "Zapier Integration")
+  keyHash     String    @unique                 // SHA-256 hash of the full key
+  keyPrefix   String                            // First 12 chars for identification (vga_xxxxxxxx)
+  scopes      String[]                          // Array of scope strings (read:companies, write:deals, etc.)
+  createdBy   String                            // User ID who created the key
+  lastUsedAt  DateTime?
+  lastUsedIp  String?
+  expiresAt   DateTime?                         // null = no expiry
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator     User      @relation("ApiKeyCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([createdBy])
+  @@index([keyHash])
+  @@map("api_keys")
 }

@@ -1102,3 +1102,36 @@ input[type="checkbox"] {
     min-height: 44px;
   }
 }
+/* ============================================================================
+   Phase 11 — API Key Management responsive styles
+   ============================================================================ */
+
+/* API key row — stack vertically on mobile */
+@media (max-width: 768px) {
+  .api-key-row {
+    flex-direction: column !important;
+  }
+  .api-key-row > div:last-child {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .api-key-row > div:last-child button {
+    flex: 1;
+    min-height: 44px;
+  }
+}
+
+/* API keys list — tighter spacing on mobile */
+@media (max-width: 768px) {
+  .api-keys-list > div {
+    padding: 16px !important;
+  }
+}
+
+/* Small phone — ensure touch targets are 44px+ */
+@media (max-width: 480px) {
+  .api-key-row button {
+    min-height: 44px;
+    font-size: 14px;
+  }
+}

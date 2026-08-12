@@ -436,7 +436,8 @@ export const ModelName = {
   LeadFormSubmission: 'LeadFormSubmission',
   EmailCampaign: 'EmailCampaign',
   EmailCampaignRecipient: 'EmailCampaignRecipient',
-  SmsMessage: 'SmsMessage'
+  SmsMessage: 'SmsMessage',
+  ApiKey: 'ApiKey'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -452,7 +453,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "tenant" | "user" | "userTenant" | "company" | "contact" | "activity" | "task" | "project" | "projectColumn" | "projectTask" | "taskComment" | "subtask" | "deal" | "pipelineStage" | "customProperty" | "customPropertyValue" | "emailMessage" | "emailTemplate" | "emailSequence" | "sequenceStep" | "sequenceEnrollment" | "sequenceEnrollmentStep" | "workflow" | "workflowExecution" | "calendarEvent" | "bookingSlot" | "booking" | "auditLog" | "tenantSetting" | "notification" | "emailOpen" | "emailClick" | "leadScoreRule" | "quote" | "quoteLineItem" | "leadForm" | "leadFormSubmission" | "emailCampaign" | "emailCampaignRecipient" | "smsMessage"
+    modelProps: "tenant" | "user" | "userTenant" | "company" | "contact" | "activity" | "task" | "project" | "projectColumn" | "projectTask" | "taskComment" | "subtask" | "deal" | "pipelineStage" | "customProperty" | "customPropertyValue" | "emailMessage" | "emailTemplate" | "emailSequence" | "sequenceStep" | "sequenceEnrollment" | "sequenceEnrollmentStep" | "workflow" | "workflowExecution" | "calendarEvent" | "bookingSlot" | "booking" | "auditLog" | "tenantSetting" | "notification" | "emailOpen" | "emailClick" | "leadScoreRule" | "quote" | "quoteLineItem" | "leadForm" | "leadFormSubmission" | "emailCampaign" | "emailCampaignRecipient" | "smsMessage" | "apiKey"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -3416,6 +3417,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ApiKey: {
+      payload: Prisma.$ApiKeyPayload<ExtArgs>
+      fields: Prisma.ApiKeyFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ApiKeyFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiKeyPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ApiKeyFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiKeyPayload>
+        }
+        findFirst: {
+          args: Prisma.ApiKeyFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiKeyPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ApiKeyFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiKeyPayload>
+        }
+        findMany: {
+          args: Prisma.ApiKeyFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiKeyPayload>[]
+        }
+        create: {
+          args: Prisma.ApiKeyCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiKeyPayload>
+        }
+        createMany: {
+          args: Prisma.ApiKeyCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ApiKeyCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiKeyPayload>[]
+        }
+        delete: {
+          args: Prisma.ApiKeyDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiKeyPayload>
+        }
+        update: {
+          args: Prisma.ApiKeyUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiKeyPayload>
+        }
+        deleteMany: {
+          args: Prisma.ApiKeyDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ApiKeyUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ApiKeyUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiKeyPayload>[]
+        }
+        upsert: {
+          args: Prisma.ApiKeyUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiKeyPayload>
+        }
+        aggregate: {
+          args: Prisma.ApiKeyAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateApiKey>
+        }
+        groupBy: {
+          args: Prisma.ApiKeyGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ApiKeyGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ApiKeyCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ApiKeyCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -4125,6 +4200,25 @@ export const SmsMessageScalarFieldEnum = {
 export type SmsMessageScalarFieldEnum = (typeof SmsMessageScalarFieldEnum)[keyof typeof SmsMessageScalarFieldEnum]
 
 
+export const ApiKeyScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  name: 'name',
+  keyHash: 'keyHash',
+  keyPrefix: 'keyPrefix',
+  scopes: 'scopes',
+  createdBy: 'createdBy',
+  lastUsedAt: 'lastUsedAt',
+  lastUsedIp: 'lastUsedIp',
+  expiresAt: 'expiresAt',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ApiKeyScalarFieldEnum = (typeof ApiKeyScalarFieldEnum)[keyof typeof ApiKeyScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -4530,6 +4624,7 @@ export type GlobalOmitConfig = {
   emailCampaign?: Prisma.EmailCampaignOmit
   emailCampaignRecipient?: Prisma.EmailCampaignRecipientOmit
   smsMessage?: Prisma.SmsMessageOmit
+  apiKey?: Prisma.ApiKeyOmit
 }
 
 /* Types for Logging */

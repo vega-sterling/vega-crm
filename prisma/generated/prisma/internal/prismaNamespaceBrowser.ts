@@ -90,7 +90,8 @@ export const ModelName = {
   LeadFormSubmission: 'LeadFormSubmission',
   EmailCampaign: 'EmailCampaign',
   EmailCampaignRecipient: 'EmailCampaignRecipient',
-  SmsMessage: 'SmsMessage'
+  SmsMessage: 'SmsMessage',
+  ApiKey: 'ApiKey'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -777,6 +778,25 @@ export const SmsMessageScalarFieldEnum = {
 } as const
 
 export type SmsMessageScalarFieldEnum = (typeof SmsMessageScalarFieldEnum)[keyof typeof SmsMessageScalarFieldEnum]
+
+
+export const ApiKeyScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  name: 'name',
+  keyHash: 'keyHash',
+  keyPrefix: 'keyPrefix',
+  scopes: 'scopes',
+  createdBy: 'createdBy',
+  lastUsedAt: 'lastUsedAt',
+  lastUsedIp: 'lastUsedIp',
+  expiresAt: 'expiresAt',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ApiKeyScalarFieldEnum = (typeof ApiKeyScalarFieldEnum)[keyof typeof ApiKeyScalarFieldEnum]
 
 
 export const SortOrder = {

@@ -216,6 +216,7 @@ export type TenantWhereInput = {
   leadForms?: Prisma.LeadFormListRelationFilter
   emailCampaigns?: Prisma.EmailCampaignListRelationFilter
   smsMessages?: Prisma.SmsMessageListRelationFilter
+  apiKeys?: Prisma.ApiKeyListRelationFilter
 }
 
 export type TenantOrderByWithRelationInput = {
@@ -244,6 +245,7 @@ export type TenantOrderByWithRelationInput = {
   leadForms?: Prisma.LeadFormOrderByRelationAggregateInput
   emailCampaigns?: Prisma.EmailCampaignOrderByRelationAggregateInput
   smsMessages?: Prisma.SmsMessageOrderByRelationAggregateInput
+  apiKeys?: Prisma.ApiKeyOrderByRelationAggregateInput
 }
 
 export type TenantWhereUniqueInput = Prisma.AtLeast<{
@@ -275,6 +277,7 @@ export type TenantWhereUniqueInput = Prisma.AtLeast<{
   leadForms?: Prisma.LeadFormListRelationFilter
   emailCampaigns?: Prisma.EmailCampaignListRelationFilter
   smsMessages?: Prisma.SmsMessageListRelationFilter
+  apiKeys?: Prisma.ApiKeyListRelationFilter
 }, "id" | "slug">
 
 export type TenantOrderByWithAggregationInput = {
@@ -329,6 +332,7 @@ export type TenantCreateInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateInput = {
@@ -357,6 +361,7 @@ export type TenantUncheckedCreateInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUpdateInput = {
@@ -385,6 +390,7 @@ export type TenantUpdateInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateInput = {
@@ -413,6 +419,7 @@ export type TenantUncheckedUpdateInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateManyInput = {
@@ -478,6 +485,11 @@ export type TenantMinOrderByAggregateInput = {
 export type TenantScalarRelationFilter = {
   is?: Prisma.TenantWhereInput
   isNot?: Prisma.TenantWhereInput
+}
+
+export type TenantNullableScalarRelationFilter = {
+  is?: Prisma.TenantWhereInput | null
+  isNot?: Prisma.TenantWhereInput | null
 }
 
 export type StringFieldUpdateOperationsInput = {
@@ -748,6 +760,22 @@ export type TenantUpdateOneRequiredWithoutSmsMessagesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutSmsMessagesInput, Prisma.TenantUpdateWithoutSmsMessagesInput>, Prisma.TenantUncheckedUpdateWithoutSmsMessagesInput>
 }
 
+export type TenantCreateNestedOneWithoutApiKeysInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutApiKeysInput, Prisma.TenantUncheckedCreateWithoutApiKeysInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutApiKeysInput
+  connect?: Prisma.TenantWhereUniqueInput
+}
+
+export type TenantUpdateOneWithoutApiKeysNestedInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutApiKeysInput, Prisma.TenantUncheckedCreateWithoutApiKeysInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutApiKeysInput
+  upsert?: Prisma.TenantUpsertWithoutApiKeysInput
+  disconnect?: Prisma.TenantWhereInput | boolean
+  delete?: Prisma.TenantWhereInput | boolean
+  connect?: Prisma.TenantWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutApiKeysInput, Prisma.TenantUpdateWithoutApiKeysInput>, Prisma.TenantUncheckedUpdateWithoutApiKeysInput>
+}
+
 export type TenantCreateWithoutUserTenantsInput = {
   id?: string
   name: string
@@ -773,6 +801,7 @@ export type TenantCreateWithoutUserTenantsInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutUserTenantsInput = {
@@ -800,6 +829,7 @@ export type TenantUncheckedCreateWithoutUserTenantsInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutUserTenantsInput = {
@@ -843,6 +873,7 @@ export type TenantUpdateWithoutUserTenantsInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutUserTenantsInput = {
@@ -870,6 +901,7 @@ export type TenantUncheckedUpdateWithoutUserTenantsInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutCompaniesInput = {
@@ -897,6 +929,7 @@ export type TenantCreateWithoutCompaniesInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutCompaniesInput = {
@@ -924,6 +957,7 @@ export type TenantUncheckedCreateWithoutCompaniesInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutCompaniesInput = {
@@ -967,6 +1001,7 @@ export type TenantUpdateWithoutCompaniesInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutCompaniesInput = {
@@ -994,6 +1029,7 @@ export type TenantUncheckedUpdateWithoutCompaniesInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutProjectsInput = {
@@ -1021,6 +1057,7 @@ export type TenantCreateWithoutProjectsInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutProjectsInput = {
@@ -1048,6 +1085,7 @@ export type TenantUncheckedCreateWithoutProjectsInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutProjectsInput = {
@@ -1091,6 +1129,7 @@ export type TenantUpdateWithoutProjectsInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutProjectsInput = {
@@ -1118,6 +1157,7 @@ export type TenantUncheckedUpdateWithoutProjectsInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutDealsInput = {
@@ -1145,6 +1185,7 @@ export type TenantCreateWithoutDealsInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutDealsInput = {
@@ -1172,6 +1213,7 @@ export type TenantUncheckedCreateWithoutDealsInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutDealsInput = {
@@ -1215,6 +1257,7 @@ export type TenantUpdateWithoutDealsInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutDealsInput = {
@@ -1242,6 +1285,7 @@ export type TenantUncheckedUpdateWithoutDealsInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutPipelineStagesInput = {
@@ -1269,6 +1313,7 @@ export type TenantCreateWithoutPipelineStagesInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutPipelineStagesInput = {
@@ -1296,6 +1341,7 @@ export type TenantUncheckedCreateWithoutPipelineStagesInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutPipelineStagesInput = {
@@ -1339,6 +1385,7 @@ export type TenantUpdateWithoutPipelineStagesInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutPipelineStagesInput = {
@@ -1366,6 +1413,7 @@ export type TenantUncheckedUpdateWithoutPipelineStagesInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutCustomPropertiesInput = {
@@ -1393,6 +1441,7 @@ export type TenantCreateWithoutCustomPropertiesInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutCustomPropertiesInput = {
@@ -1420,6 +1469,7 @@ export type TenantUncheckedCreateWithoutCustomPropertiesInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutCustomPropertiesInput = {
@@ -1463,6 +1513,7 @@ export type TenantUpdateWithoutCustomPropertiesInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutCustomPropertiesInput = {
@@ -1490,6 +1541,7 @@ export type TenantUncheckedUpdateWithoutCustomPropertiesInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutEmailMessagesInput = {
@@ -1517,6 +1569,7 @@ export type TenantCreateWithoutEmailMessagesInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutEmailMessagesInput = {
@@ -1544,6 +1597,7 @@ export type TenantUncheckedCreateWithoutEmailMessagesInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutEmailMessagesInput = {
@@ -1587,6 +1641,7 @@ export type TenantUpdateWithoutEmailMessagesInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutEmailMessagesInput = {
@@ -1614,6 +1669,7 @@ export type TenantUncheckedUpdateWithoutEmailMessagesInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutEmailTemplatesInput = {
@@ -1641,6 +1697,7 @@ export type TenantCreateWithoutEmailTemplatesInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutEmailTemplatesInput = {
@@ -1668,6 +1725,7 @@ export type TenantUncheckedCreateWithoutEmailTemplatesInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutEmailTemplatesInput = {
@@ -1711,6 +1769,7 @@ export type TenantUpdateWithoutEmailTemplatesInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutEmailTemplatesInput = {
@@ -1738,6 +1797,7 @@ export type TenantUncheckedUpdateWithoutEmailTemplatesInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutEmailSequencesInput = {
@@ -1765,6 +1825,7 @@ export type TenantCreateWithoutEmailSequencesInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutEmailSequencesInput = {
@@ -1792,6 +1853,7 @@ export type TenantUncheckedCreateWithoutEmailSequencesInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutEmailSequencesInput = {
@@ -1835,6 +1897,7 @@ export type TenantUpdateWithoutEmailSequencesInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutEmailSequencesInput = {
@@ -1862,6 +1925,7 @@ export type TenantUncheckedUpdateWithoutEmailSequencesInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutWorkflowsInput = {
@@ -1889,6 +1953,7 @@ export type TenantCreateWithoutWorkflowsInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutWorkflowsInput = {
@@ -1916,6 +1981,7 @@ export type TenantUncheckedCreateWithoutWorkflowsInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutWorkflowsInput = {
@@ -1959,6 +2025,7 @@ export type TenantUpdateWithoutWorkflowsInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutWorkflowsInput = {
@@ -1986,6 +2053,7 @@ export type TenantUncheckedUpdateWithoutWorkflowsInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutCalendarEventsInput = {
@@ -2013,6 +2081,7 @@ export type TenantCreateWithoutCalendarEventsInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutCalendarEventsInput = {
@@ -2040,6 +2109,7 @@ export type TenantUncheckedCreateWithoutCalendarEventsInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutCalendarEventsInput = {
@@ -2083,6 +2153,7 @@ export type TenantUpdateWithoutCalendarEventsInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutCalendarEventsInput = {
@@ -2110,6 +2181,7 @@ export type TenantUncheckedUpdateWithoutCalendarEventsInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutBookingSlotsInput = {
@@ -2137,6 +2209,7 @@ export type TenantCreateWithoutBookingSlotsInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutBookingSlotsInput = {
@@ -2164,6 +2237,7 @@ export type TenantUncheckedCreateWithoutBookingSlotsInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutBookingSlotsInput = {
@@ -2207,6 +2281,7 @@ export type TenantUpdateWithoutBookingSlotsInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutBookingSlotsInput = {
@@ -2234,6 +2309,7 @@ export type TenantUncheckedUpdateWithoutBookingSlotsInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutTenantSettingsInput = {
@@ -2261,6 +2337,7 @@ export type TenantCreateWithoutTenantSettingsInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutTenantSettingsInput = {
@@ -2288,6 +2365,7 @@ export type TenantUncheckedCreateWithoutTenantSettingsInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutTenantSettingsInput = {
@@ -2331,6 +2409,7 @@ export type TenantUpdateWithoutTenantSettingsInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutTenantSettingsInput = {
@@ -2358,6 +2437,7 @@ export type TenantUncheckedUpdateWithoutTenantSettingsInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutLeadScoreRulesInput = {
@@ -2385,6 +2465,7 @@ export type TenantCreateWithoutLeadScoreRulesInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutLeadScoreRulesInput = {
@@ -2412,6 +2493,7 @@ export type TenantUncheckedCreateWithoutLeadScoreRulesInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutLeadScoreRulesInput = {
@@ -2455,6 +2537,7 @@ export type TenantUpdateWithoutLeadScoreRulesInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutLeadScoreRulesInput = {
@@ -2482,6 +2565,7 @@ export type TenantUncheckedUpdateWithoutLeadScoreRulesInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutQuotesInput = {
@@ -2509,6 +2593,7 @@ export type TenantCreateWithoutQuotesInput = {
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutQuotesInput = {
@@ -2536,6 +2621,7 @@ export type TenantUncheckedCreateWithoutQuotesInput = {
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutQuotesInput = {
@@ -2579,6 +2665,7 @@ export type TenantUpdateWithoutQuotesInput = {
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutQuotesInput = {
@@ -2606,6 +2693,7 @@ export type TenantUncheckedUpdateWithoutQuotesInput = {
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutLeadFormsInput = {
@@ -2633,6 +2721,7 @@ export type TenantCreateWithoutLeadFormsInput = {
   quotes?: Prisma.QuoteCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutLeadFormsInput = {
@@ -2660,6 +2749,7 @@ export type TenantUncheckedCreateWithoutLeadFormsInput = {
   quotes?: Prisma.QuoteUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutLeadFormsInput = {
@@ -2703,6 +2793,7 @@ export type TenantUpdateWithoutLeadFormsInput = {
   quotes?: Prisma.QuoteUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutLeadFormsInput = {
@@ -2730,6 +2821,7 @@ export type TenantUncheckedUpdateWithoutLeadFormsInput = {
   quotes?: Prisma.QuoteUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutEmailCampaignsInput = {
@@ -2757,6 +2849,7 @@ export type TenantCreateWithoutEmailCampaignsInput = {
   quotes?: Prisma.QuoteCreateNestedManyWithoutTenantInput
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutEmailCampaignsInput = {
@@ -2784,6 +2877,7 @@ export type TenantUncheckedCreateWithoutEmailCampaignsInput = {
   quotes?: Prisma.QuoteUncheckedCreateNestedManyWithoutTenantInput
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutEmailCampaignsInput = {
@@ -2827,6 +2921,7 @@ export type TenantUpdateWithoutEmailCampaignsInput = {
   quotes?: Prisma.QuoteUpdateManyWithoutTenantNestedInput
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutEmailCampaignsInput = {
@@ -2854,6 +2949,7 @@ export type TenantUncheckedUpdateWithoutEmailCampaignsInput = {
   quotes?: Prisma.QuoteUncheckedUpdateManyWithoutTenantNestedInput
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutSmsMessagesInput = {
@@ -2881,6 +2977,7 @@ export type TenantCreateWithoutSmsMessagesInput = {
   quotes?: Prisma.QuoteCreateNestedManyWithoutTenantInput
   leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutSmsMessagesInput = {
@@ -2908,6 +3005,7 @@ export type TenantUncheckedCreateWithoutSmsMessagesInput = {
   quotes?: Prisma.QuoteUncheckedCreateNestedManyWithoutTenantInput
   leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutSmsMessagesInput = {
@@ -2951,6 +3049,7 @@ export type TenantUpdateWithoutSmsMessagesInput = {
   quotes?: Prisma.QuoteUpdateManyWithoutTenantNestedInput
   leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutSmsMessagesInput = {
@@ -2978,6 +3077,135 @@ export type TenantUncheckedUpdateWithoutSmsMessagesInput = {
   quotes?: Prisma.QuoteUncheckedUpdateManyWithoutTenantNestedInput
   leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutTenantNestedInput
+}
+
+export type TenantCreateWithoutApiKeysInput = {
+  id?: string
+  name: string
+  slug: string
+  description?: string | null
+  isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  companies?: Prisma.CompanyCreateNestedManyWithoutTenantInput
+  userTenants?: Prisma.UserTenantCreateNestedManyWithoutTenantInput
+  projects?: Prisma.ProjectCreateNestedManyWithoutTenantInput
+  deals?: Prisma.DealCreateNestedManyWithoutTenantInput
+  pipelineStages?: Prisma.PipelineStageCreateNestedManyWithoutTenantInput
+  customProperties?: Prisma.CustomPropertyCreateNestedManyWithoutTenantInput
+  emailMessages?: Prisma.EmailMessageCreateNestedManyWithoutTenantInput
+  emailTemplates?: Prisma.EmailTemplateCreateNestedManyWithoutTenantInput
+  emailSequences?: Prisma.EmailSequenceCreateNestedManyWithoutTenantInput
+  workflows?: Prisma.WorkflowCreateNestedManyWithoutTenantInput
+  calendarEvents?: Prisma.CalendarEventCreateNestedManyWithoutTenantInput
+  bookingSlots?: Prisma.BookingSlotCreateNestedManyWithoutTenantInput
+  tenantSettings?: Prisma.TenantSettingCreateNestedManyWithoutTenantInput
+  leadScoreRules?: Prisma.LeadScoreRuleCreateNestedManyWithoutTenantInput
+  quotes?: Prisma.QuoteCreateNestedManyWithoutTenantInput
+  leadForms?: Prisma.LeadFormCreateNestedManyWithoutTenantInput
+  emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutTenantInput
+  smsMessages?: Prisma.SmsMessageCreateNestedManyWithoutTenantInput
+}
+
+export type TenantUncheckedCreateWithoutApiKeysInput = {
+  id?: string
+  name: string
+  slug: string
+  description?: string | null
+  isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  companies?: Prisma.CompanyUncheckedCreateNestedManyWithoutTenantInput
+  userTenants?: Prisma.UserTenantUncheckedCreateNestedManyWithoutTenantInput
+  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutTenantInput
+  deals?: Prisma.DealUncheckedCreateNestedManyWithoutTenantInput
+  pipelineStages?: Prisma.PipelineStageUncheckedCreateNestedManyWithoutTenantInput
+  customProperties?: Prisma.CustomPropertyUncheckedCreateNestedManyWithoutTenantInput
+  emailMessages?: Prisma.EmailMessageUncheckedCreateNestedManyWithoutTenantInput
+  emailTemplates?: Prisma.EmailTemplateUncheckedCreateNestedManyWithoutTenantInput
+  emailSequences?: Prisma.EmailSequenceUncheckedCreateNestedManyWithoutTenantInput
+  workflows?: Prisma.WorkflowUncheckedCreateNestedManyWithoutTenantInput
+  calendarEvents?: Prisma.CalendarEventUncheckedCreateNestedManyWithoutTenantInput
+  bookingSlots?: Prisma.BookingSlotUncheckedCreateNestedManyWithoutTenantInput
+  tenantSettings?: Prisma.TenantSettingUncheckedCreateNestedManyWithoutTenantInput
+  leadScoreRules?: Prisma.LeadScoreRuleUncheckedCreateNestedManyWithoutTenantInput
+  quotes?: Prisma.QuoteUncheckedCreateNestedManyWithoutTenantInput
+  leadForms?: Prisma.LeadFormUncheckedCreateNestedManyWithoutTenantInput
+  emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutTenantInput
+  smsMessages?: Prisma.SmsMessageUncheckedCreateNestedManyWithoutTenantInput
+}
+
+export type TenantCreateOrConnectWithoutApiKeysInput = {
+  where: Prisma.TenantWhereUniqueInput
+  create: Prisma.XOR<Prisma.TenantCreateWithoutApiKeysInput, Prisma.TenantUncheckedCreateWithoutApiKeysInput>
+}
+
+export type TenantUpsertWithoutApiKeysInput = {
+  update: Prisma.XOR<Prisma.TenantUpdateWithoutApiKeysInput, Prisma.TenantUncheckedUpdateWithoutApiKeysInput>
+  create: Prisma.XOR<Prisma.TenantCreateWithoutApiKeysInput, Prisma.TenantUncheckedCreateWithoutApiKeysInput>
+  where?: Prisma.TenantWhereInput
+}
+
+export type TenantUpdateToOneWithWhereWithoutApiKeysInput = {
+  where?: Prisma.TenantWhereInput
+  data: Prisma.XOR<Prisma.TenantUpdateWithoutApiKeysInput, Prisma.TenantUncheckedUpdateWithoutApiKeysInput>
+}
+
+export type TenantUpdateWithoutApiKeysInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  companies?: Prisma.CompanyUpdateManyWithoutTenantNestedInput
+  userTenants?: Prisma.UserTenantUpdateManyWithoutTenantNestedInput
+  projects?: Prisma.ProjectUpdateManyWithoutTenantNestedInput
+  deals?: Prisma.DealUpdateManyWithoutTenantNestedInput
+  pipelineStages?: Prisma.PipelineStageUpdateManyWithoutTenantNestedInput
+  customProperties?: Prisma.CustomPropertyUpdateManyWithoutTenantNestedInput
+  emailMessages?: Prisma.EmailMessageUpdateManyWithoutTenantNestedInput
+  emailTemplates?: Prisma.EmailTemplateUpdateManyWithoutTenantNestedInput
+  emailSequences?: Prisma.EmailSequenceUpdateManyWithoutTenantNestedInput
+  workflows?: Prisma.WorkflowUpdateManyWithoutTenantNestedInput
+  calendarEvents?: Prisma.CalendarEventUpdateManyWithoutTenantNestedInput
+  bookingSlots?: Prisma.BookingSlotUpdateManyWithoutTenantNestedInput
+  tenantSettings?: Prisma.TenantSettingUpdateManyWithoutTenantNestedInput
+  leadScoreRules?: Prisma.LeadScoreRuleUpdateManyWithoutTenantNestedInput
+  quotes?: Prisma.QuoteUpdateManyWithoutTenantNestedInput
+  leadForms?: Prisma.LeadFormUpdateManyWithoutTenantNestedInput
+  emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutTenantNestedInput
+  smsMessages?: Prisma.SmsMessageUpdateManyWithoutTenantNestedInput
+}
+
+export type TenantUncheckedUpdateWithoutApiKeysInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  companies?: Prisma.CompanyUncheckedUpdateManyWithoutTenantNestedInput
+  userTenants?: Prisma.UserTenantUncheckedUpdateManyWithoutTenantNestedInput
+  projects?: Prisma.ProjectUncheckedUpdateManyWithoutTenantNestedInput
+  deals?: Prisma.DealUncheckedUpdateManyWithoutTenantNestedInput
+  pipelineStages?: Prisma.PipelineStageUncheckedUpdateManyWithoutTenantNestedInput
+  customProperties?: Prisma.CustomPropertyUncheckedUpdateManyWithoutTenantNestedInput
+  emailMessages?: Prisma.EmailMessageUncheckedUpdateManyWithoutTenantNestedInput
+  emailTemplates?: Prisma.EmailTemplateUncheckedUpdateManyWithoutTenantNestedInput
+  emailSequences?: Prisma.EmailSequenceUncheckedUpdateManyWithoutTenantNestedInput
+  workflows?: Prisma.WorkflowUncheckedUpdateManyWithoutTenantNestedInput
+  calendarEvents?: Prisma.CalendarEventUncheckedUpdateManyWithoutTenantNestedInput
+  bookingSlots?: Prisma.BookingSlotUncheckedUpdateManyWithoutTenantNestedInput
+  tenantSettings?: Prisma.TenantSettingUncheckedUpdateManyWithoutTenantNestedInput
+  leadScoreRules?: Prisma.LeadScoreRuleUncheckedUpdateManyWithoutTenantNestedInput
+  quotes?: Prisma.QuoteUncheckedUpdateManyWithoutTenantNestedInput
+  leadForms?: Prisma.LeadFormUncheckedUpdateManyWithoutTenantNestedInput
+  emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutTenantNestedInput
+  smsMessages?: Prisma.SmsMessageUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 
@@ -3004,6 +3232,7 @@ export type TenantCountOutputType = {
   leadForms: number
   emailCampaigns: number
   smsMessages: number
+  apiKeys: number
 }
 
 export type TenantCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -3025,6 +3254,7 @@ export type TenantCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions
   leadForms?: boolean | TenantCountOutputTypeCountLeadFormsArgs
   emailCampaigns?: boolean | TenantCountOutputTypeCountEmailCampaignsArgs
   smsMessages?: boolean | TenantCountOutputTypeCountSmsMessagesArgs
+  apiKeys?: boolean | TenantCountOutputTypeCountApiKeysArgs
 }
 
 /**
@@ -3163,6 +3393,13 @@ export type TenantCountOutputTypeCountSmsMessagesArgs<ExtArgs extends runtime.Ty
   where?: Prisma.SmsMessageWhereInput
 }
 
+/**
+ * TenantCountOutputType without action
+ */
+export type TenantCountOutputTypeCountApiKeysArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ApiKeyWhereInput
+}
+
 
 export type TenantSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -3190,6 +3427,7 @@ export type TenantSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   leadForms?: boolean | Prisma.Tenant$leadFormsArgs<ExtArgs>
   emailCampaigns?: boolean | Prisma.Tenant$emailCampaignsArgs<ExtArgs>
   smsMessages?: boolean | Prisma.Tenant$smsMessagesArgs<ExtArgs>
+  apiKeys?: boolean | Prisma.Tenant$apiKeysArgs<ExtArgs>
   _count?: boolean | Prisma.TenantCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["tenant"]>
 
@@ -3243,6 +3481,7 @@ export type TenantInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   leadForms?: boolean | Prisma.Tenant$leadFormsArgs<ExtArgs>
   emailCampaigns?: boolean | Prisma.Tenant$emailCampaignsArgs<ExtArgs>
   smsMessages?: boolean | Prisma.Tenant$smsMessagesArgs<ExtArgs>
+  apiKeys?: boolean | Prisma.Tenant$apiKeysArgs<ExtArgs>
   _count?: boolean | Prisma.TenantCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TenantIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -3269,6 +3508,7 @@ export type $TenantPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     leadForms: Prisma.$LeadFormPayload<ExtArgs>[]
     emailCampaigns: Prisma.$EmailCampaignPayload<ExtArgs>[]
     smsMessages: Prisma.$SmsMessagePayload<ExtArgs>[]
+    apiKeys: Prisma.$ApiKeyPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -3690,6 +3930,7 @@ export interface Prisma__TenantClient<T, Null = never, ExtArgs extends runtime.T
   leadForms<T extends Prisma.Tenant$leadFormsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$leadFormsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadFormPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   emailCampaigns<T extends Prisma.Tenant$emailCampaignsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$emailCampaignsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EmailCampaignPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   smsMessages<T extends Prisma.Tenant$smsMessagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$smsMessagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SmsMessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  apiKeys<T extends Prisma.Tenant$apiKeysArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$apiKeysArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ApiKeyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4548,6 +4789,30 @@ export type Tenant$smsMessagesArgs<ExtArgs extends runtime.Types.Extensions.Inte
   take?: number
   skip?: number
   distinct?: Prisma.SmsMessageScalarFieldEnum | Prisma.SmsMessageScalarFieldEnum[]
+}
+
+/**
+ * Tenant.apiKeys
+ */
+export type Tenant$apiKeysArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ApiKey
+   */
+  select?: Prisma.ApiKeySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ApiKey
+   */
+  omit?: Prisma.ApiKeyOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ApiKeyInclude<ExtArgs> | null
+  where?: Prisma.ApiKeyWhereInput
+  orderBy?: Prisma.ApiKeyOrderByWithRelationInput | Prisma.ApiKeyOrderByWithRelationInput[]
+  cursor?: Prisma.ApiKeyWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ApiKeyScalarFieldEnum | Prisma.ApiKeyScalarFieldEnum[]
 }
 
 /**

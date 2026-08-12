@@ -241,3 +241,8 @@ export type EmailCampaignRecipient = Prisma.EmailCampaignRecipientModel
  * 
  */
 export type SmsMessage = Prisma.SmsMessageModel
+/**
+ * Model ApiKey
+ * 
+ */
+export type ApiKey = Prisma.ApiKeyModel
