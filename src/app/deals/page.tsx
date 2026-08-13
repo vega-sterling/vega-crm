@@ -23,7 +23,7 @@ import { useRouter } from 'next/navigation'
 import ProtectedLayout from '../components/ProtectedLayout'
 import Spinner from '../components/Spinner'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { IconPlus, IconDiamond, IconKanban, IconClipboard, IconTrash, IconArrowLeft } from '../components/Icons'
+import { IconPlus, IconDiamond, IconKanban, IconClipboard, IconTrash, IconArrowLeft, IconChevronRight, IconX } from '../components/Icons'
 import { apiFetch } from '../lib/api'
 import { layout, panel, typeography, forms, buttons, statusBadge, statusDot, table } from '../lib/styles'
 import type { Deal, PipelineStage, Company, Contact, User, Tenant } from '../lib/types'
@@ -58,6 +58,7 @@ function DealsContent() {
   const [showNew, setShowNew] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [movingDealId, setMovingDealId] = useState<string | null>(null)
   const [dragOverStage, setDragOverStage] = useState<string | null>(null)
 
   // ── View mode: Kanban | List ──
@@ -908,49 +909,154 @@ function DealsContent() {
                       Drop deals here
                     </div>
                   ) : (
-                    stageDeals.map((deal) => (
-                      <div
-                        key={deal.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, deal.id)}
-                        onDragEnd={handleDragEnd}
-                        onClick={() => router.push(`/deals/${deal.id}`)}
-                        className="panel-container"
-                        style={{
-                          ...panel.compact,
-                          cursor: 'grab',
-                          opacity: draggingId === deal.id ? 0.4 : 1,
-                          borderLeft: `3px solid ${stageColor}`,
-                          transition: 'opacity .15s, box-shadow .15s, border-color .15s',
-                        }}
-                      >
-                        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>{deal.company?.name || '—'}</div>
-                        <div style={{ fontSize: 13, color: 'var(--fg-dim)', marginBottom: 8 }}>{deal.title}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--gold)' }}>
-                            {currencyFmt(deal.value || 0, deal.currency)}
+                    stageDeals.map((deal) => {
+                      const assigneeName = deal.assignee?.name || ''
+                      const initials = assigneeName.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+                      const isOverdue = deal.expectedCloseDate && new Date(deal.expectedCloseDate) < new Date() && deal.status === 'OPEN'
+                      return (
+                    <div
+                      key={deal.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, deal.id)}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => router.push(`/deals/${deal.id}`)}
+                      className="panel-container"
+                      style={{
+                        ...panel.compact,
+                        cursor: 'grab',
+                        opacity: draggingId === deal.id ? 0.4 : 1,
+                        borderLeft: `3px solid ${stageColor}`,
+                        transition: 'opacity .15s, box-shadow .15s, border-color .15s',
+                      }}
+                    >
+                      {/* Top row: company + move button */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {deal.company?.name || '—'}
+                        </div>
+                        <button
+                          className="btn-touch deal-move-btn"
+                          onClick={(e) => { e.stopPropagation(); setMovingDealId(deal.id) }}
+                          style={{
+                            padding: '2px 6px', borderRadius: 4,
+                            background: 'transparent', border: '1px solid var(--panel-border)',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2,
+                            fontSize: 11, color: 'var(--fg-dim)', flexShrink: 0,
+                          }}
+                          aria-label="Move deal to another stage"
+                        >
+                          <IconChevronRight size={14} /> Move
+                        </button>
+                      </div>
+                      {/* Deal title */}
+                      <div style={{ fontSize: 13, color: 'var(--fg-dim)', marginBottom: 8 }}>{deal.title}</div>
+                      {/* Value + contact */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--gold)' }}>
+                          {currencyFmt(deal.value || 0, deal.currency)}
+                        </span>
+                        {deal.contact && (
+                          <span style={{ fontSize: 12, color: 'var(--fg-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {deal.contact.firstName} {deal.contact.lastName}
                           </span>
-                          {deal.contact && (
-                            <span style={{ fontSize: 12, color: 'var(--fg-dim)' }}>
-                              {deal.contact.firstName} {deal.contact.lastName}
+                        )}
+                      </div>
+                      {/* Assignee avatar + close date */}
+                      {(assigneeName || deal.expectedCloseDate) && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--panel-border)' }}>
+                          {assigneeName && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{
+                                width: 22, height: 22, borderRadius: '50%',
+                                backgroundColor: 'var(--gold)', color: 'var(--bg)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 10, fontWeight: 700, flexShrink: 0,
+                              }}>
+                                {initials || '?'}
+                              </span>
+                              <span style={{ fontSize: 12, color: 'var(--fg-dim)' }}>{assigneeName}</span>
+                            </div>
+                          )}
+                          {deal.expectedCloseDate && (
+                            <span style={{
+                              fontSize: 11, fontWeight: 600,
+                              color: isOverdue ? 'var(--rust)' : 'var(--fg-dim)',
+                              display: 'flex', alignItems: 'center', gap: 3,
+                            }}>
+                              {isOverdue && '⚠ '}
+                              {new Date(deal.expectedCloseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
                           )}
                         </div>
-                        {deal.probability != null && deal.probability > 0 && (
-                          <div style={{ marginTop: 8 }}>
-                            <span style={statusBadge(stageColor)}>
-                              <span style={statusDot(stageColor)} />
-                              {deal.probability}% likely
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    ))
+                      )}
+                      {/* Probability badge */}
+                      {deal.probability != null && deal.probability > 0 && (
+                        <div style={{ marginTop: 8 }}>
+                          <span style={statusBadge(stageColor)}>
+                            <span style={statusDot(stageColor)} />
+                            {deal.probability}% likely
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                      )
+                    })
                   )}
                 </div>
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Stage move modal — touch-compatible bottom sheet */}
+      {movingDealId && (
+        <div onClick={() => setMovingDealId(null)} style={{
+          position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
+          zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        }}>
+          <div onClick={(e) => e.stopPropagation()} className="panel-container stage-move-sheet" style={{
+            ...panel.container,
+            width: '100%', maxWidth: 500,
+            borderRadius: '16px 16px 0 0',
+            borderBottom: 'none',
+            padding: 24,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ ...typeography.subtitle, margin: 0 }}>Move Deal</h3>
+              <button className="btn-touch" onClick={() => setMovingDealId(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4 }}>
+                <IconX size={18} />
+              </button>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--fg-dim)', marginBottom: 16 }}>Select a stage to move this deal to:</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {stages.map((s) => {
+                const deal = (deals || []).find(d => d.id === movingDealId)
+                const isCurrent = deal?.stageId === s.id
+                return (
+                  <button
+                    key={s.id}
+                    className="btn-touch stage-move-option"
+                    onClick={() => { handleStageMove(movingDealId, s.id); setMovingDealId(null) }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '12px 16px', borderRadius: 10,
+                      border: `1px solid ${isCurrent ? s.color || 'var(--gold)' : 'var(--panel-border)'}`,
+                      backgroundColor: isCurrent ? `${s.color || 'var(--gold)'}11` : 'var(--bg-soft)',
+                      cursor: 'pointer', textAlign: 'left',
+                      transition: 'all .15s',
+                      minHeight: 44,
+                    }}
+                  >
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: s.color || 'var(--gold)', flexShrink: 0 }} />
+                    <span style={{ fontWeight: 600, fontSize: 14, flex: 1 }}>{s.name}</span>
+                    {isCurrent && <span style={{ fontSize: 12, color: 'var(--fg-dim)' }}>Current</span>}
+                    {s.probability != null && <span style={{ fontSize: 12, color: 'var(--fg-dim)' }}>{s.probability}%</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
       )}
 

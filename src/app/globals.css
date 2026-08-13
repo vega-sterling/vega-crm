@@ -1135,3 +1135,38 @@ input[type="checkbox"] {
     font-size: 14px;
   }
 }
+/* ============================================================================ */
+/* PHASE 12 CSS — Touch-compatible Kanban + Enhanced Deal Cards                 */
+/* ============================================================================ */
+
+/* Stage move sheet — desktop: centered modal */
+@media (min-width: 769px) {
+  .stage-move-sheet {
+    border-radius: 16px !important;
+    border-bottom: 1px solid var(--panel-border) !important;
+    margin-bottom: 5vh !important;
+  }
+}
+
+/* Stage move sheet — mobile: bottom sheet */
+@media (max-width: 768px) {
+  .stage-move-sheet {
+    border-radius: 16px 16px 0 0 !important;
+    max-width: 100% !important;
+  }
+  .stage-move-option {
+    min-height: 48px !important;
+    font-size: 15px !important;
+  }
+  .deal-move-btn {
+    min-height: 32px !important;
+    padding: 4px 8px !important;
+  }
+}
+
+/* Kanban card hover effect (desktop only) */
+@media (hover: hover) {
+  .kanban-column .panel-container:hover {
+    box-shadow: var(--shadow-md) !important;
+  }
+}
