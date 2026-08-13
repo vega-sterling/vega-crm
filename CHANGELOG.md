@@ -1,3 +1,44 @@
+## 2026-08-13 — Phase 12: Touch-Compatible Kanban Board + Enhanced Deal Cards (Priority 2 Gap Fix)
+
+### Problem
+The kanban deal pipeline used HTML5 drag-and-drop (draggable, onDragStart, onDragOver, onDrop) which **does not work on touch devices** (phones, tablets). This was a responsive design gap — Priority 2 requires full mobile usability, but deal stage moves were desktop-only.
+
+### Added
+- **Touch-compatible stage mover** — tap the Move button on any kanban card to open a stage picker:
+  - **Bottom sheet on mobile** (<768px) — slides up from bottom, 48px+ touch targets, full-width
+  - **Centered modal on desktop** (>=769px) — appears above the board with dark backdrop
+  - **Stage pills** — each stage shown as a tappable button with color dot, name, probability %, and current-stage highlight
+  - One tap to move — no drag gesture required
+  - Uses existing handleStageMove API (PUT /api/deals/:id with stageId + probability)
+  - HTML5 drag-and-drop preserved for desktop users (both methods work side-by-side)
+
+- **Enhanced kanban deal cards**:
+  - **Assignee initials avatar** — gold circle badge with user initials
+  - **Expected close date** — displayed as "Mon 15" format, turns red with ⚠ icon when overdue (past today + status OPEN)
+  - **Move button** — small "Move" button with chevron icon on each card
+  - **Company name truncation** — ellipsis for long names
+  - **Visual separator** — border between card body and footer (assignee + date row)
+  - **Desktop hover effect** — subtle shadow elevation on card hover (hover: hover media query)
+
+### Responsive
+- **Desktop (>=769px)**: Stage picker is a centered modal, cards have hover shadow
+- **Tablet (768-1024px)**: Same as desktop with kanban horizontal scroll
+- **Phone (<768px)**: Stage picker is a bottom sheet with 48px+ touch targets, 15px font
+- **Small phone (<480px)**: Move button has 32px+ min height
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded with no errors (Next.js 16.3.0, Turbopack)
+- ✅ All 23 authenticated pages return HTTP 307 (auth redirect — expected)
+- ✅ Deals API returns 401 (needs auth — expected)
+- ✅ Deals bulk API returns 405 (POST-only — expected)
+- ✅ No runtime errors in container logs after deployment
+- ✅ Git committed: 2 files changed, 177 insertions(+), 36 deletions(-)
+
+### Files Changed
+- src/app/deals/page.tsx — MODIFIED (added movingDealId state, Move button on cards, stage picker bottom sheet/modal, enhanced card content with assignee avatar + close date + overdue indicator)
+- src/app/globals.css — MODIFIED (added Phase 12 CSS: stage move sheet responsive, kanban card hover effect)
+
 ## 2026-08-11 — Phase 10: Data Export & Import (Priority 7 Continued)
 
 ### Added
