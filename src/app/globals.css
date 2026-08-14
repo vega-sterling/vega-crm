@@ -1170,3 +1170,57 @@ input[type="checkbox"] {
     box-shadow: var(--shadow-md) !important;
   }
 }
+
+/* ============================================================================ */
+/* PHASE 13 CSS — Custom Fields Management Responsive                           */
+/* ============================================================================ */
+
+/* Custom fields admin table — mobile: transform to card layout */
+@media (max-width: 768px) {
+  .custom-fields-table thead { display: none; }
+  .custom-fields-table tr {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    background: var(--panel);
+  }
+  .custom-fields-table td {
+    padding: 6px 0 !important;
+    border: none !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .custom-fields-table td::before {
+    content: attr(data-label);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--fg-dim);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .custom-fields-table td[data-label] {
+    flex-direction: row;
+  }
+  .custom-fields-table td:last-child {
+    justify-content: flex-start;
+  }
+}
+
+/* Small phone — ensure touch targets are 44px+ */
+@media (max-width: 480px) {
+  .custom-fields-table button,
+  .custom-fields-create button {
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .custom-fields-table input,
+  .custom-fields-table select {
+    min-height: 44px;
+  }
+}

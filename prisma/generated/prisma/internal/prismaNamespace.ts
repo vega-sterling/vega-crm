@@ -3797,7 +3797,9 @@ export const CustomPropertyScalarFieldEnum = {
   label: 'label',
   fieldType: 'fieldType',
   options: 'options',
+  defaultValue: 'defaultValue',
   isRequired: 'isRequired',
+  isVisible: 'isVisible',
   position: 'position',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

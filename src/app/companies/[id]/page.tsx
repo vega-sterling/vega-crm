@@ -11,6 +11,7 @@ import TimelineFilterTabs, { type TimelineFilter } from '../../components/Timeli
 import TasksTab from '../../components/TasksTab'
 import ActivityCard from '../../components/ActivityCard'
 import PropertyQuickEdit from '../../components/PropertyQuickEdit'
+import CustomFieldsSection from '../../components/CustomFieldsSection'
 import { ContactsCard, DealsCard, TasksCard } from '../../components/AssociationCards'
 import { usePinnedNote } from '../../components/PinnedNotes'
 import EmailThreadCard from '../../components/EmailThreadCard'
@@ -277,6 +278,13 @@ function CompanyDetailContent() {
               <p style={{ color: 'var(--fg-dim)', fontSize: 14, lineHeight: 1.5 }}>{company.description}</p>
             </div>
           )}
+
+          {/* Custom Fields section */}
+          <CustomFieldsSection
+            entityId={companyId}
+            entityType="COMPANY"
+            tenantId={company.tenantId}
+          />
 
           {/* Action buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

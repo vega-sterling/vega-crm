@@ -542,22 +542,25 @@ model PipelineStage {
 // ============================================================================
 
 model CustomProperty {
-  id          String   @id @default(cuid())
-  tenantId    String
-  entity      String                                  // "company" or "contact"
-  key         String                                  // Field key (e.g., "property_type")
-  label       String                                  // Display label (e.g., "Property Type")
-  fieldType   String                                  // "text", "number", "dropdown", "date", "boolean"
-  options     String[] @default([])                   // Dropdown options
-  isRequired  Boolean  @default(false)
-  position    Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  tenantId     String
+  entity       String                                  // "company" or "contact"
+  key          String                                  // Field key (e.g., "property_type")
+  label        String                                  // Display label (e.g., "Property Type")
+  fieldType    String                                  // "text", "number", "dropdown", "date", "boolean"
+  options      String[] @default([])                   // Dropdown options
+  defaultValue String?                                 // Default value when record created
+  isRequired   Boolean  @default(false)
+  isVisible    Boolean  @default(true)                 // Show on record detail pages
+  position     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  values      CustomPropertyValue[]
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  values       CustomPropertyValue[]
 
+  @@unique([tenantId, entity, key])
   @@index([tenantId])
   @@index([entity])
   @@map("custom_properties")

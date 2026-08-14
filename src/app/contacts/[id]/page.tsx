@@ -11,6 +11,7 @@ import TimelineFilterTabs, { type TimelineFilter } from '../../components/Timeli
 import TasksTab from '../../components/TasksTab'
 import ActivityCard from '../../components/ActivityCard'
 import PropertyQuickEdit from '../../components/PropertyQuickEdit'
+import CustomFieldsSection from '../../components/CustomFieldsSection'
 import { CompanyCard, DealsCard, TasksCard } from '../../components/AssociationCards'
 import { usePinnedNote } from '../../components/PinnedNotes'
 import EmailThreadCard from '../../components/EmailThreadCard'
@@ -271,6 +272,13 @@ function ContactDetailContent() {
               <p style={{ color: 'var(--fg-dim)', fontSize: 14, lineHeight: 1.5 }}>{contact.notes}</p>
             </div>
           )}
+
+          {/* Custom Fields section */}
+          <CustomFieldsSection
+            entityId={contactId}
+            entityType="CONTACT"
+            tenantId={contact.tenantId}
+          />
 
           {/* Action buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

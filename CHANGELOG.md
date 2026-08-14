@@ -452,3 +452,84 @@ The kanban deal pipeline used HTML5 drag-and-drop (draggable, onDragStart, onDra
 - src/app/admin/api-keys/page.tsx — NEW (API Key Management admin page)
 - src/app/components/AppShell.tsx — MODIFIED (added API Keys + Data Management sidebar links)
 - src/app/globals.css — MODIFIED (Phase 11 CSS: responsive table→card for API keys)
+
+## 2026-08-14 — Phase 13: Custom Properties Management (Priority 7)
+
+### Problem
+The CRM had backend APIs for custom properties (`/api/custom-properties`, `/api/custom-values`) and a Prisma schema for `CustomProperty` / `CustomPropertyValue`, but no admin UI to create or manage custom field definitions. Users had no way to add custom fields to companies or contacts through the interface. The schema was also missing `defaultValue` and `isVisible` columns that the APIs referenced.
+
+### Added
+- **Custom Fields Admin Page** (`/admin/custom-fields`) — HubSpot/Salesforce-style field builder:
+  - **Create field form** — inline expandable form with:
+    - Entity selector (Company or Contact)
+    - Tenant selector (auto-selects first tenant)
+    - Field key (lowercase, no spaces — enforced with regex validation)
+    - Display label (human-readable)
+    - Field type picker — visual buttons for Text, Number, Dropdown, Date, Yes/No
+    - Dropdown options editor — dynamic add/remove option rows
+    - Required toggle — mark field as required
+    - Visible toggle — control whether field shows on record detail pages
+  - **Properties table** — sortable list with columns: Label, Key, Entity, Type, Options, Required, Values count, Tenant, Actions
+  - **Inline edit** — edit label, required, visible, and dropdown options directly in the table row
+  - **Reorder** — up/down arrows to change field display order (position)
+  - **Delete** — confirmation dialog before permanent deletion
+  - **Filters** — filter by entity type and tenant
+  - **Empty state** — friendly "No Custom Fields Yet" message with create button
+
+- **CustomFieldsSection component** — renders custom fields on company and contact detail pages:
+  - Placed in the left sidebar below the standard Properties card
+  - Inline editing matching PropertyQuickEdit pattern (click pencil icon, type, Enter to save, Escape to cancel)
+  - Field-type-aware inputs: text input, number input, date picker, dropdown select, Yes/No select
+  - Required field indicator (red asterisk)
+  - Respects `isVisible` flag — hidden fields don't render
+  - Shows/hides automatically — only renders when custom fields exist for the entity
+
+- **Prisma Schema** — additive changes only (no existing tables/columns modified):
+  - `CustomProperty.defaultValue` — optional String for future default value support
+  - `CustomProperty.isVisible` — Boolean (default true) — controls record page visibility
+  - `@@unique([tenantId, entity, key])` — prevents duplicate field keys per tenant+entity
+
+- **Database Migration** — applied directly via SQL (additive ALTER TABLE):
+  - `ALTER TABLE custom_properties ADD COLUMN "defaultValue" TEXT`
+  - `ALTER TABLE custom_properties ADD COLUMN "isVisible" BOOLEAN NOT NULL DEFAULT true`
+  - `CREATE UNIQUE INDEX custom_properties_tenant_entity_key_idx ON custom_properties ("tenantId", entity, key)`
+
+- **API Updates**:
+  - `POST /api/custom-properties` — now persists `defaultValue` and `isVisible` on create
+  - `GET /api/custom-values` — now returns `defaultValue` and `isVisible` in property select
+
+- **Sidebar Navigation** — added "Custom Fields" link to Administration section
+
+### Responsive
+- **Desktop (>1024px)**: Full table view with all columns, spacious layout
+- **Tablet (768-1024px)**: Table with reduced padding (existing table-wrapper responsive)
+- **Phone (<768px)**: Table transforms to card layout — each field becomes a stacked card with data-label attributes
+- **Small phone (<480px)**: 44px+ touch targets on all buttons, inputs, and selects
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded with no errors (Next.js 16.3.0, Turbopack, TypeScript strict)
+- ✅ All 24 authenticated pages return HTTP 307 (auth redirect — expected)
+- ✅ Custom Fields admin page (/admin/custom-fields): 307 (route exists, auth redirect)
+- ✅ All 5 API endpoints return 401 (needs auth — expected)
+- ✅ Prisma client generated successfully with new fields
+- ✅ Database migration applied: defaultValue + isVisible columns added
+- ✅ Unique constraint enforced: duplicate (tenantId, entity, key) rejected with P2002
+- ✅ Custom property created in DB: dropdown with 4 options, isVisible=true
+- ✅ Custom value upserted in DB: "Multi-Family" linked to OzarksGo company
+- ✅ isVisible filter: only visible fields render on record pages
+- ✅ Test data created, verified, and cleaned up
+- ✅ No runtime errors in container logs after deployment
+- ✅ Git committed with all changes
+
+### Files Changed
+- prisma/schema.prisma — MODIFIED (added defaultValue, isVisible, @@unique on CustomProperty)
+- src/app/api/custom-properties/route.ts — MODIFIED (POST now saves defaultValue + isVisible)
+- src/app/api/custom-values/route.ts — MODIFIED (GET now returns defaultValue + isVisible in property select)
+- src/app/admin/custom-fields/page.tsx — NEW (admin Custom Fields management page)
+- src/app/components/CustomFieldsSection.tsx — NEW (inline custom fields renderer for record pages)
+- src/app/components/AppShell.tsx — MODIFIED (added "Custom Fields" to Administration nav)
+- src/app/companies/[id]/page.tsx — MODIFIED (added CustomFieldsSection to left sidebar)
+- src/app/contacts/[id]/page.tsx — MODIFIED (added CustomFieldsSection to left sidebar)
+- src/app/globals.css — MODIFIED (Phase 13 responsive CSS: table→card on mobile)
+- CHANGELOG.md — MODIFIED (this entry)

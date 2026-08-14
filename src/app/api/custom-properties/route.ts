@@ -116,7 +116,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         label: body.label,
         fieldType: body.fieldType.toLowerCase(),
         options: body.options?.map((o) => o.value) ?? [],
+        defaultValue: body.defaultValue ?? null,
         isRequired: body.isRequired ?? false,
+        isVisible: body.isVisible ?? true,
         position: existingCount,
       },
     });

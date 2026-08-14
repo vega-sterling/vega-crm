@@ -41,7 +41,9 @@ export type CustomPropertyMinAggregateOutputType = {
   key: string | null
   label: string | null
   fieldType: string | null
+  defaultValue: string | null
   isRequired: boolean | null
+  isVisible: boolean | null
   position: number | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -54,7 +56,9 @@ export type CustomPropertyMaxAggregateOutputType = {
   key: string | null
   label: string | null
   fieldType: string | null
+  defaultValue: string | null
   isRequired: boolean | null
+  isVisible: boolean | null
   position: number | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -68,7 +72,9 @@ export type CustomPropertyCountAggregateOutputType = {
   label: number
   fieldType: number
   options: number
+  defaultValue: number
   isRequired: number
+  isVisible: number
   position: number
   createdAt: number
   updatedAt: number
@@ -91,7 +97,9 @@ export type CustomPropertyMinAggregateInputType = {
   key?: true
   label?: true
   fieldType?: true
+  defaultValue?: true
   isRequired?: true
+  isVisible?: true
   position?: true
   createdAt?: true
   updatedAt?: true
@@ -104,7 +112,9 @@ export type CustomPropertyMaxAggregateInputType = {
   key?: true
   label?: true
   fieldType?: true
+  defaultValue?: true
   isRequired?: true
+  isVisible?: true
   position?: true
   createdAt?: true
   updatedAt?: true
@@ -118,7 +128,9 @@ export type CustomPropertyCountAggregateInputType = {
   label?: true
   fieldType?: true
   options?: true
+  defaultValue?: true
   isRequired?: true
+  isVisible?: true
   position?: true
   createdAt?: true
   updatedAt?: true
@@ -219,7 +231,9 @@ export type CustomPropertyGroupByOutputType = {
   label: string
   fieldType: string
   options: string[]
+  defaultValue: string | null
   isRequired: boolean
+  isVisible: boolean
   position: number
   createdAt: Date
   updatedAt: Date
@@ -256,7 +270,9 @@ export type CustomPropertyWhereInput = {
   label?: Prisma.StringFilter<"CustomProperty"> | string
   fieldType?: Prisma.StringFilter<"CustomProperty"> | string
   options?: Prisma.StringNullableListFilter<"CustomProperty">
+  defaultValue?: Prisma.StringNullableFilter<"CustomProperty"> | string | null
   isRequired?: Prisma.BoolFilter<"CustomProperty"> | boolean
+  isVisible?: Prisma.BoolFilter<"CustomProperty"> | boolean
   position?: Prisma.IntFilter<"CustomProperty"> | number
   createdAt?: Prisma.DateTimeFilter<"CustomProperty"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CustomProperty"> | Date | string
@@ -272,7 +288,9 @@ export type CustomPropertyOrderByWithRelationInput = {
   label?: Prisma.SortOrder
   fieldType?: Prisma.SortOrder
   options?: Prisma.SortOrder
+  defaultValue?: Prisma.SortOrderInput | Prisma.SortOrder
   isRequired?: Prisma.SortOrder
+  isVisible?: Prisma.SortOrder
   position?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -282,6 +300,7 @@ export type CustomPropertyOrderByWithRelationInput = {
 
 export type CustomPropertyWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  tenantId_entity_key?: Prisma.CustomPropertyTenantIdEntityKeyCompoundUniqueInput
   AND?: Prisma.CustomPropertyWhereInput | Prisma.CustomPropertyWhereInput[]
   OR?: Prisma.CustomPropertyWhereInput[]
   NOT?: Prisma.CustomPropertyWhereInput | Prisma.CustomPropertyWhereInput[]
@@ -291,13 +310,15 @@ export type CustomPropertyWhereUniqueInput = Prisma.AtLeast<{
   label?: Prisma.StringFilter<"CustomProperty"> | string
   fieldType?: Prisma.StringFilter<"CustomProperty"> | string
   options?: Prisma.StringNullableListFilter<"CustomProperty">
+  defaultValue?: Prisma.StringNullableFilter<"CustomProperty"> | string | null
   isRequired?: Prisma.BoolFilter<"CustomProperty"> | boolean
+  isVisible?: Prisma.BoolFilter<"CustomProperty"> | boolean
   position?: Prisma.IntFilter<"CustomProperty"> | number
   createdAt?: Prisma.DateTimeFilter<"CustomProperty"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CustomProperty"> | Date | string
   tenant?: Prisma.XOR<Prisma.TenantScalarRelationFilter, Prisma.TenantWhereInput>
   values?: Prisma.CustomPropertyValueListRelationFilter
-}, "id">
+}, "id" | "tenantId_entity_key">
 
 export type CustomPropertyOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -307,7 +328,9 @@ export type CustomPropertyOrderByWithAggregationInput = {
   label?: Prisma.SortOrder
   fieldType?: Prisma.SortOrder
   options?: Prisma.SortOrder
+  defaultValue?: Prisma.SortOrderInput | Prisma.SortOrder
   isRequired?: Prisma.SortOrder
+  isVisible?: Prisma.SortOrder
   position?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -329,7 +352,9 @@ export type CustomPropertyScalarWhereWithAggregatesInput = {
   label?: Prisma.StringWithAggregatesFilter<"CustomProperty"> | string
   fieldType?: Prisma.StringWithAggregatesFilter<"CustomProperty"> | string
   options?: Prisma.StringNullableListFilter<"CustomProperty">
+  defaultValue?: Prisma.StringNullableWithAggregatesFilter<"CustomProperty"> | string | null
   isRequired?: Prisma.BoolWithAggregatesFilter<"CustomProperty"> | boolean
+  isVisible?: Prisma.BoolWithAggregatesFilter<"CustomProperty"> | boolean
   position?: Prisma.IntWithAggregatesFilter<"CustomProperty"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"CustomProperty"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"CustomProperty"> | Date | string
@@ -342,7 +367,9 @@ export type CustomPropertyCreateInput = {
   label: string
   fieldType: string
   options?: Prisma.CustomPropertyCreateoptionsInput | string[]
+  defaultValue?: string | null
   isRequired?: boolean
+  isVisible?: boolean
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -358,7 +385,9 @@ export type CustomPropertyUncheckedCreateInput = {
   label: string
   fieldType: string
   options?: Prisma.CustomPropertyCreateoptionsInput | string[]
+  defaultValue?: string | null
   isRequired?: boolean
+  isVisible?: boolean
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -372,7 +401,9 @@ export type CustomPropertyUpdateInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   fieldType?: Prisma.StringFieldUpdateOperationsInput | string
   options?: Prisma.CustomPropertyUpdateoptionsInput | string[]
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isRequired?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isVisible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   position?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -388,7 +419,9 @@ export type CustomPropertyUncheckedUpdateInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   fieldType?: Prisma.StringFieldUpdateOperationsInput | string
   options?: Prisma.CustomPropertyUpdateoptionsInput | string[]
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isRequired?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isVisible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   position?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -403,7 +436,9 @@ export type CustomPropertyCreateManyInput = {
   label: string
   fieldType: string
   options?: Prisma.CustomPropertyCreateoptionsInput | string[]
+  defaultValue?: string | null
   isRequired?: boolean
+  isVisible?: boolean
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -416,7 +451,9 @@ export type CustomPropertyUpdateManyMutationInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   fieldType?: Prisma.StringFieldUpdateOperationsInput | string
   options?: Prisma.CustomPropertyUpdateoptionsInput | string[]
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isRequired?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isVisible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   position?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -430,7 +467,9 @@ export type CustomPropertyUncheckedUpdateManyInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   fieldType?: Prisma.StringFieldUpdateOperationsInput | string
   options?: Prisma.CustomPropertyUpdateoptionsInput | string[]
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isRequired?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isVisible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   position?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -446,6 +485,12 @@ export type CustomPropertyOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type CustomPropertyTenantIdEntityKeyCompoundUniqueInput = {
+  tenantId: string
+  entity: string
+  key: string
+}
+
 export type CustomPropertyCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   tenantId?: Prisma.SortOrder
@@ -454,7 +499,9 @@ export type CustomPropertyCountOrderByAggregateInput = {
   label?: Prisma.SortOrder
   fieldType?: Prisma.SortOrder
   options?: Prisma.SortOrder
+  defaultValue?: Prisma.SortOrder
   isRequired?: Prisma.SortOrder
+  isVisible?: Prisma.SortOrder
   position?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -471,7 +518,9 @@ export type CustomPropertyMaxOrderByAggregateInput = {
   key?: Prisma.SortOrder
   label?: Prisma.SortOrder
   fieldType?: Prisma.SortOrder
+  defaultValue?: Prisma.SortOrder
   isRequired?: Prisma.SortOrder
+  isVisible?: Prisma.SortOrder
   position?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -484,7 +533,9 @@ export type CustomPropertyMinOrderByAggregateInput = {
   key?: Prisma.SortOrder
   label?: Prisma.SortOrder
   fieldType?: Prisma.SortOrder
+  defaultValue?: Prisma.SortOrder
   isRequired?: Prisma.SortOrder
+  isVisible?: Prisma.SortOrder
   position?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -571,7 +622,9 @@ export type CustomPropertyCreateWithoutTenantInput = {
   label: string
   fieldType: string
   options?: Prisma.CustomPropertyCreateoptionsInput | string[]
+  defaultValue?: string | null
   isRequired?: boolean
+  isVisible?: boolean
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -585,7 +638,9 @@ export type CustomPropertyUncheckedCreateWithoutTenantInput = {
   label: string
   fieldType: string
   options?: Prisma.CustomPropertyCreateoptionsInput | string[]
+  defaultValue?: string | null
   isRequired?: boolean
+  isVisible?: boolean
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -629,7 +684,9 @@ export type CustomPropertyScalarWhereInput = {
   label?: Prisma.StringFilter<"CustomProperty"> | string
   fieldType?: Prisma.StringFilter<"CustomProperty"> | string
   options?: Prisma.StringNullableListFilter<"CustomProperty">
+  defaultValue?: Prisma.StringNullableFilter<"CustomProperty"> | string | null
   isRequired?: Prisma.BoolFilter<"CustomProperty"> | boolean
+  isVisible?: Prisma.BoolFilter<"CustomProperty"> | boolean
   position?: Prisma.IntFilter<"CustomProperty"> | number
   createdAt?: Prisma.DateTimeFilter<"CustomProperty"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CustomProperty"> | Date | string
@@ -642,7 +699,9 @@ export type CustomPropertyCreateWithoutValuesInput = {
   label: string
   fieldType: string
   options?: Prisma.CustomPropertyCreateoptionsInput | string[]
+  defaultValue?: string | null
   isRequired?: boolean
+  isVisible?: boolean
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -657,7 +716,9 @@ export type CustomPropertyUncheckedCreateWithoutValuesInput = {
   label: string
   fieldType: string
   options?: Prisma.CustomPropertyCreateoptionsInput | string[]
+  defaultValue?: string | null
   isRequired?: boolean
+  isVisible?: boolean
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -686,7 +747,9 @@ export type CustomPropertyUpdateWithoutValuesInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   fieldType?: Prisma.StringFieldUpdateOperationsInput | string
   options?: Prisma.CustomPropertyUpdateoptionsInput | string[]
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isRequired?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isVisible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   position?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -701,7 +764,9 @@ export type CustomPropertyUncheckedUpdateWithoutValuesInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   fieldType?: Prisma.StringFieldUpdateOperationsInput | string
   options?: Prisma.CustomPropertyUpdateoptionsInput | string[]
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isRequired?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isVisible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   position?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -714,7 +779,9 @@ export type CustomPropertyCreateManyTenantInput = {
   label: string
   fieldType: string
   options?: Prisma.CustomPropertyCreateoptionsInput | string[]
+  defaultValue?: string | null
   isRequired?: boolean
+  isVisible?: boolean
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -727,7 +794,9 @@ export type CustomPropertyUpdateWithoutTenantInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   fieldType?: Prisma.StringFieldUpdateOperationsInput | string
   options?: Prisma.CustomPropertyUpdateoptionsInput | string[]
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isRequired?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isVisible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   position?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -741,7 +810,9 @@ export type CustomPropertyUncheckedUpdateWithoutTenantInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   fieldType?: Prisma.StringFieldUpdateOperationsInput | string
   options?: Prisma.CustomPropertyUpdateoptionsInput | string[]
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isRequired?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isVisible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   position?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -755,7 +826,9 @@ export type CustomPropertyUncheckedUpdateManyWithoutTenantInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   fieldType?: Prisma.StringFieldUpdateOperationsInput | string
   options?: Prisma.CustomPropertyUpdateoptionsInput | string[]
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isRequired?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isVisible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   position?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -800,7 +873,9 @@ export type CustomPropertySelect<ExtArgs extends runtime.Types.Extensions.Intern
   label?: boolean
   fieldType?: boolean
   options?: boolean
+  defaultValue?: boolean
   isRequired?: boolean
+  isVisible?: boolean
   position?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -817,7 +892,9 @@ export type CustomPropertySelectCreateManyAndReturn<ExtArgs extends runtime.Type
   label?: boolean
   fieldType?: boolean
   options?: boolean
+  defaultValue?: boolean
   isRequired?: boolean
+  isVisible?: boolean
   position?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -832,7 +909,9 @@ export type CustomPropertySelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   label?: boolean
   fieldType?: boolean
   options?: boolean
+  defaultValue?: boolean
   isRequired?: boolean
+  isVisible?: boolean
   position?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -847,13 +926,15 @@ export type CustomPropertySelectScalar = {
   label?: boolean
   fieldType?: boolean
   options?: boolean
+  defaultValue?: boolean
   isRequired?: boolean
+  isVisible?: boolean
   position?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type CustomPropertyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "tenantId" | "entity" | "key" | "label" | "fieldType" | "options" | "isRequired" | "position" | "createdAt" | "updatedAt", ExtArgs["result"]["customProperty"]>
+export type CustomPropertyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "tenantId" | "entity" | "key" | "label" | "fieldType" | "options" | "defaultValue" | "isRequired" | "isVisible" | "position" | "createdAt" | "updatedAt", ExtArgs["result"]["customProperty"]>
 export type CustomPropertyInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   tenant?: boolean | Prisma.TenantDefaultArgs<ExtArgs>
   values?: boolean | Prisma.CustomProperty$valuesArgs<ExtArgs>
@@ -880,7 +961,9 @@ export type $CustomPropertyPayload<ExtArgs extends runtime.Types.Extensions.Inte
     label: string
     fieldType: string
     options: string[]
+    defaultValue: string | null
     isRequired: boolean
+    isVisible: boolean
     position: number
     createdAt: Date
     updatedAt: Date
@@ -1316,7 +1399,9 @@ export interface CustomPropertyFieldRefs {
   readonly label: Prisma.FieldRef<"CustomProperty", 'String'>
   readonly fieldType: Prisma.FieldRef<"CustomProperty", 'String'>
   readonly options: Prisma.FieldRef<"CustomProperty", 'String[]'>
+  readonly defaultValue: Prisma.FieldRef<"CustomProperty", 'String'>
   readonly isRequired: Prisma.FieldRef<"CustomProperty", 'Boolean'>
+  readonly isVisible: Prisma.FieldRef<"CustomProperty", 'Boolean'>
   readonly position: Prisma.FieldRef<"CustomProperty", 'Int'>
   readonly createdAt: Prisma.FieldRef<"CustomProperty", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"CustomProperty", 'DateTime'>
