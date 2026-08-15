@@ -1,3 +1,66 @@
+## 2026-08-15 — Phase 14: Enhanced Lead Scoring System (Priority 6 Continued)
+
+### Problem
+The Lead Scoring system was half-built: the admin page had unused `searchQuery`/`searchResult` state that was never wired up, the calculate API used hardcoded points instead of configured rules (rules existed in DB but weren't read), there was no rule editing/toggling, no score thresholds, and no score display anywhere on contacts. The rules API POST would crash with P2002 if a rule with the same event already existed.
+
+### Added
+- **Calculate API rewrite** (`/api/lead-score/calculate`):
+  - Now reads configured `LeadScoreRule` entries from DB and applies them
+  - Falls back to sensible default scoring when no rules are configured
+  - New event types: `ACTIVITY_CREATED`, `EMAIL_OPENED`, `DEAL_CREATED`, `HAS_EMAIL`, `HAS_PHONE`, `HAS_TITLE`, `NO_ACTIVITY_30D`, `CONTACT_EXISTS`
+  - Returns `{ score, tier, breakdown }` where tier is `HOT` (≥75), `WARM` (≥40), or `COLD`
+  - Added `GET` method support (in addition to existing `POST`)
+  - Breakdown entries now include human-readable labels
+
+- **Rules API enhancement** (`/api/lead-score/rules`):
+  - Added `PUT` method for inline rule editing (points, isActive toggle)
+  - `POST` now upserts: if a rule with the same `tenantId + event` exists, it updates points instead of crashing with P2002
+  - Rules ordered by event name then creation date
+
+- **Complete rewrite of Lead Scoring admin page** (`/admin/lead-scoring`):
+  - **Score tier cards** — visual display of HOT (≥75), WARM (≥40), COLD thresholds with color-coded backgrounds
+  - **Event type dropdown** — predefined events with descriptions and auto-filled default points
+  - **Rules table** — inline point editing (click Edit, type, ✓ save), active/inactive toggle button, delete with confirmation
+  - **Contact score lookup** — live search dropdown (search by name/email), click to calculate score
+  - **Score result card** — colored score circle, tier label, expandable breakdown showing each scoring event and its points
+  - **Toast notifications** — success messages auto-dismiss after 3 seconds, dismissible error banners
+  - **Empty state** — friendly message when no rules configured, explains default scoring will be used
+
+- **LeadScoreBadge component** (`src/app/components/LeadScoreBadge.tsx`):
+  - `LeadScoreMini` — compact inline badge for contact list rows: shows tier emoji + score number in a colored pill
+  - `LeadScoreBadge` — expandable card for contact detail pages: large score circle, tier label, click to expand/collapse breakdown list with per-event points and total
+  - Color-coded by tier: HOT (rust/red), WARM (gold/amber), COLD (cyan)
+  - Fetches score via `/api/lead-score/calculate?contactId=xxx` on mount
+
+- **Contacts list page** — added Score column showing `LeadScoreMini` per row (table view)
+- **Contact detail page** — added `LeadScoreBadge` to left sidebar below Custom Fields section
+
+### Responsive
+- Desktop (>1024px): Full rules table with all columns, spacious score lookup
+- Tablet (768-1024px): Same table with responsive table-wrapper
+- Phone (<768px): Table transforms to card layout, 44px+ touch targets on all buttons/inputs
+- Small phone (<480px): Score cards stack vertically, search results full-width
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded with no errors (Next.js 16.3.0, Turbopack)
+- ✅ All 24 authenticated pages return HTTP 307 (auth redirect — expected)
+- ✅ Lead Score Rules API: 401 (needs auth — expected)
+- ✅ Lead Score Calculate API: 401 (needs auth — expected)
+- ✅ All 12 API endpoints return correct status codes (401/403 — expected)
+- ✅ No runtime errors in container logs after deployment
+- ✅ Database verified: 0 existing rules (default scoring will be used)
+- ✅ Contact data verified: contacts with activities exist in DB
+- ✅ Git committed: 6 files changed, 876 insertions(+), 96 deletions(-)
+
+### Files Changed
+- src/app/api/lead-score/calculate/route.ts — REWRITTEN (uses configured rules, GET method, tier classification, expanded event types)
+- src/app/api/lead-score/rules/route.ts — MODIFIED (added PUT method, POST upsert, ordered results)
+- src/app/admin/lead-scoring/page.tsx — REWRITTEN (complete UI: tier cards, event dropdown, inline edit, toggle, score lookup, breakdown)
+- src/app/components/LeadScoreBadge.tsx — NEW (LeadScoreMini + LeadScoreBadge components)
+- src/app/contacts/page.tsx — MODIFIED (added Score column with LeadScoreMini)
+- src/app/contacts/[id]/page.tsx — MODIFIED (added LeadScoreBadge to left sidebar)
+
 ## 2026-08-13 — Phase 12: Touch-Compatible Kanban Board + Enhanced Deal Cards (Priority 2 Gap Fix)
 
 ### Problem
