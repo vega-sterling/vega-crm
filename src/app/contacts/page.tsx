@@ -19,6 +19,7 @@ import { IconSearch, IconMail, IconPhone, IconPlus } from '../components/Icons'
 import { apiFetch } from '../lib/api'
 import { layout, panel, typeography, forms, buttons, table } from '../lib/styles'
 import type { Contact, Company, Tenant } from '../lib/types'
+import { LeadScoreMini } from '../components/LeadScoreBadge'
 
 const formatDate = (d?: string) => {
   if (!d) return '—'
@@ -238,12 +239,13 @@ function ContactsContent() {
                   <th style={table.th}>Email</th>
                   <th style={table.th}>Phone</th>
                   <th style={table.th}>Created</th>
+                  <th style={table.th}>Score</th>
                   <th style={{ ...table.th, width: 120 }}></th>
                 </tr>
               </thead>
               <tbody>
                 {paginated.length === 0 ? (
-                  <tr><td colSpan={7} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center', padding: 32 }}>No contacts found.</td></tr>
+                  <tr><td colSpan={8} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center', padding: 32 }}>No contacts found.</td></tr>
                 ) : (
                   paginated.map((c) => (
                     <tr key={c.id} className="vega-table-row" style={table.tr}>
@@ -280,6 +282,7 @@ function ContactsContent() {
                         )}
                       </td>
                       <td style={{ ...table.td, color: 'var(--fg-dim)', fontSize: 12 }}>{formatDate(c.createdAt)}</td>
+                      <td style={table.td}><LeadScoreMini contactId={c.id} /></td>
                       <td style={table.td}>
                         <RowActions onEdit={() => openEdit(c)} onDelete={() => handleDelete(c)} />
                       </td>

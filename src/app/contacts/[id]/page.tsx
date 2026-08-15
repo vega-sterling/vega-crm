@@ -12,6 +12,7 @@ import TasksTab from '../../components/TasksTab'
 import ActivityCard from '../../components/ActivityCard'
 import PropertyQuickEdit from '../../components/PropertyQuickEdit'
 import CustomFieldsSection from '../../components/CustomFieldsSection'
+import { LeadScoreBadge } from '../../components/LeadScoreBadge'
 import { CompanyCard, DealsCard, TasksCard } from '../../components/AssociationCards'
 import { usePinnedNote } from '../../components/PinnedNotes'
 import EmailThreadCard from '../../components/EmailThreadCard'
@@ -279,6 +280,9 @@ function ContactDetailContent() {
             entityType="CONTACT"
             tenantId={contact.tenantId}
           />
+
+          {/* Lead Score */}
+          <LeadScoreBadge contactId={contactId} />
 
           {/* Action buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
