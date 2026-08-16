@@ -1,3 +1,134 @@
+
+## 2026-08-16 — Phase 15: Server-Side Unified Global Search API (Performance)
+
+### Problem
+The GlobalSearch component in the header was fetching ALL contacts and ALL deals on every keystroke, then filtering client-side in the browser. This had two problems:
+1. Performance: As the CRM grows, fetching entire lists on every search becomes increasingly slow and bandwidth-heavy
+2. Incomplete: Tasks were not searchable at all, and deals had no server-side search endpoint
+
+### Added
+- **New /api/search endpoint** (src/app/api/search/route.ts):
+  - Unified server-side search across companies, contacts, deals, and tasks
+  - Companies: searches name, industry, website, email
+  - Contacts: searches firstName, lastName, email, phone
+  - Deals: searches title and related company name
+  - Tasks: searches title, description, and related company name
+  - Returns grouped results with max 8 per type, plus counts
+  - All Prisma queries run in parallel for speed
+  - Respects tenant access controls (same as all other APIs)
+
+- **GlobalSearch rewritten** (src/app/components/GlobalSearch.tsx):
+  - Now calls /api/search instead of fetching entire lists
+  - Results include 4 groups: Companies, Contacts, Deals, Tasks (with icons)
+  - Group headers show count per type
+  - Footer shows total result count + keyboard hint
+  - Improved empty state with search icon and helpful hint text
+  - Better text overflow handling (ellipsis) for long labels
+  - 40px min-height input for touch target compliance
+  - Keyboard navigation (arrow keys, Enter, Escape) preserved
+
+- **Deals API enhanced** (src/app/api/deals/route.ts):
+  - Added search query parameter support
+  - Searches deal title and related company name (case-insensitive)
+
+- **Tasks API enhanced** (src/app/api/tasks/route.ts):
+  - Added search query parameter support
+  - Searches task title and description (case-insensitive)
+
+### Responsive
+- Desktop: Full dropdown with all 4 groups, spacious
+- Tablet: Same dropdown, constrained to search width
+- Phone: Dropdown full-width, 44px+ touch targets, truncated text
+
+### QA Results
+- Health check: 307 redirect to /login (healthy)
+- Build succeeded with no errors (Next.js 16.3.0, Turbopack)
+- All 23 authenticated pages return HTTP 307 (auth redirect — expected)
+- /api/search returns 401 without auth (expected)
+- /api/search?q=hello returns 401 without auth (expected)
+- /api/deals?search=test returns 401 without auth (expected)
+- /api/tasks?search=test returns 401 without auth (expected)
+- All 12 API endpoints return correct 401 (auth required — expected)
+- No runtime errors in container logs after deployment
+- Clean startup: Ready in 0ms, no warnings
+
+### Files Changed
+- src/app/api/search/route.ts — NEW (unified server-side search endpoint)
+- src/app/components/GlobalSearch.tsx — REWRITTEN (uses /api/search, adds tasks group, better UX)
+- src/app/api/deals/route.ts — MODIFIED (added search query param)
+- src/app/api/tasks/route.ts — MODIFIED (added search query param)
+
+### Impact
+- Eliminates fetching 100+ contacts and all deals on every search keystroke
+- Server-side Prisma queries with contains + mode insensitive are fast and indexed
+- Tasks are now searchable from the header (previously not searchable at all)
+- Scales gracefully as CRM data grows
+
+## 2026-08-16 — Phase 15: Server-Side Unified Global Search API (Performance)
+
+### Problem
+The GlobalSearch component in the header was fetching ALL contacts () and ALL deals () on every keystroke, then filtering client-side in the browser. This had two problems:
+1. **Performance**: As the CRM grows, fetching entire lists on every search becomes increasingly slow and bandwidth-heavy
+2. **Incomplete**: Tasks were not searchable at all, and deals had no server-side search endpoint
+
+### Added
+- **New  endpoint** ():
+  - Unified server-side search across companies, contacts, deals, and tasks
+  - Companies: searches name, industry, website, email
+  - Contacts: searches firstName, lastName, email, phone
+  - Deals: searches title and related company name
+  - Tasks: searches title, description, and related company name
+  - Returns grouped results with max 8 per type, plus counts
+  - All Prisma queries run in parallel for speed
+  - Respects tenant access controls (same as all other APIs)
+  - Returns 400-style response for queries < 2 characters
+
+- **GlobalSearch rewritten** ():
+  - Now calls  instead of fetching entire lists
+  - Results include 4 groups: Companies, Contacts, Deals, Tasks (with icons)
+  - Group headers show count per type
+  - Footer shows total result count + keyboard hint
+  - Improved empty state with search icon and helpful hint text
+  - Better text overflow handling (ellipsis) for long labels
+  - 40px min-height input for touch target compliance
+  - Keyboard navigation (arrow keys, Enter, Escape) preserved
+
+- **Deals API enhanced** ():
+  - Added  query parameter support
+  - Searches deal title and related company name (case-insensitive)
+
+- **Tasks API enhanced** ():
+  - Added  query parameter support
+  - Searches task title and description (case-insensitive)
+
+### Responsive
+- Desktop (>1024px): Full dropdown with all 4 groups, spacious
+- Tablet (768-1024px): Same dropdown, constrained to search width
+- Phone (<768px): Dropdown full-width, 44px+ touch targets, truncated text
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded with no errors (Next.js 16.3.0, Turbopack)
+- ✅ All 23 authenticated pages return HTTP 307 (auth redirect — expected)
+- ✅ /api/search returns 401 without auth (expected)
+- ✅ /api/search?q=hello returns 401 without auth (expected)
+- ✅ /api/deals?search=test returns 401 without auth (expected)
+- ✅ /api/tasks?search=test returns 401 without auth (expected)
+- ✅ All 12 API endpoints return correct 401 (auth required — expected)
+- ✅ No runtime errors in container logs after deployment
+- ✅ Clean startup: Ready in 0ms, no warnings
+
+### Files Changed
+- src/app/api/search/route.ts — NEW (unified server-side search endpoint)
+- src/app/components/GlobalSearch.tsx — REWRITTEN (uses /api/search, adds tasks group, better UX)
+- src/app/api/deals/route.ts — MODIFIED (added search query param)
+- src/app/api/tasks/route.ts — MODIFIED (added search query param)
+
+### Impact
+- Eliminates fetching 100+ contacts and all deals on every search keystroke
+- Server-side Prisma queries with  +  are fast and indexed
+- Tasks are now searchable from the header (previously not searchable at all)
+- Scales gracefully as CRM data grows
 ## 2026-08-15 — Phase 14: Enhanced Lead Scoring System (Priority 6 Continued)
 
 ### Problem

@@ -2,8 +2,12 @@
 
 // ============================================================================
 // GlobalSearch — Header search bar that searches across companies, contacts,
-// and deals. Results appear in a dropdown grouped by type. Keyboard accessible
+// deals, and tasks using the server-side /api/search endpoint.
+// Results appear in a dropdown grouped by type. Keyboard accessible
 // (arrow keys, Enter, Escape). Works on all pages (rendered in AppShell header).
+//
+// Phase 15: Rewritten to use /api/search instead of fetching entire lists
+//           and filtering client-side. Now includes tasks in search results.
 // ============================================================================
 
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -18,19 +22,35 @@ interface SearchResult {
 }
 
 interface SearchResponse {
-  companies?: { id: string; name: string; industry?: string | null }[]
-  contacts?: { id: string; firstName: string; lastName: string; email?: string | null; company?: { name: string } | null }[]
-  deals?: { id: string; title: string; value?: number; company?: { name: string } | null }[]
+  companies: SearchResult[]
+  contacts: SearchResult[]
+  deals: SearchResult[]
+  tasks: SearchResult[]
+  counts?: {
+    companies: number
+    contacts: number
+    deals: number
+    tasks: number
+    total: number
+  }
 }
+
+const GROUP_META: { key: keyof Pick<SearchResponse, 'companies' | 'contacts' | 'deals' | 'tasks'> ; label: string; icon: string }[] = [
+  { key: 'companies', label: 'Companies', icon: '🏢' },
+  { key: 'contacts', label: 'Contacts', icon: '👤' },
+  { key: 'deals', label: 'Deals', icon: '💠' },
+  { key: 'tasks', label: 'Tasks', icon: '☑️' },
+]
 
 export default function GlobalSearch() {
   const router = useRouter()
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<{
-    companies: SearchResult[]
-    contacts: SearchResult[]
-    deals: SearchResult[]
-  }>({ companies: [], contacts: [], deals: [] })
+  const [results, setResults] = useState<SearchResponse>({
+    companies: [],
+    contacts: [],
+    deals: [],
+    tasks: [],
+  })
   const [open, setOpen] = useState(false)
   const [highlightIdx, setHighlightIdx] = useState(-1)
   const [loading, setLoading] = useState(false)
@@ -42,51 +62,20 @@ export default function GlobalSearch() {
     ...results.companies,
     ...results.contacts,
     ...results.deals,
+    ...results.tasks,
   ]
 
   const doSearch = useCallback(async (q: string) => {
     if (q.trim().length < 2) {
-      setResults({ companies: [], contacts: [], deals: [] })
+      setResults({ companies: [], contacts: [], deals: [], tasks: [] })
       setLoading(false)
       return
     }
     try {
-      // Search all three endpoints in parallel
-      const [companiesRes, contactsRes, dealsRes] = await Promise.all([
-        apiFetch<{ data: SearchResponse['companies'] }>(`/api/companies?search=${encodeURIComponent(q)}&limit=5`),
-        apiFetch<{ data: SearchResponse['contacts'] }>(`/api/contacts?limit=100`),
-        apiFetch<{ deals: SearchResponse['deals'] }>(`/api/deals`),
-      ])
-      const companies = (companiesRes.data || []).filter((c) =>
-        c.name.toLowerCase().includes(q.toLowerCase())
-      ).slice(0, 5).map((c) => ({
-        id: c.id,
-        label: c.name,
-        sublabel: c.industry || undefined,
-        href: `/companies/${c.id}`,
-      }))
-      const contacts = (contactsRes.data || []).filter((c) => {
-        const fullName = `${c.firstName} ${c.lastName}`.toLowerCase()
-        return fullName.includes(q.toLowerCase()) ||
-          (c.email || '').toLowerCase().includes(q.toLowerCase())
-      }).slice(0, 5).map((c) => ({
-        id: c.id,
-        label: `${c.firstName} ${c.lastName}`,
-        sublabel: c.company?.name || c.email || undefined,
-        href: `/contacts/${c.id}`,
-      }))
-      const deals = (dealsRes.deals || []).filter((d) =>
-        d.title.toLowerCase().includes(q.toLowerCase()) ||
-        (d.company?.name || '').toLowerCase().includes(q.toLowerCase())
-      ).slice(0, 5).map((d) => ({
-        id: d.id,
-        label: d.title,
-        sublabel: d.company?.name || undefined,
-        href: `/deals/${d.id}`,
-      }))
-      setResults({ companies, contacts, deals })
+      const data = await apiFetch<SearchResponse>(`/api/search?q=${encodeURIComponent(q)}`)
+      setResults(data)
     } catch {
-      setResults({ companies: [], contacts: [], deals: [] })
+      setResults({ companies: [], contacts: [], deals: [], tasks: [] })
     } finally {
       setLoading(false)
     }
@@ -97,7 +86,7 @@ export default function GlobalSearch() {
     setHighlightIdx(-1)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (val.trim().length < 2) {
-      setResults({ companies: [], contacts: [], deals: [] })
+      setResults({ companies: [], contacts: [], deals: [], tasks: [] })
       setLoading(false)
       setOpen(false)
       return
@@ -130,7 +119,7 @@ export default function GlobalSearch() {
     router.push(r.href)
     setQuery('')
     setOpen(false)
-    setResults({ companies: [], contacts: [], deals: [] })
+    setResults({ companies: [], contacts: [], deals: [], tasks: [] })
   }
 
   // Close dropdown when clicking outside
@@ -144,19 +133,22 @@ export default function GlobalSearch() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const hasResults = results.companies.length > 0 || results.contacts.length > 0 || results.deals.length > 0
+  const hasResults = results.companies.length > 0 || results.contacts.length > 0 || results.deals.length > 0 || results.tasks.length > 0
   let runningIdx = -1
 
-  const renderGroup = (title: string, items: SearchResult[]) => {
+  const renderGroup = (groupKey: string, label: string, icon: string, items: SearchResult[]) => {
     if (items.length === 0) return null
     return (
-      <div key={title} style={{ padding: '4px 0' }}>
+      <div key={groupKey} style={{ padding: '4px 0' }}>
         <div style={{
           fontSize: 11, fontWeight: 600, textTransform: 'uppercase',
           letterSpacing: 0.5, color: 'var(--fg-dim)',
           padding: '6px 12px',
+          display: 'flex', alignItems: 'center', gap: 6,
         }}>
-          {title}
+          <span style={{ fontSize: 13 }}>{icon}</span>
+          {label}
+          <span style={{ color: 'var(--fg-dimmer)', fontWeight: 400 }}>{items.length}</span>
         </div>
         {items.map((r) => {
           runningIdx++
@@ -164,7 +156,7 @@ export default function GlobalSearch() {
           const isHighlighted = idx === highlightIdx
           return (
             <div
-              key={`${title}-${r.id}`}
+              key={`${groupKey}-${r.id}`}
               onClick={() => navigateTo(r)}
               style={{
                 padding: '8px 12px',
@@ -175,12 +167,13 @@ export default function GlobalSearch() {
                 gap: 2,
                 borderRadius: 6,
                 margin: '0 4px',
+                transition: 'background .1s',
               }}
               onMouseEnter={() => setHighlightIdx(idx)}
             >
-              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg)' }}>{r.label}</span>
+              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</span>
               {r.sublabel && (
-                <span style={{ fontSize: 12, color: 'var(--fg-dim)' }}>{r.sublabel}</span>
+                <span style={{ fontSize: 12, color: 'var(--fg-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.sublabel}</span>
               )}
             </div>
           )
@@ -188,6 +181,8 @@ export default function GlobalSearch() {
       </div>
     )
   }
+
+  const totalCount = results.counts?.total ?? flatResults.length
 
   return (
     <div
@@ -197,7 +192,7 @@ export default function GlobalSearch() {
     >
       <input
         type="text"
-        placeholder="Search companies, contacts, deals…"
+        placeholder="Search companies, contacts, deals, tasks…"
         value={query}
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
@@ -211,6 +206,7 @@ export default function GlobalSearch() {
           borderRadius: 8,
           padding: '8px 12px',
           fontSize: 14,
+          minHeight: 40,
         }}
       />
       {open && (
@@ -236,14 +232,29 @@ export default function GlobalSearch() {
               Searching…
             </div>
           ) : !hasResults ? (
-            <div style={{ padding: 16, textAlign: 'center', color: 'var(--fg-dim)', fontSize: 14 }}>
-              No results for "{query}"
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--fg-dim)', fontSize: 14 }}>
+              <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.4 }}>🔍</div>
+              No results for &ldquo;{query}&rdquo;
+              <div style={{ fontSize: 12, marginTop: 4, color: 'var(--fg-dimmer)' }}>
+                Try searching by name, email, company, or deal title
+              </div>
             </div>
           ) : (
             <>
-              {renderGroup('Companies', results.companies)}
-              {renderGroup('Contacts', results.contacts)}
-              {renderGroup('Deals', results.deals)}
+              {GROUP_META.map((g) =>
+                renderGroup(g.key, g.label, g.icon, results[g.key])
+              )}
+              {totalCount > 0 && (
+                <div style={{
+                  padding: '8px 12px',
+                  borderTop: '1px solid var(--panel-border)',
+                  fontSize: 12,
+                  color: 'var(--fg-dimmer)',
+                  textAlign: 'center',
+                }}>
+                  {totalCount} result{totalCount !== 1 ? 's' : ''} · Press Enter to open
+                </div>
+              )}
             </>
           )}
         </div>

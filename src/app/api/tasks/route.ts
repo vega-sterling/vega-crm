@@ -70,6 +70,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const companyId = searchParams.get('companyId');
   const assignedToId = searchParams.get('assignedToId');
   const tenantId = searchParams.get('tenantId');
+  const search = searchParams.get('search')?.trim();
 
   const where: Record<string, unknown> = {
     tenantId: tenantIds ? { in: tenantIds } : undefined,
@@ -78,6 +79,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (tenantId) {
     if (tenantIds && !tenantIds.includes(tenantId)) return errorResponse('Forbidden', 403);
     where.tenantId = tenantId;
+  }
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+    ];
   }
   if (status) where.status = status;
   if (companyId) where.companyId = companyId;

@@ -85,6 +85,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const contactId = searchParams.get('contactId');
   const assignedToId = searchParams.get('assignedToId');
   const tenantId = searchParams.get('tenantId');
+  const search = searchParams.get('search')?.trim();
 
   const where: Record<string, unknown> = {
     tenantId: tenantIds ? { in: tenantIds } : undefined,
@@ -98,6 +99,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (companyId) where.companyId = companyId;
   if (contactId) where.contactId = contactId;
   if (assignedToId) where.assignedToId = assignedToId;
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { company: { name: { contains: search, mode: 'insensitive' } } },
+    ];
+  }
 
   const [data, stages] = await Promise.all([
     prisma.deal.findMany({
