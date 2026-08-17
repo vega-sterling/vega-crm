@@ -727,3 +727,108 @@ The CRM had backend APIs for custom properties (`/api/custom-properties`, `/api/
 - src/app/contacts/[id]/page.tsx — MODIFIED (added CustomFieldsSection to left sidebar)
 - src/app/globals.css — MODIFIED (Phase 13 responsive CSS: table→card on mobile)
 - CHANGELOG.md — MODIFIED (this entry)
+
+---
+
+## Phase 16 — Unified Activity Center (August 17, 2026)
+
+Transformed the Activities page from a basic flat list into a HubSpot-style activity command center — the central hub for logging and tracking all customer interactions.
+
+### What Was Built
+
+**Multi-type activity creation (inline, no modals)**
+- Quick action bar with three inline forms: Note, Log Call, Schedule Meeting
+- Each form includes company selector, relevant fields (direction, duration, outcome for calls; date/time for meetings)
+- Note composer preserves the existing inline pattern (type + Enter, Shift+Enter for newline)
+
+**Activity type filter tabs with live counts**
+- Six tabs: All, Notes, Calls, Emails, Tasks, Meetings
+- Each tab shows a live count badge with the number of activities of that type
+- Active tab highlighted with gold underline (matches existing TimelineFilterTabs pattern)
+
+**Quick stats bar**
+- Four KPI cards: Today's Activities, This Week, Calls Today, Upcoming Meetings
+- Auto-calculated from the loaded activity data
+- Color-coded values for visual scanning
+
+**Date-grouped activity feed**
+- Activities grouped by date: Today, Yesterday, This Week, Earlier
+- Sticky group headers that stay visible while scrolling (like HubSpot/Close)
+- Each header shows a count badge for the group
+
+**Search within activities**
+- Full-text search across activity subject and description
+- Real-time filtering as you type
+- Search results show count with the query term
+
+**Enhanced filter toolbar**
+- Date range filter (All Time, Today, This Week, This Month)
+- Company filter
+- User filter
+- All filters work together with type tabs and search
+
+### Responsive Design
+- **Desktop (>1024px)**: Full layout with stats grid, filter toolbar, grouped feed
+- **Tablet (768-1024px)**: Stats grid in 2 columns, toolbar wraps gracefully
+- **Phone (<768px)**: Single column, stat cards 2×2, toolbar stacks vertically, quick action buttons full-width
+- **Small phone (≤480px)**: Stats single column, compact date headers
+
+### Files Changed
+-  — REWRITTEN (Phase 16 Unified Activity Center)
+-  — MODIFIED (Phase 16 responsive CSS: sticky headers, mobile toolbar, stat grid)
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded (Next.js 16.3.0, TypeScript strict, no errors)
+- ✅ All 22 authenticated pages return HTTP 307 (auth redirect — expected)
+- ✅ All 7 API endpoints return 401 (needs auth — expected)
+- ✅ No runtime errors in container logs
+- ✅ Git committed
+
+---
+
+## Phase 16 — Unified Activity Center (August 17, 2026)
+
+Transformed the Activities page from a basic flat list into a HubSpot-style activity command center.
+
+### What Was Built
+
+**Multi-type activity creation (inline, no modals)**
+- Quick action bar: Note, Log Call, Schedule Meeting
+- Each form has company selector + relevant fields
+- Note composer preserves inline pattern (Enter to save)
+
+**Activity type filter tabs with live counts**
+- Six tabs: All, Notes, Calls, Emails, Tasks, Meetings
+- Live count badges on each tab
+
+**Quick stats bar**
+- Four KPI cards: Today, This Week, Calls Today, Upcoming Meetings
+
+**Date-grouped activity feed**
+- Activities grouped: Today, Yesterday, This Week, Earlier
+- Sticky group headers while scrolling
+
+**Search within activities**
+- Full-text search across subject and description
+
+**Enhanced filter toolbar**
+- Date range, company, user filters all work together
+
+### Responsive Design
+- Desktop: Full layout, stats grid, grouped feed
+- Tablet: Stats 2 columns, toolbar wraps
+- Phone: Single column, stacked toolbar, full-width buttons
+- Small phone: Stats single column, compact headers
+
+### Files Changed
+- src/app/activities/page.tsx — REWRITTEN (Unified Activity Center)
+- src/app/globals.css — MODIFIED (responsive CSS for new components)
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded (Next.js 16.3.0, TypeScript strict)
+- ✅ All 22 authenticated pages return 307 (expected)
+- ✅ All 7 API endpoints return 401 (expected)
+- ✅ No runtime errors in container logs
+- ✅ Git committed

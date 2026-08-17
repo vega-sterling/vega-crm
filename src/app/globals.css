@@ -1224,3 +1224,49 @@ input[type="checkbox"] {
     min-height: 44px;
   }
 }
+
+/* ── Phase 16: Activity Center — sticky date headers + responsive ── */
+
+/* Sticky date headers in the activity feed */
+.activity-date-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
+}
+
+/* On mobile, the list toolbar wraps — ensure search stays full width */
+@media (max-width: 768px) {
+  .list-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .list-toolbar > div,
+  .list-toolbar > select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Quick action buttons — full width on phone */
+  .quick-action-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* Activity center stat grid — 2 columns on phone */
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* On very small phones, stat cards become single column */
+@media (max-width: 480px) {
+  .stat-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Activity date headers — smaller text */
+  .activity-date-header span {
+    font-size: 11px !important;
+  }
+}
