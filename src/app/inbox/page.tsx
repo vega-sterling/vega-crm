@@ -5,9 +5,12 @@
 // Description: Universal email inbox — HubSpot-style. Shows all emails
 //              across all contacts/deals in one view. Filter by
 //              direction, read/unread, tenant. Reply inline. Search.
+//              Phase 17: Full responsive design — two-pane on desktop,
+//              stack + back navigation on tablet/phone.
 // ============================================================================
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import ProtectedLayout from "../components/ProtectedLayout";
 import Spinner from "../components/Spinner";
 import { apiFetch } from "../lib/api";
@@ -182,11 +185,12 @@ export default function InboxPage() {
         )}
 
         {/* Filters + Search */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ display: "flex", gap: 4 }}>
+        <div className="inbox-toolbar" style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
+          <div className="inbox-filters" style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
             {(["all", "inbound", "outbound", "unread"] as FilterType[]).map((f) => (
               <button
                 key={f}
+                className="btn-touch"
                 onClick={() => setFilter(f)}
                 style={{
                   ...buttons.small,
@@ -203,6 +207,7 @@ export default function InboxPage() {
           </div>
           <input
             type="text"
+            className="form-input"
             placeholder="Search emails..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -210,14 +215,23 @@ export default function InboxPage() {
               ...forms.input,
               maxWidth: 300,
               flex: 1,
+              minWidth: 0,
             }}
           />
         </div>
 
         {/* Two-pane layout: list + detail */}
-        <div style={{ display: "flex", gap: 0, border: "1px solid var(--panel-border)", borderRadius: 12, overflow: "hidden", minHeight: 500 }}>
+        <div className="inbox-container" style={{ display: "flex", gap: 0, border: "1px solid var(--panel-border)", borderRadius: 12, overflow: "hidden", minHeight: 500 }}>
           {/* Email list */}
-          <div style={{ width: selectedEmail ? "40%" : "100%", borderRight: selectedEmail ? "1px solid var(--panel-border)" : "none", overflow: "auto", maxHeight: "70vh" }}>
+          <div
+            className="inbox-list"
+            style={{
+              width: selectedEmail ? "40%" : "100%",
+              borderRight: selectedEmail ? "1px solid var(--panel-border)" : "none",
+              overflow: "auto",
+              maxHeight: "70vh",
+            }}
+          >
             {filtered.length === 0 ? (
               <div style={{ padding: 40, textAlign: "center", color: "var(--fg-dim)" }}>
                 <p style={{ fontSize: 16, marginBottom: 8 }}>No emails</p>
@@ -303,11 +317,14 @@ export default function InboxPage() {
 
           {/* Email detail pane */}
           {selectedEmail && (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", maxHeight: "70vh" }}>
+            <div
+              className="inbox-detail"
+              style={{ flex: 1, display: "flex", flexDirection: "column", maxHeight: "70vh" }}
+            >
               {/* Email header */}
               <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--panel-border)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 8px", color: "var(--fg)" }}>
                       {selectedEmail.subject || "(no subject)"}
                     </h2>
@@ -316,22 +333,35 @@ export default function InboxPage() {
                       <div><strong style={{ color: "var(--fg)" }}>To:</strong> {selectedEmail.toEmails.join(", ")}</div>
                       {selectedEmail.contact && (
                         <div style={{ marginTop: 4 }}>
-                          <a href={`/contacts/${selectedEmail.contact.id}`} style={{ color: "var(--gold)", textDecoration: "none" }}>
+                          <Link href={`/contacts/${selectedEmail.contact.id}`} style={{ color: "var(--gold)", textDecoration: "none" }}>
                             → {selectedEmail.contact.firstName} {selectedEmail.contact.lastName}
-                          </a>
+                          </Link>
                         </div>
                       )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => setSelectedEmail(null)}
-                    style={{
-                      ...buttons.small,
-                      flexShrink: 0,
-                    }}
-                  >
-                    ✕ Close
-                  </button>
+                  <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                    <button
+                      className="btn-touch inbox-back-btn"
+                      onClick={() => setSelectedEmail(null)}
+                      style={{
+                        ...buttons.small,
+                        display: "none", // shown only on mobile via CSS
+                      }}
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      className="btn-touch"
+                      onClick={() => setSelectedEmail(null)}
+                      style={{
+                        ...buttons.small,
+                        flexShrink: 0,
+                      }}
+                    >
+                      ✕ Close
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -353,6 +383,7 @@ export default function InboxPage() {
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     placeholder="Type a reply..."
+                    className="form-textarea"
                     style={{
                       ...forms.textarea,
                       minHeight: 80,
@@ -370,6 +401,7 @@ export default function InboxPage() {
                     )}
                     <button
                       type="submit"
+                      className="btn-touch"
                       disabled={sending || !replyText.trim()}
                       style={{
                         ...buttons.primary,

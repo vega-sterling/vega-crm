@@ -1225,6 +1225,124 @@ input[type="checkbox"] {
   }
 }
 
+/* ============================================================================ */
+/* PHASE 17 CSS — Inbox Responsive + Calendar Mobile + Reports Mobile           */
+/* ============================================================================ */
+
+/* ── Inbox: Desktop (>768px) — two-pane side by side ── */
+@media (min-width: 769px) {
+  .inbox-back-btn {
+    display: none !important;
+  }
+}
+
+/* ── Inbox: Tablet/Phone (≤768px) — stack: list first, detail as full view ── */
+@media (max-width: 768px) {
+  /* When an email is selected, hide the list and show detail full-width */
+  .inbox-container:has(.inbox-detail) .inbox-list {
+    display: none !important;
+  }
+  .inbox-container:has(.inbox-detail) .inbox-detail {
+    width: 100% !important;
+    flex: 1 !important;
+  }
+
+  /* Show the back button on mobile */
+  .inbox-back-btn {
+    display: flex !important;
+  }
+
+  /* Toolbar stacks vertically */
+  .inbox-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .inbox-filters {
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+  .inbox-filters button {
+    flex: 1 1 auto !important;
+    min-width: 60px !important;
+    justify-content: center !important;
+  }
+  .inbox-toolbar input {
+    max-width: none !important;
+    width: 100% !important;
+  }
+}
+
+/* Small phone (≤480px) — tighter inbox */
+@media (max-width: 480px) {
+  .inbox-filters button {
+    font-size: 12px !important;
+    padding: 8px 10px !important;
+  }
+}
+
+/* ── Calendar: responsive improvements ── */
+
+/* Calendar 2-column grid → 1 column on tablet/phone */
+@media (max-width: 1024px) {
+  .calendar-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Calendar form inputs on mobile */
+@media (max-width: 768px) {
+  .calendar-grid > .panel-container {
+    padding: 16px !important;
+  }
+  .calendar-grid .form-input,
+  .calendar-grid .form-select,
+  .calendar-grid input[type="date"],
+  .calendar-grid input[type="time"],
+  .calendar-grid input[type="number"] {
+    min-height: 44px !important;
+    font-size: 16px !important;
+  }
+  .calendar-grid button {
+    min-height: 44px !important;
+    font-size: 14px !important;
+  }
+  /* Calendar header buttons wrap */
+  .calendar-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+  .calendar-header > div {
+    width: 100% !important;
+  }
+  .calendar-header button {
+    flex: 1 !important;
+  }
+}
+
+/* ── Reports: responsive improvements ── */
+
+/* Reports date inputs wrap properly on mobile */
+@media (max-width: 768px) {
+  .reports-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+  .reports-header > div {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+  .reports-header input[type="date"] {
+    min-height: 44px !important;
+    flex: 1 !important;
+    min-width: 120px !important;
+  }
+}
+
+/* ============================================================================ */
+/* PHASE 17 CSS END                                                             */
+/* ============================================================================ */
 /* ── Phase 16: Activity Center — sticky date headers + responsive ── */
 
 /* Sticky date headers in the activity feed */

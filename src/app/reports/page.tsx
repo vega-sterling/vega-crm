@@ -230,11 +230,11 @@ function ReportsContent() {
 
   return (
     <div style={layout.page}>
-      <div style={layout.header}>
+      <div className="reports-header" style={layout.header}>
         <h1 style={{ ...typeography.title, marginBottom: 0 }}>Reports</h1>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <input style={{ ...forms.input, width: 'auto' }} type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-          <input style={{ ...forms.input, width: 'auto' }} type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          <input className="form-input" style={{ ...forms.input, width: 'auto' }} type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          <input className="form-input" style={{ ...forms.input, width: 'auto' }} type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
           <button style={buttons.primary} onClick={handleExport}>Export JSON</button>
         </div>
       </div>

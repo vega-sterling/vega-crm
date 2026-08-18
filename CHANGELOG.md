@@ -832,3 +832,46 @@ Transformed the Activities page from a basic flat list into a HubSpot-style acti
 - ✅ All 7 API endpoints return 401 (expected)
 - ✅ No runtime errors in container logs
 - ✅ Git committed
+
+---
+
+## Phase 17 — Inbox Responsive + Calendar/Reports Mobile (August 18, 2026)
+
+Transformed the Inbox from a desktop-only two-pane layout into a fully responsive experience, plus mobile improvements for Calendar and Reports pages.
+
+### What Was Built
+
+**Inbox — Full responsive design**
+- Desktop (>768px): Two-pane side-by-side (40% list + 60% detail) — unchanged
+- Tablet/Phone (≤768px): When an email is selected, list hides and detail shows full-width with a "← Back" button to return to the list
+- Toolbar stacks vertically on mobile (filters above search, full-width)
+- Filter buttons flex to equal widths on mobile for touch-friendly targets
+- Small phone (≤480px): Tighter filter button sizing
+- All touch targets 44px+ (btn-touch class added to buttons)
+- Form inputs use form-input/form-textarea classes for 44px min-height on mobile
+
+**Calendar — Mobile improvements**
+- 2-column grid (events + booking sidebar) collapses to single column on tablet/phone (≤1024px)
+- All form inputs, selects, and textareas now have form-input/form-select/form-textarea classes → 44px min-height, 16px font on mobile
+- Calendar header stacks vertically on mobile with full-width buttons
+- All buttons get 44px min-height on mobile
+
+**Reports — Mobile improvements**
+- Header stacks vertically on mobile (date inputs + export button wrap below title)
+- Date inputs get form-input class for 44px min-height on mobile
+- Date inputs flex to fill available width on mobile
+
+### Files Changed
+- src/app/inbox/page.tsx — REWRITTEN (responsive: mobile back navigation, stacked toolbar, form classes)
+- src/app/calendar/page.tsx — MODIFIED (calendar-grid + calendar-header classes, form-input/form-select/form-textarea classes on all inputs)
+- src/app/reports/page.tsx — MODIFIED (reports-header class, form-input class on date inputs)
+- src/app/globals.css — ADDED Phase 17 CSS block (inbox responsive, calendar responsive, reports responsive — 118 lines)
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded (Next.js 16.3.0, no errors)
+- ✅ All 16 authenticated pages return HTTP 307 (auth redirect — expected)
+- ✅ /setup-2fa returns 200 (public page — correct)
+- ✅ All 8 API endpoints return 401 (needs auth — expected)
+- ✅ No runtime errors in container logs
+- ✅ Git committed

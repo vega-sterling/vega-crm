@@ -180,7 +180,7 @@ function CalendarContent() {
 
   return (
     <div style={layout.page}>
-      <div style={layout.header}>
+      <div className="calendar-header" style={layout.header}>
         <h1 style={{ ...typeography.title, marginBottom: 0 }}>Calendar</h1>
         <div style={{ display: 'flex', gap: 12 }}>
           <button style={buttons.secondary} onClick={handleSync} disabled={syncing}>{syncing ? 'Syncing...' : 'Sync Calendar'}</button>
@@ -194,7 +194,7 @@ function CalendarContent() {
         </div>
       )}
 
-      <div className="project-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+      <div className="project-grid calendar-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
         <div className="panel-container" style={panel.container}>
           <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Upcoming (next 30 days)</h2>
           {Object.keys(groupedEvents).length === 0 && <p style={typeography.muted}>No upcoming events.</p>}
@@ -244,7 +244,7 @@ function CalendarContent() {
             <div style={forms.row}>
               <label style={forms.group}>
                 <span style={forms.label}>Weekday</span>
-                <select style={forms.select} value={slotForm.weekday} onChange={(e) => setSlotForm({ ...slotForm, weekday: Number(e.target.value) })}>
+                <select className="form-select" style={forms.select} value={slotForm.weekday} onChange={(e) => setSlotForm({ ...slotForm, weekday: Number(e.target.value) })}>
                   {WEEKDAYS.map((name, i) => (
                     <option key={i} value={i}>{name}</option>
                   ))}
@@ -252,7 +252,7 @@ function CalendarContent() {
               </label>
               <label style={forms.group}>
                 <span style={forms.label}>Duration (min)</span>
-                <select style={forms.select} value={slotForm.durationMinutes} onChange={(e) => setSlotForm({ ...slotForm, durationMinutes: Number(e.target.value) })}>
+                <select className="form-select" style={forms.select} value={slotForm.durationMinutes} onChange={(e) => setSlotForm({ ...slotForm, durationMinutes: Number(e.target.value) })}>
                   {[15, 30, 45, 60, 90, 120].map((m) => (
                     <option key={m} value={m}>{m} min</option>
                   ))}
@@ -262,11 +262,11 @@ function CalendarContent() {
             <div style={forms.row}>
               <label style={forms.group}>
                 <span style={forms.label}>Start</span>
-                <input style={forms.input} type="time" value={slotForm.startTime} onChange={(e) => setSlotForm({ ...slotForm, startTime: e.target.value })} />
+                <input className="form-input" style={forms.input} type="time" value={slotForm.startTime} onChange={(e) => setSlotForm({ ...slotForm, startTime: e.target.value })} />
               </label>
               <label style={forms.group}>
                 <span style={forms.label}>End</span>
-                <input style={forms.input} type="time" value={slotForm.endTime} onChange={(e) => setSlotForm({ ...slotForm, endTime: e.target.value })} />
+                <input className="form-input" style={forms.input} type="time" value={slotForm.endTime} onChange={(e) => setSlotForm({ ...slotForm, endTime: e.target.value })} />
               </label>
             </div>
             <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Add availability'}</button>
@@ -297,38 +297,38 @@ function CalendarContent() {
             <form onSubmit={handleCreateEvent} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <label style={forms.group}>
                 <span style={forms.label}>Title</span>
-                <input style={forms.input} required value={eventForm.title} onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })} />
+                <input className="form-input" style={forms.input} required value={eventForm.title} onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })} />
               </label>
 
               <div style={forms.row}>
                 <label style={forms.group}>
                   <span style={forms.label}>Date</span>
-                  <input style={forms.input} type="date" required value={eventForm.date} onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })} />
+                  <input className="form-input" style={forms.input} type="date" required value={eventForm.date} onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })} />
                 </label>
                 <label style={forms.group}>
                   <span style={forms.label}>Time</span>
-                  <input style={forms.input} type="time" required value={eventForm.time} onChange={(e) => setEventForm({ ...eventForm, time: e.target.value })} />
+                  <input className="form-input" style={forms.input} type="time" required value={eventForm.time} onChange={(e) => setEventForm({ ...eventForm, time: e.target.value })} />
                 </label>
                 <label style={forms.group}>
                   <span style={forms.label}>Duration (min)</span>
-                  <input style={forms.input} type="number" min={5} value={eventForm.duration} onChange={(e) => setEventForm({ ...eventForm, duration: Number(e.target.value) })} />
+                  <input className="form-input" style={forms.input} type="number" min={5} value={eventForm.duration} onChange={(e) => setEventForm({ ...eventForm, duration: Number(e.target.value) })} />
                 </label>
               </div>
 
               <label style={forms.group}>
                 <span style={forms.label}>Attendees (comma-separated emails)</span>
-                <input style={forms.input} value={eventForm.attendees} onChange={(e) => setEventForm({ ...eventForm, attendees: e.target.value })} />
+                <input className="form-input" style={forms.input} value={eventForm.attendees} onChange={(e) => setEventForm({ ...eventForm, attendees: e.target.value })} />
               </label>
 
               <label style={forms.group}>
                 <span style={forms.label}>Location</span>
-                <input style={forms.input} value={eventForm.location} onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })} />
+                <input className="form-input" style={forms.input} value={eventForm.location} onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })} />
               </label>
 
               <div style={forms.row}>
                 <label style={forms.group}>
                   <span style={forms.label}>Linked contact</span>
-                  <select style={forms.select} value={eventForm.contactId} onChange={(e) => setEventForm({ ...eventForm, contactId: e.target.value })}>
+                  <select className="form-select" style={forms.select} value={eventForm.contactId} onChange={(e) => setEventForm({ ...eventForm, contactId: e.target.value })}>
                     <option value="">None</option>
                     {contacts.map((c) => (
                       <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
@@ -337,7 +337,7 @@ function CalendarContent() {
                 </label>
                 <label style={forms.group}>
                   <span style={forms.label}>Linked company</span>
-                  <select style={forms.select} value={eventForm.companyId} onChange={(e) => setEventForm({ ...eventForm, companyId: e.target.value })}>
+                  <select className="form-select" style={forms.select} value={eventForm.companyId} onChange={(e) => setEventForm({ ...eventForm, companyId: e.target.value })}>
                     <option value="">None</option>
                     {companies.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
@@ -348,7 +348,7 @@ function CalendarContent() {
 
               <label style={forms.group}>
                 <span style={forms.label}>Description</span>
-                <textarea style={forms.textarea} value={eventForm.description} onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })} />
+                <textarea className="form-textarea" style={forms.textarea} value={eventForm.description} onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })} />
               </label>
 
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
