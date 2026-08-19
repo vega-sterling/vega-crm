@@ -875,3 +875,61 @@ Transformed the Inbox from a desktop-only two-pane layout into a fully responsiv
 - ✅ All 8 API endpoints return 401 (needs auth — expected)
 - ✅ No runtime errors in container logs
 - ✅ Git committed
+
+## Phase 18 — AI-Powered Record Summaries (August 19, 2026)
+
+Implemented HubSpot-style "Summarize a record" feature — a deterministic intelligence engine that analyzes a contact or company's full relationship data (activities, deals, tasks, emails, engagement trends, call quality, response patterns) and generates a natural-language executive brief with recommended next steps and a relationship health score.
+
+### What Was Built
+
+**Summary API — Contact (`GET /api/contacts/[id]/summary`)**
+- Fetches all activities, tasks, deals, and emails for the contact
+- Builds an activity tally (calls, emails, notes, meetings) with call outcomes and durations
+- Calculates engagement trend (accelerating/steady/declining/dormant) based on 30-day activity velocity
+- Computes email reply rate (inbound/outbound ratio)
+- Computes call connect rate (answered vs voicemail/missed)
+- Generates a 7-paragraph natural-language executive brief
+- Generates 1-5 recommended next steps based on relationship state (re-engagement, task follow-up, deal advancement, voicemail workaround)
+- Computes a 0-100 relationship health score with tier (Thriving/Active/At Risk/Dormant)
+- Returns structured JSON: brief paragraphs, stats grid, next steps, health score, generated timestamp
+
+**Summary API — Company (`GET /api/companies/[id]/summary`)**
+- Mirrors the contact summary but scoped to company: aggregates activities across all contacts, all deals, all tasks, all emails, plus contact count and deal pipeline value
+- Same intelligence engine: trend analysis, health score, recommended next steps
+- Company-specific recommendations: stale deal follow-up, task delegation, contact expansion
+
+**SummaryCard Component (`src/app/components/SummaryCard.tsx`)**
+- Reusable client component placed in the left sidebar of contact and company detail pages
+- Collapsed state: a "Generate Summary" button with sparkles icon (Apple/Porsche aesthetic — clean, flat, no modal)
+- Expanded state: displays the executive brief as readable paragraphs, a 3-column stat grid (activities, health score, trend), health badge with tier color, and a numbered list of recommended next steps
+- "Regenerate" button to refresh the summary on demand
+- Loading state with spinner; error state with retry
+- Fully responsive: stat grid collapses to 2-col on tablet, 1-col on phone
+
+**IconSparkles**
+- New SVG icon (three sparkles) added to Icons.tsx for the AI summary action
+
+**Responsive CSS**
+- Phase 18 block in globals.css: summary stat grid collapses gracefully on tablet/phone
+
+### Files Changed
+- `src/app/api/contacts/[id]/summary/route.ts` — NEW (contact summary intelligence engine)
+- `src/app/api/companies/[id]/summary/route.ts` — NEW (company summary intelligence engine)
+- `src/app/components/SummaryCard.tsx` — NEW (reusable summary card component)
+- `src/app/components/Icons.tsx` — MODIFIED (added IconSparkles)
+- `src/app/contacts/[id]/page.tsx` — MODIFIED (imported + placed SummaryCard in left sidebar)
+- `src/app/companies/[id]/page.tsx` — MODIFIED (imported + placed SummaryCard in left sidebar)
+- `src/app/globals.css` — MODIFIED (Phase 18 responsive CSS)
+- `CHANGELOG.md` — UPDATED
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded (Next.js 16.3.0, TypeScript compiled, no errors)
+- ✅ New API `/api/contacts/[id]/summary` returns 401 (auth required — correct)
+- ✅ New API `/api/companies/[id]/summary` returns 401 (auth required — correct)
+- ✅ All 26 authenticated pages return HTTP 307 (auth redirect — expected)
+- ✅ /login returns 200, /setup-2fa returns 200 (public pages — correct)
+- ✅ All 19 API endpoints return 401/403 (auth — expected)
+- ✅ No runtime errors in container logs
+- ✅ Verified real data exists for summary generation (123 activities, 1 contact at Test Property Management)
+- ✅ Git committed

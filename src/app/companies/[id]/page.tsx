@@ -12,6 +12,7 @@ import TasksTab from '../../components/TasksTab'
 import ActivityCard from '../../components/ActivityCard'
 import PropertyQuickEdit from '../../components/PropertyQuickEdit'
 import CustomFieldsSection from '../../components/CustomFieldsSection'
+import SummaryCard from '../../components/SummaryCard'
 import { ContactsCard, DealsCard, TasksCard } from '../../components/AssociationCards'
 import { usePinnedNote } from '../../components/PinnedNotes'
 import EmailThreadCard from '../../components/EmailThreadCard'
@@ -285,6 +286,9 @@ function CompanyDetailContent() {
             entityType="COMPANY"
             tenantId={company.tenantId}
           />
+
+          {/* AI Summary */}
+          <SummaryCard endpoint={`/api/companies/${companyId}/summary`} entityType="Company" />
 
           {/* Action buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

@@ -1388,3 +1388,17 @@ input[type="checkbox"] {
     font-size: 11px !important;
   }
 }
+
+/* ── Phase 18: AI Summary Card responsive ── */
+/* On phone, the summary stat grid (3-col) collapses to 2-col for readability */
+@media (max-width: 768px) {
+  .record-left .panel-container > div[style*="grid-template-columns: repeat(3"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .record-left .panel-container > div[style*="grid-template-columns: repeat(2"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}

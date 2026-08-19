@@ -13,6 +13,7 @@ import ActivityCard from '../../components/ActivityCard'
 import PropertyQuickEdit from '../../components/PropertyQuickEdit'
 import CustomFieldsSection from '../../components/CustomFieldsSection'
 import { LeadScoreBadge } from '../../components/LeadScoreBadge'
+import SummaryCard from '../../components/SummaryCard'
 import { CompanyCard, DealsCard, TasksCard } from '../../components/AssociationCards'
 import { usePinnedNote } from '../../components/PinnedNotes'
 import EmailThreadCard from '../../components/EmailThreadCard'
@@ -283,6 +284,9 @@ function ContactDetailContent() {
 
           {/* Lead Score */}
           <LeadScoreBadge contactId={contactId} />
+
+          {/* AI Summary */}
+          <SummaryCard endpoint={`/api/contacts/${contactId}/summary`} entityType="Contact" />
 
           {/* Action buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
