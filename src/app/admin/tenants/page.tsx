@@ -146,7 +146,7 @@ export default function TenantsPage() {
         </div>
 
         {showModal && (
-          <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 }}>
+          <div className="vega-modal-overlay" style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 }}>
             <div style={{ ...panel.container, width: "100%", maxWidth: 480 }}>
               <h2 style={{ ...typeography.subtitle, marginBottom: 16 }}>{editingTenant ? "Edit Tenant" : "New Tenant"}</h2>
               <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>

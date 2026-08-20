@@ -132,7 +132,7 @@ export default function CampaignsPage() {
         {showModal && (
           <div
             onClick={() => setShowModal(false)}
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 }}
+            className="vega-modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 }}
           >
             <div
               onClick={(e) => e.stopPropagation()}

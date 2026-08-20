@@ -158,7 +158,7 @@ function CompaniesContent() {
       <div style={layout.header}>
         <h1 style={typeography.title}>Companies</h1>
         <div style={{ display: 'flex', gap: 8 }}>
-          <div style={{ display: 'flex', border: '1px solid var(--panel-border)', borderRadius: 8, overflow: 'hidden' }}>
+          <div className="view-mode-toggle" style={{ display: 'flex', border: '1px solid var(--panel-border)', borderRadius: 8, overflow: 'hidden' }}>
             <button onClick={() => setViewMode('table')} style={{
               padding: '8px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
               backgroundColor: viewMode === 'table' ? 'var(--panel-elevated)' : 'transparent',
@@ -219,9 +219,8 @@ function CompaniesContent() {
         {filtered.length} {filtered.length === 1 ? 'company' : 'companies'}
       </div>
 
-      {/* ── Table View ── */}
-      {viewMode === 'table' ? (
-        <div className="panel-container list-table-view" style={panel.container}>
+      {/* ── Table View ── Desktop manual toggle via viewMode; mobile: CSS hides automatically */}
+      <div className="panel-container list-table-view" style={{ ...panel.container, display: viewMode === 'table' ? 'block' : 'none' }}>
           <div className="table-wrapper" style={{ overflowX: 'auto' }}>
             <table style={table.table}>
               <thead>
@@ -293,11 +292,10 @@ function CompaniesContent() {
             onPageChange={setPage}
           />
         </div>
-      ) : (
-        /* ── Card Grid View ── */
-        <div className="card-grid list-card-view" style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16,
-        }}>
+      {/* ── Card Grid View ── Desktop: visible only when viewMode=card; Mobile: CSS forces visible */}
+      <div className="card-grid list-card-view" style={{
+        display: viewMode === 'card' ? 'grid' : 'none', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16,
+      }}>
           {filtered.length === 0 ? (
             <div className="panel-container" style={{ ...panel.container, gridColumn: '1 / -1', textAlign: 'center', color: 'var(--fg-dim)' }}>No companies found.</div>
           ) : (
@@ -335,13 +333,12 @@ function CompaniesContent() {
               </Link>
             ))
           )}
-        </div>
-      )}
+      </div>
 
       {/* ── New/Edit Modal ── */}
       {modalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }} onClick={() => setModalOpen(false)}>
-          <div style={{ ...panel.container, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', boxShadow: 'var(--shadow-lg)' }} onClick={(e) => e.stopPropagation()}>
+        <div className="vega-modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }} onClick={() => setModalOpen(false)}>
+          <div className="vega-modal-content" style={{ ...panel.container, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', boxShadow: 'var(--shadow-lg)' }} onClick={(e) => e.stopPropagation()}>
             <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{editingCompany ? 'Edit Company' : 'New Company'}</h2>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <label style={forms.group}>

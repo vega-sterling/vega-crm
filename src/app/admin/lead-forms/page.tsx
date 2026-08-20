@@ -139,7 +139,7 @@ export default function LeadFormsPage() {
         )}
 
         {showModal && (
-          <div onClick={() => setShowModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 }}>
+          <div className="vega-modal-overlay" onClick={() => setShowModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 }}>
             <div onClick={e => e.stopPropagation()} style={{ ...panel.container, maxWidth: 600, maxHeight: "85vh", overflowY: "auto", width: "100%" }}>
               <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Create Lead Form</h2>
               <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>

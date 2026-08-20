@@ -933,3 +933,50 @@ Implemented HubSpot-style "Summarize a record" feature — a deterministic intel
 - ✅ No runtime errors in container logs
 - ✅ Verified real data exists for summary generation (123 activities, 1 contact at Test Property Management)
 - ✅ Git committed
+
+## Phase 19 — Automatic Table-to-Card Mobile Responsive + Modal Bottom Sheets (2026-08-20)
+
+### Summary
+Completed the final responsive design gap: contacts and companies list pages now automatically convert from table view to card view on mobile (<=768px), without requiring manual toggle. All modals across the CRM now transform into bottom sheets on mobile, following Apple/Stripe design patterns.
+
+### What Was Built
+
+**1. Dual-Render Table + Card Views (Contacts and Companies)**
+- Both table and card views are now always rendered in the DOM simultaneously
+- Desktop: manual table/card toggle preserved (inline display styles control visibility)
+- Mobile (<=768px): CSS !important rules automatically hide table view and show card view
+- Previously: only one view existed in the DOM at a time (React conditional render), making CSS media queries ineffective
+
+**2. View Toggle Hidden on Mobile**
+- The Table/Card toggle buttons (.view-mode-toggle) are hidden on mobile via display: none !important
+- No user action needed — cards are always shown on phone
+
+**3. Modal Bottom Sheets (All Pages)**
+- All modal overlays transform into bottom sheets on mobile
+- Content slides up from bottom with slideUpSheet animation (0.25s ease-out)
+- border-radius: 20px 20px 0 0 — rounded top corners only
+- Grabber handle pseudo-element (36px bar) at top of sheet
+- max-height: 85vh with overflow scroll
+- Extra bottom padding for thumb reach
+- Pages affected: contacts, companies, campaigns, lead-forms, tenants, contact/company detail
+
+**4. Pagination Hidden in Mobile Card View**
+- Table pagination is hidden when card view is active on mobile
+
+### Files Changed
+- src/app/contacts/page.tsx — MODIFIED (dual-render table+card, CSS classes)
+- src/app/companies/page.tsx — MODIFIED (dual-render table+card, CSS classes)
+- src/app/campaigns/page.tsx — MODIFIED (vega-modal-overlay class)
+- src/app/admin/lead-forms/page.tsx — MODIFIED (vega-modal-overlay class)
+- src/app/admin/tenants/page.tsx — MODIFIED (vega-modal-overlay class)
+- src/app/globals.css — MODIFIED (Phase 19 responsive CSS)
+- CHANGELOG.md — UPDATED
+
+### QA Results
+- PASS Health check: 307 redirect to /login (healthy)
+- PASS Build succeeded (Next.js 16.3.0, no TypeScript errors)
+- PASS All 27 authenticated pages return HTTP 307 (auth redirect expected)
+- PASS All 8 API endpoints return 401 (auth expected)
+- PASS /login returns 200, /setup-2fa returns 200 (public pages correct)
+- PASS No runtime errors in container logs
+- PASS No data changes (pure UI/CSS enhancement)

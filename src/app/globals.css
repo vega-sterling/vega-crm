@@ -1402,3 +1402,70 @@ input[type="checkbox"] {
     grid-template-columns: 1fr 1fr !important;
   }
 }
+
+/* ============================================================================ */
+/* PHASE 19 CSS — Automatic Table-to-Card Mobile + Modal Bottom Sheets         */
+/* ============================================================================ */
+
+/* Hide the Table/Card view toggle on mobile — CSS auto-selects card view */
+@media (max-width: 768px) {
+  .view-mode-toggle {
+    display: none !important;
+  }
+}
+
+/* Modals become bottom sheets on phone — Apple/Stripe pattern */
+@media (max-width: 768px) {
+  .vega-modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .vega-modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 85vh !important;
+    border-radius: 20px 20px 0 0 !important;
+    padding: 24px 20px 32px !important;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.3) !important;
+    animation: slideUpSheet 0.25s ease-out;
+  }
+  /* Small grabber handle at top of bottom sheet */
+  .vega-modal-content::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--panel-border);
+    margin: 0 auto 20px;
+  }
+}
+
+@keyframes slideUpSheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* Ensure pagination inside list-table-view is hidden on mobile (card view is unpaginated) */
+@media (max-width: 768px) {
+  .list-table-view .pagination {
+    display: none !important;
+  }
+}
+
+/* Bottom sheet behavior for existing modal-overlay class too */
+@media (max-width: 768px) {
+  .modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .modal-overlay > div:last-child {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 85vh !important;
+    border-radius: 20px 20px 0 0 !important;
+    padding: 24px 20px 32px !important;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.3) !important;
+    animation: slideUpSheet 0.25s ease-out;
+  }
+}
