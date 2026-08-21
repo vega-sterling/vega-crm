@@ -1469,3 +1469,32 @@ input[type="checkbox"] {
     animation: slideUpSheet 0.25s ease-out;
   }
 }
+
+/* ============================================================================
+   PHASE 20 CSS — Dashboard Command Center (Sales Intelligence)
+   ============================================================================ */
+
+/* Sales metrics grid: 5 columns desktop → 3 tablet → 2 phone → 1 small */
+.sales-metrics-grid {
+  grid-template-columns: repeat(5, 1fr) !important;
+}
+
+@media (max-width: 1024px) {
+  .sales-metrics-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .sales-metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .sales-metrics-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Phase 20 CSS END */
