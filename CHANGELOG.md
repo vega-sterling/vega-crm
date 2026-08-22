@@ -1,3 +1,78 @@
+## 2026-08-22 — Phase 21: Deal Detail Page Enhancement (HubSpot-style 3-column)
+
+### Problem
+The deal detail page was significantly behind the company/contact pages in UX quality. It used a modal form for editing instead of inline PropertyQuickEdit, lacked AI SummaryCard, had no email threads in the unified timeline, no Tasks tab with inline creation, and no stage progression visualization. The right sidebar used hand-coded panels instead of reusable AssociationCards components.
+
+### Added
+- **New Deal Summary API** (`/api/deals/[id]/summary`):
+  - Deterministic intelligence engine analyzing deal activities, tasks, emails, stage history, and company/contact context
+  - Generates natural-language executive brief with deal status, stage progression, engagement trends, close date analysis
+  - Health score (0-100) based on activity recency, deal momentum, stage progress, probability, task status, close date
+  - Recommended next steps contextual to deal status (OPEN/WON/LOST)
+  - Stage progression analysis: current stage, next stage, % through pipeline, days in current stage
+  - Close date status: on_track, approaching, overdue, no_date
+  - Weighted value calculation (value × probability / 100)
+  - Email engagement stats: outbound, inbound, reply rate
+  - Call quality metrics: connect rate, total talk time
+  - Engagement trend analysis: 30-day vs prior 30-day comparison
+
+- **SummaryCard updated** (`src/app/components/SummaryCard.tsx`):
+  - Now supports `entityType: 'Deal'` in addition to 'Contact' and 'Company'
+  - Deal-specific stat grid: Activities, Calls, Emails, Meetings, Open Tasks, Overdue Tasks
+  - Stage progress bar visualization with current/next stage labels
+  - Weighted value display
+  - Close date status indicator with color-coded alerts (overdue/approaching/on track)
+  - Existing contact/company stats remain unchanged
+
+- **Deal detail page rewritten** (`src/app/deals/[id]/page.tsx`):
+  - **3-column HubSpot-style layout**: Left (properties + AI summary), Middle (timeline/tasks), Right (associations)
+  - **Inline PropertyQuickEdit** for deal value, probability, expected close date, lead source, loss reason, description — hover to edit, Enter to save, no modals
+  - **AI SummaryCard** in left sidebar — one click generates executive brief with health score, stage progress, and recommended next steps
+  - **Stage progression bar** in header — visual pipeline showing all stages with current/past/won/lost indicators
+  - **Quick stage changer** — dropdown in left sidebar to instantly move deal to any stage
+  - **Quick status changer** — dropdown to set OPEN/WON/LOST
+  - **InlineNoteComposer** — type a note + Enter, no modal
+  - **QuickActionBar** — Log Call, Create Task, Send Email, Schedule Meeting inline
+  - **TimelineFilterTabs** — All, Notes, Calls, Emails, Tasks, Meetings
+  - **EmailThreadCard** integrated into unified timeline — emails grouped by thread, expandable
+  - **PinnedNotes** — pin important notes to top of timeline
+  - **Tasks tab** with inline creation — switch between Timeline and Tasks tabs in middle column
+  - **Reusable AssociationCards** in right sidebar: CompanyCard, contact card, TasksCard, Recent Emails
+  - Full edit mode preserved for bulk property changes and deal deletion
+
+### Responsive
+- Desktop (>1024px): Full 3-column layout with sticky sidebars
+- Tablet (768-1024px): 2-column with reduced padding (existing CSS)
+- Phone (<768px): Single column, full-width, touch-friendly (existing CSS)
+- Stage progression bar wraps on narrow screens
+- All buttons have btn-touch class for 44px+ touch targets
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded with no errors (Next.js 16.3.0, Turbopack)
+- ✅ All 17 authenticated pages return HTTP 307 (auth redirect — expected)
+- ✅ /api/deals returns 401 (auth required — expected)
+- ✅ /api/deals/test-id returns 401 (auth required — expected)
+- ✅ /api/deals/test-id/summary returns 401 (auth required — expected)
+- ✅ All 12 API endpoints return correct 401 (auth required — expected)
+- ✅ No runtime errors in container logs after deployment
+- ✅ Clean startup: Ready in 0ms, no warnings
+- ✅ TypeScript compilation passed (2 errors fixed: optional totalDealValue, EmailThreadCard dealId prop)
+
+### Files Changed
+- src/app/api/deals/[id]/summary/route.ts — NEW (deal intelligence engine)
+- src/app/components/SummaryCard.tsx — MODIFIED (Deal entity type support, deal-specific stats, stage progress, close date status)
+- src/app/deals/[id]/page.tsx — REWRITTEN (3-column layout, inline PropertyQuickEdit, AI SummaryCard, EmailThreadCard, TasksTab, stage progression bar, reusable AssociationCards)
+
+### Impact
+- Deal detail page now matches the UX quality of company/contact pages
+- Inline property editing eliminates modal friction for quick field updates
+- AI SummaryCard provides instant deal intelligence with health score and next steps
+- Stage progression bar gives visual pipeline context at a glance
+- Email threads are now integrated into the unified timeline (previously flat cards in sidebar)
+- Tasks tab with inline creation matches the company page pattern
+- Reusable AssociationCards in right sidebar reduce code duplication
+
 
 ## 2026-08-16 — Phase 15: Server-Side Unified Global Search API (Performance)
 

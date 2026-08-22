@@ -24,6 +24,7 @@ interface SummaryResponse {
   nextSteps: string[]
   health: { score: number; label: string; color: string }
   stats: {
+    // Common
     totalActivities: number
     calls: number
     emails: number
@@ -32,18 +33,29 @@ interface SummaryResponse {
     openTasks?: number
     overdueTasks?: number
     completedTasks?: number
-    openDeals: number
-    wonDeals: number
-    lostDeals: number
-    totalDealValue: number
-    wonValue: number
     outboundEmails?: number
     inboundEmails?: number
     replyRate?: number | null
     lastActivityDays: number | null
     lastActivityType: string | null
     trend: 'up' | 'down' | 'flat'
+    // Contact/Company
+    openDeals?: number
+    wonDeals?: number
+    lostDeals?: number
+    totalDealValue?: number
+    wonValue?: number
     activeContacts?: number
+    // Deal-specific
+    dealValue?: number
+    weightedValue?: number
+    probability?: number
+    stageProgress?: number
+    currentStageName?: string | null
+    nextStageName?: string | null
+    daysInStage?: number
+    closeDateStatus?: 'on_track' | 'approaching' | 'overdue' | 'no_date'
+    daysToClose?: number | null
   }
   generatedAt: string
 }
@@ -51,8 +63,8 @@ interface SummaryResponse {
 interface SummaryCardProps {
   /** API endpoint to fetch the summary from, e.g. `/api/contacts/${id}/summary` */
   endpoint: string
-  /** Entity label for the header, e.g. "Contact" or "Company" */
-  entityType: 'Contact' | 'Company'
+  /** Entity label for the header, e.g. "Contact", "Company", or "Deal" */
+  entityType: 'Contact' | 'Company' | 'Deal'
 }
 
 // ── Trend icon ───────────────────────────────────────────────────────────────
@@ -263,23 +275,111 @@ export default function SummaryCard({ endpoint, entityType }: SummaryCardProps) 
             ))}
           </div>
 
-          {/* Stat grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 6,
-            marginBottom: 16,
-          }}>
-            <StatPill label="Activities" value={s.stats.totalActivities} />
-            <StatPill label="Calls" value={s.stats.calls} />
-            <StatPill label="Emails" value={s.stats.emails} />
-            <StatPill label="Meetings" value={s.stats.meetings} />
-            <StatPill label="Open Deals" value={s.stats.openDeals} color={s.stats.openDeals > 0 ? 'var(--blue)' : undefined} />
-            <StatPill label="Won Deals" value={s.stats.wonDeals} color={s.stats.wonDeals > 0 ? 'var(--emerald)' : undefined} />
-          </div>
+          {/* Stat grid — entity-specific */}
+          {entityType === 'Deal' ? (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 6,
+              marginBottom: 16,
+            }}>
+              <StatPill label="Activities" value={s.stats.totalActivities} />
+              <StatPill label="Calls" value={s.stats.calls} />
+              <StatPill label="Emails" value={s.stats.emails} />
+              <StatPill label="Meetings" value={s.stats.meetings} />
+              <StatPill label="Open Tasks" value={s.stats.openTasks ?? 0} color={s.stats.openTasks ? 'var(--gold)' : undefined} />
+              <StatPill label="Overdue" value={s.stats.overdueTasks ?? 0} color={s.stats.overdueTasks ? 'var(--rust)' : undefined} />
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 6,
+              marginBottom: 16,
+            }}>
+              <StatPill label="Activities" value={s.stats.totalActivities} />
+              <StatPill label="Calls" value={s.stats.calls} />
+              <StatPill label="Emails" value={s.stats.emails} />
+              <StatPill label="Meetings" value={s.stats.meetings} />
+              <StatPill label="Open Deals" value={s.stats.openDeals ?? 0} color={(s.stats.openDeals ?? 0) > 0 ? 'var(--blue)' : undefined} />
+              <StatPill label="Won Deals" value={s.stats.wonDeals ?? 0} color={(s.stats.wonDeals ?? 0) > 0 ? 'var(--emerald)' : undefined} />
+            </div>
+          )}
 
-          {/* Deal value (if any) */}
-          {s.stats.totalDealValue > 0 && (
+          {/* Deal-specific metrics */}
+          {entityType === 'Deal' && s.stats.stageProgress !== undefined && (
+            <div style={{ marginBottom: 16 }}>
+              {/* Stage progress bar */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--fg-dim)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>
+                  Stage Progress
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--gold)' }}>
+                  {s.stats.stageProgress}%
+                </span>
+              </div>
+              <div style={{ height: 6, borderRadius: 3, backgroundColor: 'var(--bg)', overflow: 'hidden', marginBottom: 8 }}>
+                <div style={{
+                  width: `${s.stats.stageProgress}%`,
+                  height: '100%',
+                  backgroundColor: 'var(--gold)',
+                  borderRadius: 3,
+                  transition: 'width .4s ease',
+                }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--fg-dim)' }}>
+                <span>{s.stats.currentStageName || '—'}</span>
+                <span>{s.stats.nextStageName ? `Next: ${s.stats.nextStageName}` : 'Final stage'}</span>
+              </div>
+
+              {/* Deal value + weighted */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '8px 10px',
+                backgroundColor: 'var(--bg)',
+                borderRadius: 8,
+                border: '1px solid var(--panel-border)',
+                marginTop: 8,
+              }}>
+                <span style={{ fontSize: 12, color: 'var(--fg-dim)' }}>Weighted Value</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--blue)' }}>{fmt(s.stats.weightedValue || 0)}</span>
+              </div>
+
+              {/* Close date status */}
+              {s.stats.closeDateStatus && s.stats.closeDateStatus !== 'no_date' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 10px',
+                  borderRadius: 8,
+                  marginTop: 8,
+                  backgroundColor:
+                    s.stats.closeDateStatus === 'overdue' ? 'rgba(184,80,74,0.1)' :
+                    s.stats.closeDateStatus === 'approaching' ? 'rgba(196,146,74,0.1)' :
+                    'rgba(90,138,90,0.1)',
+                  border: `1px solid ${
+                    s.stats.closeDateStatus === 'overdue' ? 'rgba(184,80,74,0.3)' :
+                    s.stats.closeDateStatus === 'approaching' ? 'rgba(196,146,74,0.3)' :
+                    'rgba(90,138,90,0.3)'
+                  }`,
+                }}>
+                  <span style={{ fontSize: 12 }}>
+                    {s.stats.closeDateStatus === 'overdue' ? '⚠️' : s.stats.closeDateStatus === 'approaching' ? '⏰' : '✓'}
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--fg-dim)' }}>
+                    {s.stats.closeDateStatus === 'overdue' ? `Past due by ${Math.abs(s.stats.daysToClose || 0)} days` :
+                     s.stats.closeDateStatus === 'approaching' ? `Closing in ${s.stats.daysToClose} days` :
+                     'On track for close date'}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Deal value (contact/company — if any) */}
+          {entityType !== 'Deal' && (s.stats.totalDealValue ?? 0) > 0 && (
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -290,7 +390,7 @@ export default function SummaryCard({ endpoint, entityType }: SummaryCardProps) 
               marginBottom: 16,
             }}>
               <span style={{ fontSize: 12, color: 'var(--fg-dim)' }}>Open Pipeline</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--gold)' }}>{fmt(s.stats.totalDealValue)}</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--gold)' }}>{fmt(s.stats.totalDealValue || 0)}</span>
             </div>
           )}
 

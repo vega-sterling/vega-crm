@@ -1,5 +1,19 @@
 'use client'
 
+// ============================================================================
+// File: src/app/deals/[id]/page.tsx
+// Description: HubSpot-style 3-column deal detail page.
+//              Phase 21: Inline PropertyQuickEdit, AI SummaryCard, EmailThreadCard
+//              in unified timeline, TasksTab with inline creation, stage
+//              progression bar, reusable AssociationCards in right sidebar.
+//
+//              Left: Deal properties with inline quick-edit
+//              Middle: Inline note composer + quick action bar + timeline filter
+//                     tabs + pinned notes + activity timeline (with email threads)
+//                     + Tasks tab with inline creation
+//              Right: Associated company, contact, open tasks, recent emails
+// ============================================================================
+
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
@@ -10,6 +24,12 @@ import QuickActionBar from '../../components/QuickActionBar'
 import TimelineFilterTabs, { type TimelineFilter } from '../../components/TimelineFilterTabs'
 import ActivityCard from '../../components/ActivityCard'
 import PinnedNotes, { usePinnedNote } from '../../components/PinnedNotes'
+import EmailThreadCard from '../../components/EmailThreadCard'
+import SummaryCard from '../../components/SummaryCard'
+import TasksTab from '../../components/TasksTab'
+import PropertyQuickEdit from '../../components/PropertyQuickEdit'
+import { CompanyCard, ContactsCard, TasksCard } from '../../components/AssociationCards'
+import { groupEmailsByThread } from '../../lib/emailThreads'
 import { apiFetch } from '../../lib/api'
 import { layout, panel, typeography, forms, buttons, statusBadge } from '../../lib/styles'
 import type { Deal, PipelineStage, Company, Contact, User, Activity, Task, EmailMessage } from '../../lib/types'
@@ -47,6 +67,8 @@ const TASK_STATUS_COLORS: Record<string, string> = {
   CANCELLED: 'var(--rust)',
 }
 
+type MiddleTab = 'timeline' | 'tasks'
+
 function DealDetailContent() {
   const params = useParams()
   const router = useRouter()
@@ -66,6 +88,7 @@ function DealDetailContent() {
   const [submitting, setSubmitting] = useState(false)
   const [editing, setEditing] = useState(false)
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>('ALL')
+  const [middleTab, setMiddleTab] = useState<MiddleTab>('timeline')
 
   // Pinned notes hook
   const { pinnedId, pin, unpin } = usePinnedNote('deal', dealId)
@@ -100,7 +123,6 @@ function DealDetailContent() {
     setLoading(true)
     setError('')
     try {
-      // Fetch deal, users, and stages — the deal itself is the critical path
       const [dealRes, usersRes, stagesRes] = await Promise.all([
         apiFetch<Deal>(`/api/deals/${dealId}`),
         apiFetch<{ data: User[] }>('/api/admin/users').catch(() => ({ data: [] as User[] })),
@@ -110,7 +132,6 @@ function DealDetailContent() {
       setUsers(usersRes.data || [])
       setStages(stagesRes.data || [])
 
-      // Get current user id from /api/auth/me
       try {
         const me = await apiFetch<User>('/api/auth/me')
         setCurrentUserId(me.id)
@@ -122,8 +143,6 @@ function DealDetailContent() {
         return
       }
 
-      // Fetch activities, tasks, emails, companies, contacts in parallel
-      // — each fetch is independent and gracefully handles failure
       const [activitiesRes, tasksRes, emailsRes, companiesRes, contactsRes] = await Promise.all([
         apiFetch<{ data: Activity[] }>(`/api/activities?dealId=${dealId}&limit=100`).catch(() => ({ data: [] as Activity[] })),
         apiFetch<{ data: Task[] }>(`/api/tasks?companyId=${dealRes.companyId}&limit=100`).catch(() => ({ data: [] as Task[] })),
@@ -138,7 +157,6 @@ function DealDetailContent() {
       setCompanies(companiesRes.data || [])
       setContacts(contactsRes.data || [])
 
-      // Populate form
       setForm({
         title: dealRes.title || '',
         value: dealRes.value || 0,
@@ -164,6 +182,9 @@ function DealDetailContent() {
     loadAll()
   }, [loadAll])
 
+  // ── Email threads for timeline ──
+  const emailThreads = useMemo(() => groupEmailsByThread(emails), [emails])
+
   // ── Timeline filtering ──
   const timelineCounts = useMemo(() => {
     const counts: Record<TimelineFilter, number> = { ALL: 0, NOTE: 0, CALL: 0, EMAIL: 0, TASK: 0, MEETING: 0 }
@@ -171,14 +192,37 @@ function DealDetailContent() {
       counts.ALL++
       if (counts[a.type] !== undefined) counts[a.type]++
     }
+    counts.EMAIL += emails.length
+    counts.ALL += emails.length
     return counts
-  }, [activities])
+  }, [activities, emails])
 
-  const filteredActivities = useMemo(() => {
-    // Pinned note always shows at top (if present in activities list)
-    if (timelineFilter === 'ALL') return activities
-    return activities.filter((a) => a.type === timelineFilter)
-  }, [activities, timelineFilter])
+  // ── Unified timeline items (activities + email threads) ──
+  const filteredTimeline = useMemo(() => {
+    type TimelineItem =
+      | { kind: 'activity'; data: Activity }
+      | { kind: 'emailThread'; data: typeof emailThreads[number]; sortKey: string }
+
+    const items: TimelineItem[] = []
+
+    for (const a of activities) {
+      if (timelineFilter === 'ALL' || timelineFilter === a.type) {
+        items.push({ kind: 'activity', data: a })
+      }
+    }
+
+    if (timelineFilter === 'ALL' || timelineFilter === 'EMAIL') {
+      for (const thread of emailThreads) {
+        items.push({ kind: 'emailThread', data: thread, sortKey: thread.latestCreatedAt })
+      }
+    }
+
+    return items.sort((a, b) => {
+      const aKey = a.kind === 'activity' ? a.data.createdAt : a.sortKey
+      const bKey = b.kind === 'activity' ? b.data.createdAt : b.sortKey
+      return new Date(bKey).getTime() - new Date(aKey).getTime()
+    })
+  }, [activities, emailThreads, timelineFilter])
 
   const pinnedActivity = pinnedId ? activities.find((a) => a.id === pinnedId) : null
 
@@ -203,6 +247,14 @@ function DealDetailContent() {
     setTasks((prev) => [task, ...prev])
   }
 
+  const handleTasksChanged = useCallback(async () => {
+    if (!deal) return
+    try {
+      const res = await apiFetch<{ data: Task[] }>(`/api/tasks?companyId=${deal.companyId}&limit=100`)
+      setTasks(res.data || [])
+    } catch {}
+  }, [deal])
+
   const handleActivityDelete = async (id: string) => {
     if (!confirm('Delete this activity? This cannot be undone.')) return
     try {
@@ -212,6 +264,35 @@ function DealDetailContent() {
     } catch (err: any) {
       alert('Failed to delete: ' + err.message)
     }
+  }
+
+  // ── Inline property save handlers ──
+  const updateDealField = async (field: string, value: string | number) => {
+    if (!deal) return
+    const body: Record<string, unknown> = { [field]: value }
+    const updated = await apiFetch<Deal>(`/api/deals/${dealId}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    })
+    setDeal(updated)
+  }
+
+  const handleTitleSave = async (value: string) => updateDealField('title', value)
+  const handleDescriptionSave = async (value: string) => updateDealField('description', value)
+  const handleLeadSourceSave = async (value: string) => updateDealField('leadSource', value)
+  const handleLossReasonSave = async (value: string) => updateDealField('lossReason', value)
+  const handleValueSave = async (value: string) => updateDealField('value', parseFloat(value) || 0)
+  const handleProbabilitySave = async (value: string) => updateDealField('probability', parseInt(value, 10) || 0)
+  const handleExpectedCloseSave = async (value: string) => {
+    if (!deal) return
+    const body: Record<string, unknown> = {}
+    if (value) body.expectedCloseDate = value
+    else body.expectedCloseDate = null
+    const updated = await apiFetch<Deal>(`/api/deals/${dealId}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    })
+    setDeal(updated)
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -263,7 +344,6 @@ function DealDetailContent() {
         body: JSON.stringify({ stageId: newStageId }),
       })
       setDeal(updated)
-      // Update probability to match stage default
       const stage = stages.find((s) => s.id === newStageId)
       if (stage) setForm((f) => ({ ...f, stageId: newStageId, probability: stage.probability }))
     } catch (err: any) {
@@ -271,7 +351,6 @@ function DealDetailContent() {
     }
   }
 
-  // Quick stage change dropdown
   const handleStatusChange = async (newStatus: 'OPEN' | 'WON' | 'LOST') => {
     if (!deal || newStatus === deal.status) return
     try {
@@ -427,8 +506,11 @@ function DealDetailContent() {
   const dealStage = deal.stage
   const dealAssignee = deal.assignee
 
-  // Weighted value for forecasting
   const weightedValue = (deal.value || 0) * (deal.probability || 0) / 100
+
+  // Stage progression
+  const currentStageIndex = stages.findIndex((s) => s.id === deal.stageId)
+  const stageProgress = stages.length > 0 ? Math.round(((currentStageIndex + 1) / stages.length) * 100) : 0
 
   return (
     <ProtectedLayout>
@@ -454,6 +536,55 @@ function DealDetailContent() {
                 {deal.probability}% prob · {currencyFmt(weightedValue, deal.currency)} weighted
               </span>
             </div>
+
+            {/* Stage progression bar */}
+            {stages.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                  {stages.map((s, i) => {
+                    const isCurrent = s.id === deal.stageId
+                    const isPast = i < currentStageIndex
+                    const isWon = s.isWonStage && deal.status === 'WON'
+                    const isLost = s.isLostStage && deal.status === 'LOST'
+                    return (
+                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 4, flex: '1 1 auto', minWidth: 0 }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: 28,
+                            minWidth: 60,
+                            padding: '0 10px',
+                            borderRadius: 6,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            backgroundColor: isCurrent || isWon ? (s.color || 'var(--gold)') + '20' : isPast ? 'var(--panel-elevated)' : 'var(--bg)',
+                            border: `1px solid ${isCurrent || isWon ? (s.color || 'var(--gold)') + '60' : isPast ? 'var(--panel-border-hot)' : 'var(--panel-border)'}`,
+                            color: isCurrent || isWon ? (s.color || 'var(--gold)') : isPast ? 'var(--fg)' : 'var(--fg-dim)',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {isWon ? '✓' : isLost ? '✕' : isPast ? '✓' : isCurrent ? '●' : ''} {s.name}
+                        </div>
+                        {i < stages.length - 1 && (
+                          <div style={{
+                            width: 12,
+                            height: 2,
+                            backgroundColor: isPast ? 'var(--panel-border-hot)' : 'var(--panel-border)',
+                            flexShrink: 0,
+                          }} />
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--fg-dim)' }}>
+                  {stageProgress}% through pipeline · {currentStageIndex >= 0 && currentStageIndex < stages.length - 1 ? `Next: ${stages[currentStageIndex + 1].name}` : 'Final stage'}
+                </div>
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button className="btn-touch" style={buttons.secondary} onClick={() => setEditing(true)}>✏️ Edit</button>
@@ -469,7 +600,13 @@ function DealDetailContent() {
         }}>
           {/* ── LEFT: Properties ── */}
           <div className="record-left" style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 88 }}>
-            {/* Deal Properties */}
+            {/* AI Summary Card */}
+            <SummaryCard
+              endpoint={`/api/deals/${dealId}/summary`}
+              entityType="Deal"
+            />
+
+            {/* Deal Properties — with inline quick edit */}
             <div className="panel-container" style={panel.container}>
               <h2 style={{ ...typeography.subtitle, fontSize: 16, marginBottom: 16 }}>Deal Properties</h2>
 
@@ -503,170 +640,227 @@ function DealDetailContent() {
                 </select>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div>
-                  <span style={forms.label}>Value</span>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--gold)', marginTop: 4 }}>
-                    {currencyFmt(deal.value, deal.currency)}
-                  </div>
-                </div>
-                <div>
-                  <span style={forms.label}>Probability</span>
-                  <div style={{ fontSize: 16, fontWeight: 600, marginTop: 4 }}>{deal.probability}%</div>
-                </div>
-                <div>
-                  <span style={forms.label}>Weighted Value</span>
-                  <div style={{ fontSize: 16, fontWeight: 600, marginTop: 4, color: 'var(--blue)' }}>
+              {/* Inline editable properties */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <PropertyQuickEdit
+                  label="Deal Value"
+                  value={currencyFmt(deal.value, deal.currency)}
+                  onSave={handleValueSave}
+                  type="number"
+                />
+                <PropertyQuickEdit
+                  label="Probability (%)"
+                  value={String(deal.probability)}
+                  onSave={handleProbabilitySave}
+                  type="number"
+                />
+                <div style={{ padding: '6px 0' }}>
+                  <span style={typeography.small}>Weighted Value</span>
+                  <div style={{ fontSize: 16, fontWeight: 600, marginTop: 2, color: 'var(--blue)' }}>
                     {currencyFmt(weightedValue, deal.currency)}
                   </div>
                 </div>
-                <div>
-                  <span style={forms.label}>Expected Close</span>
-                  <div style={{ fontSize: 14, marginTop: 4 }}>{formatDate(deal.expectedCloseDate)}</div>
+                <PropertyQuickEdit
+                  label="Expected Close"
+                  value={deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toISOString().slice(0, 10) : ''}
+                  onSave={handleExpectedCloseSave}
+                  type="date"
+                />
+                <div style={{ padding: '6px 0' }}>
+                  <span style={typeography.small}>Actual Close</span>
+                  <div style={{ fontSize: 14, marginTop: 2 }}>{formatDate(deal.actualCloseDate)}</div>
                 </div>
-                <div>
-                  <span style={forms.label}>Actual Close</span>
-                  <div style={{ fontSize: 14, marginTop: 4 }}>{formatDate(deal.actualCloseDate)}</div>
+                <PropertyQuickEdit
+                  label="Lead Source"
+                  value={deal.leadSource || ''}
+                  onSave={handleLeadSourceSave}
+                  placeholder="Add source…"
+                />
+                {deal.status === 'LOST' && (
+                  <PropertyQuickEdit
+                    label="Loss Reason"
+                    value={deal.lossReason || ''}
+                    onSave={handleLossReasonSave}
+                    placeholder="Why was this lost?"
+                  />
+                )}
+                <div style={{ padding: '6px 0' }}>
+                  <span style={typeography.small}>Assignee</span>
+                  <div style={{ fontSize: 14, marginTop: 2 }}>{dealAssignee?.name || '—'}</div>
                 </div>
-                <div>
-                  <span style={forms.label}>Lead Source</span>
-                  <div style={{ fontSize: 14, marginTop: 4 }}>{deal.leadSource || '—'}</div>
-                </div>
-                <div>
-                  <span style={forms.label}>Assignee</span>
-                  <div style={{ fontSize: 14, marginTop: 4 }}>{dealAssignee?.name || '—'}</div>
-                </div>
-                <div>
-                  <span style={forms.label}>Created</span>
-                  <div style={{ fontSize: 14, marginTop: 4 }}>{formatDate(deal.createdAt)}</div>
+                <div style={{ padding: '6px 0' }}>
+                  <span style={typeography.small}>Created</span>
+                  <div style={{ fontSize: 14, marginTop: 2 }}>{formatDate(deal.createdAt)}</div>
                 </div>
               </div>
             </div>
 
-            {/* Description */}
-            {deal.description && (
-              <div className="panel-container" style={panel.container}>
-                <h2 style={{ ...typeography.subtitle, fontSize: 16, marginBottom: 12 }}>Description</h2>
-                <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--fg)', whiteSpace: 'pre-wrap' }}>
-                  {deal.description}
-                </p>
-              </div>
-            )}
+            {/* Description — inline editable */}
+            <div className="panel-container" style={panel.container}>
+              <h2 style={{ ...typeography.subtitle, fontSize: 16, marginBottom: 12 }}>Description</h2>
+              <PropertyQuickEdit
+                label=""
+                value={deal.description || ''}
+                onSave={handleDescriptionSave}
+                placeholder="Add a description…"
+              />
+            </div>
           </div>
 
-          {/* ── MIDDLE: Timeline ── */}
+          {/* ── MIDDLE: Timeline / Tasks tab ── */}
           <div className="record-middle" style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-            {/* Inline note composer */}
-            <InlineNoteComposer
-              companyId={deal.companyId}
-              tenantId={deal.tenantId}
-              dealId={dealId}
-              contactId={deal.contactId || undefined}
-              onCreated={handleNoteCreated}
-              users={users}
-            />
-
-            {/* Quick action bar */}
-            <QuickActionBar
-              companyId={deal.companyId}
-              tenantId={deal.tenantId}
-              dealId={dealId}
-              contactId={deal.contactId || undefined}
-              contactName={dealContact ? `${dealContact.firstName} ${dealContact.lastName}` : undefined}
-              contactEmail={contacts.find((c) => c.id === deal.contactId)?.email}
-              users={users}
-              onActivityCreated={handleActivityCreated}
-              onTaskCreated={handleTaskCreated}
-              onSendEmail={() => {/* email handled elsewhere */}}
-            />
-
-            {/* Timeline filter tabs */}
-            <TimelineFilterTabs
-              active={timelineFilter}
-              onChange={setTimelineFilter}
-              counts={timelineCounts}
-            />
-
-            {/* Pinned note */}
-            {pinnedActivity && timelineFilter === 'ALL' && (
-              <div style={{ marginBottom: 4 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <span style={{ fontSize: 16 }}>📌</span>
-                  <span style={{ ...typeography.subtitle, margin: 0, fontSize: 15 }}>Pinned Note</span>
-                </div>
-                <div style={{ border: '2px solid var(--gold)', borderRadius: 12, overflow: 'hidden' }}>
-                  <ActivityCard
-                    activity={pinnedActivity}
-                    users={users}
-                    pinned={true}
-                    onPin={handlePinToggle}
-                    onDelete={handleActivityDelete}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Activity timeline */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {filteredActivities.length === 0 ? (
-                <div className="panel-container" style={{ ...panel.container, textAlign: 'center' }}>
-                  <p style={{ ...typeography.muted, fontSize: 14 }}>
-                    {timelineFilter === 'ALL'
-                      ? 'No activities yet. Write a note above to get started.'
-                      : `No ${timelineFilter.toLowerCase()}s yet.`}
-                  </p>
-                </div>
-              ) : (
-                filteredActivities.map((activity) => (
-                  <ActivityCard
-                    key={activity.id}
-                    activity={activity}
-                    users={users}
-                    pinned={pinnedId === activity.id}
-                    onPin={handlePinToggle}
-                    onDelete={handleActivityDelete}
-                  />
-                ))
-              )}
+            {/* Tab switcher: Timeline | Tasks */}
+            <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--panel-border)' }}>
+              <button
+                className="btn-touch"
+                style={{
+                  padding: '10px 20px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: middleTab === 'timeline' ? '2px solid var(--gold)' : '2px solid transparent',
+                  color: middleTab === 'timeline' ? 'var(--gold)' : 'var(--fg-dim)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+                onClick={() => setMiddleTab('timeline')}
+              >
+                📋 Timeline
+              </button>
+              <button
+                className="btn-touch"
+                style={{
+                  padding: '10px 20px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: middleTab === 'tasks' ? '2px solid var(--gold)' : '2px solid transparent',
+                  color: middleTab === 'tasks' ? 'var(--gold)' : 'var(--fg-dim)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+                onClick={() => setMiddleTab('tasks')}
+              >
+                ✓ Tasks ({tasks.length})
+              </button>
             </div>
+
+            {middleTab === 'timeline' ? (
+              <>
+                {/* Inline note composer */}
+                <InlineNoteComposer
+                  companyId={deal.companyId}
+                  tenantId={deal.tenantId}
+                  dealId={dealId}
+                  contactId={deal.contactId || undefined}
+                  onCreated={handleNoteCreated}
+                  users={users}
+                />
+
+                {/* Quick action bar */}
+                <QuickActionBar
+                  companyId={deal.companyId}
+                  tenantId={deal.tenantId}
+                  dealId={dealId}
+                  contactId={deal.contactId || undefined}
+                  contactName={dealContact ? `${dealContact.firstName} ${dealContact.lastName}` : undefined}
+                  contactEmail={contacts.find((c) => c.id === deal.contactId)?.email}
+                  users={users}
+                  onActivityCreated={handleActivityCreated}
+                  onTaskCreated={handleTaskCreated}
+                  onSendEmail={() => {/* email handled elsewhere */}}
+                />
+
+                {/* Timeline filter tabs */}
+                <TimelineFilterTabs
+                  active={timelineFilter}
+                  onChange={setTimelineFilter}
+                  counts={timelineCounts}
+                />
+
+                {/* Pinned note */}
+                {pinnedActivity && timelineFilter === 'ALL' && (
+                  <div style={{ marginBottom: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: 16 }}>📌</span>
+                      <span style={{ ...typeography.subtitle, margin: 0, fontSize: 15 }}>Pinned Note</span>
+                    </div>
+                    <div style={{ border: '2px solid var(--gold)', borderRadius: 12, overflow: 'hidden' }}>
+                      <ActivityCard
+                        activity={pinnedActivity}
+                        users={users}
+                        pinned={true}
+                        onPin={handlePinToggle}
+                        onDelete={handleActivityDelete}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Unified activity + email thread timeline */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {filteredTimeline.length === 0 ? (
+                    <div className="panel-container" style={{ ...panel.container, textAlign: 'center' }}>
+                      <p style={{ ...typeography.muted, fontSize: 14 }}>
+                        {timelineFilter === 'ALL'
+                          ? 'No activities yet. Write a note above to get started.'
+                          : `No ${timelineFilter.toLowerCase()}s yet.`}
+                      </p>
+                    </div>
+                  ) : (
+                    filteredTimeline.map((item) => {
+                      if (item.kind === 'emailThread') {
+                        return (
+                          <EmailThreadCard
+                            key={`thread-${item.data.threadId}`}
+                            emails={item.data.emails}
+                            onReplied={loadAll}
+                            tenantId={deal.tenantId}
+                          />
+                        )
+                      }
+                      return (
+                        <ActivityCard
+                          key={item.data.id}
+                          activity={item.data}
+                          users={users}
+                          pinned={pinnedId === item.data.id}
+                          onPin={handlePinToggle}
+                          onDelete={handleActivityDelete}
+                        />
+                      )
+                    })
+                  )}
+                </div>
+              </>
+            ) : (
+              /* Tasks tab with inline creation */
+              <TasksTab
+                companyId={deal.companyId}
+                tenantId={deal.tenantId}
+                users={users}
+                currentUserId={currentUserId}
+                tasks={tasks}
+                onTasksChanged={handleTasksChanged}
+              />
+            )}
           </div>
 
-          {/* ── RIGHT: Associated records ── */}
+          {/* ── RIGHT: Associated records (reusable components) ── */}
           <div className="record-right" style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 88 }}>
             {/* Company */}
-            <div className="panel-container" style={{ ...panel.compact, padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--panel-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: 'var(--fg-dimmer)' }}>▶</span>
-                <span style={{ fontSize: 14, fontWeight: 600 }}>Company</span>
-              </div>
-              <div style={{ padding: '12px 16px' }}>
-                {dealCompany ? (
-                  <Link
-                    href={`/companies/${dealCompany.id}`}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '8px 10px', borderRadius: 8,
-                      textDecoration: 'none', color: 'var(--fg)',
-                      border: '1px solid var(--panel-border)',
-                      fontWeight: 600, fontSize: 14,
-                    }}
-                  >
-                    🏢 {dealCompany.name}
-                  </Link>
-                ) : (
-                  <p style={{ ...typeography.muted, fontSize: 13 }}>No company linked.</p>
-                )}
-              </div>
-            </div>
+            <CompanyCard company={dealCompany} />
 
             {/* Contact */}
-            <div className="panel-container" style={{ ...panel.compact, padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--panel-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: 'var(--fg-dimmer)' }}>▶</span>
-                <span style={{ fontSize: 14, fontWeight: 600 }}>Contact</span>
-              </div>
-              <div style={{ padding: '12px 16px' }}>
-                {dealContact ? (
+            {dealContact && (
+              <div className="panel-container" style={{ ...panel.compact, padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--panel-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 12, color: 'var(--fg-dimmer)' }}>▶</span>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>Contact</span>
+                </div>
+                <div style={{ padding: '12px 16px' }}>
                   <Link
                     href={`/contacts/${dealContact.id}`}
                     style={{
@@ -674,57 +868,25 @@ function DealDetailContent() {
                       padding: '8px 10px', borderRadius: 8,
                       textDecoration: 'none', color: 'var(--fg)',
                       border: '1px solid var(--panel-border)',
+                      fontWeight: 600, fontSize: 14,
+                      transition: 'border-color 0.15s, background 0.15s',
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.background = 'var(--bg-soft)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--panel-border)'; e.currentTarget.style.background = 'transparent' }}
                   >
-                    <span style={{ fontWeight: 600, fontSize: 14 }}>{dealContact.firstName} {dealContact.lastName}</span>
+                    <span>{dealContact.firstName} {dealContact.lastName}</span>
+                    {contacts.find((c) => c.id === deal.contactId)?.email && (
+                      <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--fg-dim)' }}>
+                        {contacts.find((c) => c.id === deal.contactId)?.email}
+                      </span>
+                    )}
                   </Link>
-                ) : (
-                  <p style={{ ...typeography.muted, fontSize: 13 }}>No contact linked.</p>
-                )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Open Tasks */}
-            <div className="panel-container" style={{ ...panel.compact, padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--panel-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: 'var(--fg-dimmer)' }}>▶</span>
-                <span style={{ fontSize: 14, fontWeight: 600 }}>Open Tasks</span>
-                {openTasks.length > 0 && (
-                  <span style={{
-                    backgroundColor: 'var(--panel-elevated)', color: 'var(--fg-dim)',
-                    borderRadius: 10, padding: '1px 7px', fontSize: 11, fontWeight: 600,
-                  }}>{openTasks.length}</span>
-                )}
-              </div>
-              <div style={{ padding: '12px 16px' }}>
-                {openTasks.length === 0 ? (
-                  <p style={{ ...typeography.muted, fontSize: 13 }}>No open tasks.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {openTasks.slice(0, 5).map((t) => (
-                      <div key={t.id} style={{
-                        display: 'flex', flexDirection: 'column', gap: 4,
-                        padding: '8px 10px', borderRadius: 8,
-                        border: '1px solid var(--panel-border)',
-                      }}>
-                        <span style={{ fontWeight: 600, fontSize: 14 }}>{t.title}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <span style={{ ...statusBadge(PRIORITY_COLORS[t.priority] || 'var(--fg-dim)'), fontSize: 11 }}>
-                            {t.priority}
-                          </span>
-                          <span style={{ ...statusBadge(TASK_STATUS_COLORS[t.status] || 'var(--fg-dim)'), fontSize: 11 }}>
-                            {t.status.replace('_', ' ')}
-                          </span>
-                          <span style={{ fontSize: 11, color: 'var(--fg-dim)' }}>
-                            Due {formatDate(t.dueDate)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <TasksCard tasks={tasks} />
 
             {/* Recent Emails */}
             <div className="panel-container" style={{ ...panel.compact, padding: 0, overflow: 'hidden' }}>
