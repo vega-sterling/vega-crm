@@ -89,6 +89,7 @@ function DealDetailContent() {
   const [editing, setEditing] = useState(false)
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>('ALL')
   const [middleTab, setMiddleTab] = useState<MiddleTab>('timeline')
+  const [googleConnected, setGoogleConnected] = useState(false)
 
   // Pinned notes hook
   const { pinnedId, pin, unpin } = usePinnedNote('deal', dealId)
@@ -123,11 +124,13 @@ function DealDetailContent() {
     setLoading(true)
     setError('')
     try {
-      const [dealRes, usersRes, stagesRes] = await Promise.all([
+      const [dealRes, usersRes, stagesRes, googleRes] = await Promise.all([
         apiFetch<Deal>(`/api/deals/${dealId}`),
         apiFetch<{ data: User[] }>('/api/admin/users').catch(() => ({ data: [] as User[] })),
         apiFetch<{ data: PipelineStage[] }>('/api/pipeline-stages').catch(() => ({ data: [] as PipelineStage[] })),
+        apiFetch<{ connected: boolean }>('/api/google/status').catch(() => ({ connected: false })),
       ])
+      setGoogleConnected(googleRes.connected || false)
       setDeal(dealRes)
       setUsers(usersRes.data || [])
       setStages(stagesRes.data || [])
@@ -770,7 +773,11 @@ function DealDetailContent() {
                   users={users}
                   onActivityCreated={handleActivityCreated}
                   onTaskCreated={handleTaskCreated}
-                  onSendEmail={() => {/* email handled elsewhere */}}
+                  googleConnected={googleConnected}
+                  contact={(() => { const c = contacts.find((c) => c.id === deal.contactId); return c ? { firstName: c.firstName, lastName: c.lastName, email: c.email, phone: c.phone, title: c.title } : null; })()}
+                  company={(() => { const c = companies.find((c) => c.id === deal.companyId); return c ? { name: c.name, industry: c.industry, website: c.website } : null; })()}
+                  deal={{ title: deal.title, value: deal.value }}
+                  onEmailSent={() => loadAll()}
                 />
 
                 {/* Timeline filter tabs */}

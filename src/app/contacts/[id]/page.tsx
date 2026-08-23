@@ -19,7 +19,7 @@ import { usePinnedNote } from '../../components/PinnedNotes'
 import EmailThreadCard from '../../components/EmailThreadCard'
 import { apiFetch } from '../../lib/api'
 import { layout, panel, typeography, forms, buttons, statusBadge } from '../../lib/styles'
-import type { Contact, Activity, Task, Deal, Company, EmailMessage, EmailTemplate, User } from '../../lib/types'
+import type { Contact, Activity, Task, Deal, Company, EmailMessage, User } from '../../lib/types'
 import { groupEmailsByThread } from '../../lib/emailThreads'
 
 interface ContactDetail extends Contact {
@@ -50,31 +50,27 @@ function ContactDetailContent() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [deals, setDeals] = useState<Deal[]>([])
   const [emails, setEmails] = useState<EmailMessage[]>([])
-  const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>('ALL')
 
-  const [emailModal, setEmailModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [following, setFollowing] = useState(false)
   const [googleConnected, setGoogleConnected] = useState(false)
-  const [emailForm, setEmailForm] = useState({ to: '', subject: '', body: '' })
 
   // Pinned notes (localStorage)
   const { pinnedId, pin, unpin } = usePinnedNote('contact', contactId)
 
   const load = useCallback(async () => {
     try {
-      const [contactRes, activitiesRes, tasksRes, dealsRes, emailsRes, templatesRes, usersRes, meRes, googleRes] = await Promise.all([
+      const [contactRes, activitiesRes, tasksRes, dealsRes, emailsRes, usersRes, meRes, googleRes] = await Promise.all([
         apiFetch<ContactDetail>(`/api/contacts/${contactId}`),
         apiFetch<ActivityListResponse>(`/api/activities?contactId=${contactId}&limit=100`).catch(() => ({ data: [] as Activity[] })),
         apiFetch<TaskListResponse>(`/api/tasks?contactId=${contactId}&limit=100`).catch(() => ({ data: [] as Task[] })),
         apiFetch<DealListResponse>(`/api/deals?contactId=${contactId}`).catch(() => ({ data: [] as Deal[] })),
         apiFetch<EmailListResponse>(`/api/email/messages?contactId=${contactId}&limit=100`).catch(() => ({ data: [] as EmailMessage[] })),
-        apiFetch<{ data: EmailTemplate[] }>('/api/email/templates?limit=100').catch(() => ({ data: [] as EmailTemplate[] })),
         apiFetch<UserListResponse>('/api/admin/users?limit=100').catch(() => ({ data: [] as User[] })),
         apiFetch<User>('/api/auth/me').catch(() => null),
         apiFetch<{ connected: boolean }>('/api/google/status').catch(() => ({ connected: false })),
@@ -84,7 +80,6 @@ function ContactDetailContent() {
       setTasks(tasksRes.data || [])
       setDeals(dealsRes.data || [])
       setEmails(emailsRes.data || [])
-      setTemplates(templatesRes.data || [])
       setUsers(usersRes.data || [])
       setCurrentUser(meRes)
       setGoogleConnected(googleRes?.connected || false)
@@ -175,48 +170,6 @@ function ContactDetailContent() {
     setContact(updated)
   }
 
-  const handleSendEmail = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!contact) return
-    setSubmitting(true)
-    try {
-      await apiFetch('/api/email/send', {
-        method: 'POST',
-        body: JSON.stringify({
-          tenantId: contact.tenantId,
-          to: [emailForm.to],
-          subject: emailForm.subject,
-          body: emailForm.body,
-          contactId,
-          companyId: contact.companyId,
-        }),
-      })
-      setEmailModal(false)
-      setEmailForm({ to: '', subject: '', body: '' })
-      await load()
-    } catch (err: any) { setError(err.message || 'Failed to send email') }
-    finally { setSubmitting(false) }
-  }
-
-  // Apply a template to the email form, replacing {contact.*} and {company.*} variables
-  const applyTemplate = (templateId: string) => {
-    const tpl = templates.find(t => t.id === templateId)
-    if (!tpl) return
-    const replaceVars = (text: string) => text
-      .replace(/\{contact\.firstName\}/g, contact?.firstName || '')
-      .replace(/\{contact\.lastName\}/g, contact?.lastName || '')
-      .replace(/\{contact\.email\}/g, contact?.email || '')
-      .replace(/\{contact\.phone\}/g, contact?.phone || '')
-      .replace(/\{contact\.title\}/g, contact?.title || '')
-      .replace(/\{company\.name\}/g, contact?.company?.name || '')
-      .replace(/\{company\.industry\}/g, (contact as any)?.company?.industry || '')
-    setEmailForm({
-      ...emailForm,
-      subject: replaceVars(tpl.subject),
-      body: replaceVars(tpl.body),
-    })
-  }
-
   if (loading) {
     return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}><Spinner size={32} /></div>
   }
@@ -297,14 +250,7 @@ function ContactDetailContent() {
             >
               {following ? '✓ Following' : '+ Follow'}
             </button>
-            <button
-              className="btn-touch"
-              style={{ ...buttons.secondary, width: '100%' }}
-              onClick={() => {
-                setEmailForm({ ...emailForm, to: contact.email || emailForm.to })
-                setEmailModal(true)
-              }}
-            >Send Email</button>
+
             <button
               className="btn-touch"
               style={{ ...buttons.danger, width: '100%' }}
@@ -345,7 +291,10 @@ function ContactDetailContent() {
             users={users}
             onActivityCreated={(a) => setActivities((prev) => [a, ...prev])}
             onTaskCreated={() => load()}
-            onSendEmail={() => setEmailModal(true)}
+            googleConnected={googleConnected}
+            contact={contact}
+            company={contact.company}
+            onEmailSent={() => load()}
           />
 
           {/* Inline Note Composer */}
@@ -409,44 +358,6 @@ function ContactDetailContent() {
         </div>
       </div>
 
-      {/* Email Modal */}
-      {emailModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }} onClick={() => setEmailModal(false)}>
-          <div className="modal-content" style={{ ...panel.container, width: '100%', maxWidth: 600, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Send Email</h2>
-            {!googleConnected && (
-              <div style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: 'var(--rust)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-                Google account not connected. Connect in <Link href="/settings" style={{ color: 'var(--gold)' }}>Settings</Link> to send email.
-              </div>
-            )}
-            <form onSubmit={handleSendEmail} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {templates.length > 0 && (
-                <label style={forms.group}>
-                  <span style={forms.label}>Template (optional)</span>
-                  <select
-                    className="form-select"
-                    style={forms.select}
-                    value=""
-                    onChange={(e) => { if (e.target.value) applyTemplate(e.target.value) }}
-                  >
-                    <option value="">Choose a template…</option>
-                    {templates.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <label style={forms.group}><span style={forms.label}>To</span><input className="form-input" style={forms.input} type="email" required value={emailForm.to} onChange={(e) => setEmailForm({ ...emailForm, to: e.target.value })} /></label>
-              <label style={forms.group}><span style={forms.label}>Subject</span><input className="form-input" style={forms.input} required value={emailForm.subject} onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })} /></label>
-              <label style={forms.group}><span style={forms.label}>Body</span><textarea className="form-textarea" style={forms.textarea} rows={8} value={emailForm.body} onChange={(e) => setEmailForm({ ...emailForm, body: e.target.value })} /></label>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button type="button" className="btn-touch" style={buttons.secondary} onClick={() => setEmailModal(false)}>Cancel</button>
-                <button type="submit" className="btn-touch" style={buttons.primary} disabled={!googleConnected || submitting}>{submitting ? 'Sending...' : 'Send'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

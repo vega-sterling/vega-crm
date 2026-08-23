@@ -62,14 +62,12 @@ function CompanyDetailContent() {
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>('ALL')
 
   const [contactModal, setContactModal] = useState(false)
-  const [emailModal, setEmailModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [following, setFollowing] = useState(false)
 
   const [contactForm, setContactForm] = useState({
     firstName: '', lastName: '', email: '', phone: '', title: '',
   })
-  const [emailForm, setEmailForm] = useState({ to: '', subject: '', body: '' })
   const [googleConnected, setGoogleConnected] = useState(false)
 
   // Pinned notes (localStorage)
@@ -196,28 +194,6 @@ function CompanyDetailContent() {
       setContactModal(false)
       setContactForm({ firstName: '', lastName: '', email: '', phone: '', title: '' })
     } catch (err: any) { setError(err.message || 'Failed to add contact') }
-    finally { setSubmitting(false) }
-  }
-
-  const handleSendEmail = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!company) return
-    setSubmitting(true)
-    try {
-      await apiFetch('/api/email/send', {
-        method: 'POST',
-        body: JSON.stringify({
-          tenantId: company.tenantId,
-          to: [emailForm.to],
-          subject: emailForm.subject,
-          body: emailForm.body,
-          companyId,
-        }),
-      })
-      setEmailModal(false)
-      setEmailForm({ to: '', subject: '', body: '' })
-      await load()
-    } catch (err: any) { setError(err.message || 'Failed to send email') }
     finally { setSubmitting(false) }
   }
 
@@ -364,7 +340,10 @@ function CompanyDetailContent() {
                 users={users}
                 onActivityCreated={(a) => setActivities((prev) => [a, ...prev])}
                 onTaskCreated={() => load()}
-                onSendEmail={() => setEmailModal(true)}
+                googleConnected={googleConnected}
+                company={company}
+                contact={contacts.find((c) => c.id === activities.find(a => a.type === 'EMAIL')?.contactId) || null}
+                onEmailSent={() => load()}
               />
 
               {/* Inline Note Composer */}
@@ -488,28 +467,6 @@ function CompanyDetailContent() {
         </div>
       )}
 
-      {/* Email Modal */}
-      {emailModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }} onClick={() => setEmailModal(false)}>
-          <div className="modal-content" style={{ ...panel.container, width: '100%', maxWidth: 600, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Send Email</h2>
-            {!googleConnected && (
-              <div style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: 'var(--rust)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-                Google account not connected. Connect in <Link href="/settings" style={{ color: 'var(--gold)' }}>Settings</Link> to send email.
-              </div>
-            )}
-            <form onSubmit={handleSendEmail} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label style={forms.group}><span style={forms.label}>To</span><input className="form-input" style={forms.input} type="email" required value={emailForm.to} onChange={(e) => setEmailForm({ ...emailForm, to: e.target.value })} /></label>
-              <label style={forms.group}><span style={forms.label}>Subject</span><input className="form-input" style={forms.input} required value={emailForm.subject} onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })} /></label>
-              <label style={forms.group}><span style={forms.label}>Body</span><textarea className="form-textarea" style={forms.textarea} rows={8} value={emailForm.body} onChange={(e) => setEmailForm({ ...emailForm, body: e.target.value })} /></label>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button type="button" className="btn-touch" style={buttons.secondary} onClick={() => setEmailModal(false)}>Cancel</button>
-                <button type="submit" className="btn-touch" style={buttons.primary} disabled={!googleConnected || submitting}>{submitting ? 'Sending...' : 'Send'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

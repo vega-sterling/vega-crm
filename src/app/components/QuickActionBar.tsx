@@ -10,6 +10,7 @@ import { useState, useRef, useEffect } from 'react'
 import { apiFetch } from '../lib/api'
 import { forms, buttons, panel, typeography } from '../lib/styles'
 import type { Activity, Task, User } from '../lib/types'
+import InlineEmailComposer from './InlineEmailComposer'
 
 type ActionType = 'call' | 'task' | 'email' | 'meeting' | null
 
@@ -23,7 +24,13 @@ interface QuickActionBarProps {
   users: User[]
   onActivityCreated: (a: Activity) => void
   onTaskCreated: (t: Task) => void
-  onSendEmail: () => void
+  onSendEmail?: () => void
+  // Email context for inline composer
+  googleConnected?: boolean
+  contact?: { firstName?: string; lastName?: string; email?: string; phone?: string; title?: string } | null
+  company?: { name?: string; industry?: string; website?: string } | null
+  deal?: { title?: string; value?: number } | null
+  onEmailSent?: () => void
 }
 
 // ── Sub-components for inline forms ──
@@ -256,6 +263,7 @@ function TaskForm({ companyId, tenantId, contactId, users, currentUserId, onCrea
 export default function QuickActionBar({
   companyId, tenantId, contactId, dealId, contactName, contactEmail,
   users, onActivityCreated, onTaskCreated, onSendEmail,
+  googleConnected = false, contact, company, deal, onEmailSent,
 }: QuickActionBarProps) {
   const [activeAction, setActiveAction] = useState<ActionType>(null)
   const formRef = useRef<HTMLDivElement>(null)
@@ -304,12 +312,7 @@ export default function QuickActionBar({
               fontSize: 14,
             }}
             onClick={() => {
-              if (a.action === 'email') {
-                onSendEmail()
-                setActiveAction(null)
-              } else {
-                setActiveAction(activeAction === a.action ? null : a.action)
-              }
+              setActiveAction(activeAction === a.action ? null : a.action)
             }}
           >
             <span style={{ fontSize: 16 }}>{a.icon}</span>
@@ -339,6 +342,22 @@ export default function QuickActionBar({
           companyId={companyId} tenantId={tenantId} contactId={contactId}
           users={users}
           onCreated={(t) => { onTaskCreated(t); setActiveAction(null) }}
+          onCancel={() => setActiveAction(null)}
+        />
+      )}
+
+      {activeAction === 'email' && (
+        <InlineEmailComposer
+          tenantId={tenantId}
+          companyId={companyId}
+          contactId={contactId}
+          dealId={dealId}
+          toEmail={contactEmail || contact?.email || undefined}
+          contact={contact}
+          company={company}
+          deal={deal}
+          googleConnected={googleConnected}
+          onSent={() => { onEmailSent?.(); onSendEmail?.(); setActiveAction(null) }}
           onCancel={() => setActiveAction(null)}
         />
       )}

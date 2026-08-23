@@ -817,6 +817,11 @@ input:focus, select:focus, textarea:focus {
   to { transform: translateY(0); opacity: 1; }
 }
 
+@keyframes slideUp {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 /* List table — checkbox column should not wrap */
 .list-table-view th:first-child,
 .list-table-view td:first-child {
