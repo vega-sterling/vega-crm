@@ -1,3 +1,58 @@
+
+## 2026-08-24 — Phase 23: Inline Create/Edit Forms for Contacts & Companies (Modal Elimination)
+
+### Problem
+The Contacts and Companies list pages still used full-screen modal overlays for creating and editing records — violating Bryan's inline actions over modals design principle. The Deals page had already been converted to inline forms in Phase 6, but Contacts and Companies were left behind with the old modal pattern.
+
+### Added
+- **Inline create/edit form on Contacts page** ():
+  - Form slides into view below the header when New Contact clicked — no modal
+  - Same form handles both create and edit (editingContact state determines mode)
+  - Smooth scroll to form when editing existing contact
+  - slideUp animation on entrance
+  - Close button (✕) in form header for easy dismissal
+  - All fields: tenant, company, first/last name, title, email, phone, mobile, linkedin, description
+  - Inline Add email and Add phone CTAs in table rows that open the edit form
+
+- **Inline create/edit form on Companies page** ():
+  - Same inline pattern — form appears below header, no modal overlay
+  - Handles both create and edit modes
+  - Smooth scroll to form when editing
+  - All fields: tenant, name, industry, website, phone, email, address, description
+  - New sort option: Most Activities (sorts by activity count descending)
+  - Industry filter dropdown auto-populates from existing data
+  - Inline Add phone and Add email CTAs in table rows
+
+### Changed
+- **Contacts page** — removed modal overlay, modalOpen state, replaced with inline showForm state
+- **Companies page** — removed modal overlay, modalOpen state, replaced with inline showForm state
+- Both pages use existing CSS classes (, , , ) — no new CSS needed
+- Both pages reuse existing , ,  style patterns
+
+### Files Changed
+-  — REWRITTEN (modal → inline form)
+-  — REWRITTEN (modal → inline form)
+
+### Impact
+- **Zero modals on list pages** — all create/edit is now inline across Contacts, Companies, and Deals
+- **Consistent UX** — all list pages now follow the same inline form pattern
+- **Faster editing** — form appears in context, no page overlay, smooth scroll
+- **Better mobile experience** — inline forms work perfectly with existing responsive CSS (table→card auto-switch, toolbar stacking)
+- **Reduced complexity** — removed modal state management, overlay DOM, and associated CSS dependencies
+
+### Responsive
+- Desktop (>1024px): Inline form in panel container with grid-based field layout
+- Tablet (768-1024px): Same as desktop, form-grid auto-adjusts column count
+- Phone (<768px): Table auto-hides, card view shows; toolbar stacks vertically; form fields single column; 44px+ touch targets via btn-touch class
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded with no errors (Next.js 16.3.0, Turbopack, TypeScript passed)
+- ✅ All 25 authenticated pages return HTTP 307 (auth redirect — expected)
+- ✅ /login returns 200 (public page — correct)
+- ✅ All 9 API endpoints return correct auth status codes (401/403)
+- ✅ No runtime errors in container logs after deployment
+- ✅ Clean startup: Ready in 0ms, no warnings
 ## 2026-08-23 — Phase 22: Inline Email Composer with Template Integration (Priority 5)
 
 ### Problem

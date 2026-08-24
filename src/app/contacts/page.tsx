@@ -4,8 +4,8 @@
 // File: src/app/contacts/page.tsx
 // Description: Enhanced contacts list with search bar, company filter, sort,
 //              table/card grid toggle, pagination, and hover row actions.
-//              Phase 1-3 UI/UX: SVG icons, avatar initials, hover-only delete
-//              via ⋯ menu, pagination, inline "Add email/phone" CTAs.
+//              Phase 23: Inline create/edit form (no modal), matching Bryan's
+//              "inline actions over modals" design principle.
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
@@ -39,6 +39,11 @@ interface ContactListItem extends Contact {
   lastActivityAt?: string | null
 }
 
+const emptyForm = {
+  tenantId: '', companyId: '', firstName: '', lastName: '', title: '',
+  email: '', phone: '', mobile: '', linkedin: '', description: '',
+}
+
 function ContactsContent() {
   const [contacts, setContacts] = useState<ContactListItem[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
@@ -51,13 +56,11 @@ function ContactsContent() {
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [page, setPage] = useState(1)
 
-  const [modalOpen, setModalOpen] = useState(false)
+  // ── Inline form state (replaces modal) ──
+  const [showForm, setShowForm] = useState(false)
   const [editingContact, setEditingContact] = useState<ContactListItem | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [form, setForm] = useState({
-    tenantId: '', companyId: '', firstName: '', lastName: '', title: '',
-    email: '', phone: '', mobile: '', linkedin: '', description: '',
-  })
+  const [form, setForm] = useState(emptyForm)
 
   const load = useCallback(async () => {
     try {
@@ -113,18 +116,23 @@ function ContactsContent() {
 
   const openNew = () => {
     setEditingContact(null)
-    setForm({ tenantId: tenants[0]?.id || '', companyId: '', firstName: '', lastName: '', title: '', email: '', phone: '', mobile: '', linkedin: '', description: '' })
-    setModalOpen(true)
+    setForm({ ...emptyForm, tenantId: tenants[0]?.id || '' })
+    setShowForm(true)
   }
 
   const openEdit = (c: ContactListItem) => {
     setEditingContact(c)
     setForm({
-      tenantId: c.tenantId, companyId: c.companyId || '', firstName: c.firstName, lastName: c.lastName,
-      title: c.title || '', email: c.email || '', phone: c.phone || '', mobile: c.mobile || '',
-      linkedin: c.linkedin || '', description: c.description || '',
+      tenantId: c.tenantId, companyId: c.companyId || '', firstName: c.firstName,
+      lastName: c.lastName, title: c.title || '', email: c.email || '',
+      phone: c.phone || '', mobile: c.mobile || '', linkedin: c.linkedin || '',
+      description: c.description || '',
     })
-    setModalOpen(true)
+    setShowForm(true)
+    // Scroll to form
+    setTimeout(() => {
+      document.getElementById('inline-contact-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 50)
   }
 
   const handleDelete = async (c: ContactListItem) => {
@@ -138,6 +146,7 @@ function ContactsContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
+    setError('')
     try {
       const body = { ...form, tenantId: form.tenantId || tenants[0]?.id }
       if (editingContact) {
@@ -145,9 +154,9 @@ function ContactsContent() {
         setContacts((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } as ContactListItem : c)))
       } else {
         const created = await apiFetch<Contact>('/api/contacts', { method: 'POST', body: JSON.stringify(body) })
-        setContacts((prev) => [{ ...created, _count: { activities: 0 } }, ...prev])
+        setContacts((prev) => [{ ...created, company: companies.find((co) => co.id === created.companyId) || null, _count: { activities: 0 } } as ContactListItem, ...prev])
       }
-      setModalOpen(false)
+      setShowForm(false)
     } catch (err: any) { setError(err.message || 'Failed to save contact') }
     finally { setSubmitting(false) }
   }
@@ -226,155 +235,173 @@ function ContactsContent() {
         {filtered.length} {filtered.length === 1 ? 'contact' : 'contacts'}
       </div>
 
-      {/* ── Table View ── Desktop manual toggle via viewMode; mobile: CSS hides automatically */}
-      <div className="panel-container list-table-view" style={{ ...panel.container, display: viewMode === 'table' ? 'block' : 'none' }}>
-          <div className="table-wrapper" style={{ overflowX: 'auto' }}>
-            <table style={table.table}>
-              <thead>
-                <tr>
-                  <th style={table.th}>Name</th>
-                  <th style={table.th}>Title</th>
-                  <th style={table.th}>Company</th>
-                  <th style={table.th}>Email</th>
-                  <th style={table.th}>Phone</th>
-                  <th style={table.th}>Created</th>
-                  <th style={table.th}>Score</th>
-                  <th style={{ ...table.th, width: 120 }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginated.length === 0 ? (
-                  <tr><td colSpan={8} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center', padding: 32 }}>No contacts found.</td></tr>
-                ) : (
-                  paginated.map((c) => (
-                    <tr key={c.id} className="vega-table-row" style={table.tr}>
-                      <td style={table.td}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <Avatar name={`${c.firstName} ${c.lastName}`} size={32} />
-                          <Link href={`/contacts/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)' }}>{c.firstName} {c.lastName}</Link>
-                        </div>
-                      </td>
-                      <td style={table.td}>{c.title || '—'}</td>
-                      <td style={table.td}>{c.company?.name || '—'}</td>
-                      <td style={table.td}>
-                        {c.email ? (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <IconMail size={14} strokeWidth={1.5} />
-                            {c.email}
-                          </span>
-                        ) : (
-                          <button onClick={() => openEdit(c)} style={{ background: 'none', border: 'none', color: 'var(--fg-dimmer)', fontSize: 13, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <IconPlus size={12} /> Add email
-                          </button>
-                        )}
-                      </td>
-                      <td style={table.td}>
-                        {c.phone ? (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <IconPhone size={14} strokeWidth={1.5} />
-                            {c.phone}
-                          </span>
-                        ) : (
-                          <button onClick={() => openEdit(c)} style={{ background: 'none', border: 'none', color: 'var(--fg-dimmer)', fontSize: 13, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <IconPlus size={12} /> Add phone
-                          </button>
-                        )}
-                      </td>
-                      <td style={{ ...table.td, color: 'var(--fg-dim)', fontSize: 12 }}>{formatDate(c.createdAt)}</td>
-                      <td style={table.td}><LeadScoreMini contactId={c.id} /></td>
-                      <td style={table.td}>
-                        <RowActions onEdit={() => openEdit(c)} onDelete={() => handleDelete(c)} />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+      {/* ── Inline Create/Edit Form ── */}
+      {showForm && (
+        <div id="inline-contact-form" className="panel-container" style={{ ...panel.container, marginBottom: 24, animation: 'slideUp 0.25s ease-out' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h2 style={{ ...typeography.subtitle, margin: 0 }}>{editingContact ? 'Edit Contact' : 'New Contact'}</h2>
+            <button className="btn-touch" style={{ ...buttons.secondary, padding: '6px 12px', fontSize: 13 }} onClick={() => setShowForm(false)}>✕ Close</button>
           </div>
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            totalItems={filtered.length}
-            pageSize={PAGE_SIZE}
-            onPageChange={setPage}
-          />
-        </div>
-      {/* ── Card Grid View ── Desktop: visible only when viewMode=card; Mobile: CSS forces visible */}
-      <div className="card-grid list-card-view" style={{
-        display: viewMode === 'card' ? 'grid' : 'none', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16,
-      }}>
-          {filtered.length === 0 ? (
-            <div className="panel-container" style={{ ...panel.container, gridColumn: '1 / -1', textAlign: 'center', color: 'var(--fg-dim)' }}>No contacts found.</div>
-          ) : (
-            filtered.map((c) => (
-              <Link key={c.id} href={`/contacts/${c.id}`} style={{ textDecoration: 'none' }}>
-                <div className="panel-container" style={{ ...panel.container, height: '100%', cursor: 'pointer' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
-                    <Avatar name={`${c.firstName} ${c.lastName}`} size={44} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--fg)' }}>{c.firstName} {c.lastName}</div>
-                      <div style={{ fontSize: 13, color: 'var(--fg-dim)' }}>{c.title || 'No title'}</div>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--fg-dim)', marginBottom: 8 }}>
-                    {c.company?.name || 'No company'}
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--fg-dim)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {c.email && <span style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><IconMail size={14} /> {c.email}</span>}
-                    {c.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconPhone size={14} /> {c.phone}</span>}
-                  </div>
-                  <div style={{ marginTop: 12, fontSize: 12, color: 'var(--fg-dimmer)', borderTop: '1px solid var(--panel-border)', paddingTop: 8 }}>
-                    Added {formatDate(c.createdAt)}
-                  </div>
-                </div>
-              </Link>
-            ))
-          )}
-      </div>
-
-      {/* ── New/Edit Modal ── */}
-      {modalOpen && (
-        <div className="vega-modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }} onClick={() => setModalOpen(false)}>
-          <div className="vega-modal-content" style={{ ...panel.container, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', boxShadow: 'var(--shadow-lg)' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{editingContact ? 'Edit Contact' : 'New Contact'}</h2>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label style={forms.group}><span style={forms.label}>Tenant</span>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="form-grid" style={forms.row}>
+              <label style={forms.group}>
+                <span style={forms.label}>Tenant</span>
                 <select className="form-select" style={forms.select} required value={form.tenantId} onChange={(e) => setForm({ ...form, tenantId: e.target.value })}>
                   <option value="">Select tenant</option>
                   {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </label>
-              <div style={forms.row}>
-                <label style={forms.group}><span style={forms.label}>First Name</span>
-                  <input className="form-input" style={forms.input} required value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></label>
-                <label style={forms.group}><span style={forms.label}>Last Name</span>
-                  <input className="form-input" style={forms.input} required value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></label>
-              </div>
-              <div style={forms.row}>
-                <label style={forms.group}><span style={forms.label}>Title</span>
-                  <input className="form-input" style={forms.input} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
-                <label style={forms.group}><span style={forms.label}>Company</span>
-                  <select className="form-select" style={forms.select} value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })}>
-                    <option value="">None</option>
-                    {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select></label>
-              </div>
-              <div style={forms.row}>
-                <label style={forms.group}><span style={forms.label}>Email</span>
-                  <input className="form-input" style={forms.input} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
-                <label style={forms.group}><span style={forms.label}>Phone</span>
-                  <input className="form-input" style={forms.input} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
-              </div>
-              <label style={forms.group}><span style={forms.label}>Description</span>
-                <textarea className="form-textarea" style={forms.textarea} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button type="button" className="btn-touch" style={buttons.secondary} onClick={() => setModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-touch" style={{ ...buttons.primary, opacity: submitting ? 0.6 : 1 }} disabled={submitting}>{submitting ? 'Saving…' : 'Save'}</button>
-              </div>
-            </form>
-          </div>
+              <label style={forms.group}>
+                <span style={forms.label}>Company</span>
+                <select className="form-select" style={forms.select} value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })}>
+                  <option value="">No company</option>
+                  {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+            </div>
+            <div className="form-grid" style={forms.row}>
+              <label style={forms.group}><span style={forms.label}>First Name</span>
+                <input className="form-input" style={forms.input} required value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></label>
+              <label style={forms.group}><span style={forms.label}>Last Name</span>
+                <input className="form-input" style={forms.input} required value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></label>
+            </div>
+            <div className="form-grid" style={forms.row}>
+              <label style={forms.group}><span style={forms.label}>Title</span>
+                <input className="form-input" style={forms.input} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
+              <label style={forms.group}><span style={forms.label}>Email</span>
+                <input className="form-input" style={forms.input} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
+            </div>
+            <div className="form-grid" style={forms.row}>
+              <label style={forms.group}><span style={forms.label}>Phone</span>
+                <input className="form-input" style={forms.input} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
+              <label style={forms.group}><span style={forms.label}>Mobile</span>
+                <input className="form-input" style={forms.input} value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} /></label>
+            </div>
+            <div className="form-grid" style={forms.row}>
+              <label style={forms.group}><span style={forms.label}>LinkedIn</span>
+                <input className="form-input" style={forms.input} value={form.linkedin} onChange={(e) => setForm({ ...form, linkedin: e.target.value })} /></label>
+            </div>
+            <label style={forms.group}><span style={forms.label}>Description</span>
+              <textarea className="form-textarea" style={forms.textarea} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button type="button" className="btn-touch" style={buttons.secondary} onClick={() => setShowForm(false)}>Cancel</button>
+              <button type="submit" className="btn-touch" style={{ ...buttons.primary, opacity: submitting ? 0.6 : 1 }} disabled={submitting}>{submitting ? 'Saving…' : 'Save'}</button>
+            </div>
+          </form>
         </div>
       )}
+
+      {/* ── Table View ── */}
+      <div className="panel-container list-table-view" style={{ ...panel.container, display: viewMode === 'table' ? 'block' : 'none' }}>
+        <div className="table-wrapper" style={{ overflowX: 'auto' }}>
+          <table style={table.table}>
+            <thead>
+              <tr>
+                <th style={table.th}>Name</th>
+                <th style={table.th}>Title</th>
+                <th style={table.th}>Email</th>
+                <th style={table.th}>Phone</th>
+                <th style={table.th}>Company</th>
+                <th style={table.th}>Created</th>
+                <th style={{ ...table.th, width: 120 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginated.length === 0 ? (
+                <tr><td colSpan={7} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center', padding: 32 }}>No contacts found.</td></tr>
+              ) : (
+                paginated.map((c) => (
+                  <tr key={c.id} className="vega-table-row" style={table.tr}>
+                    <td style={table.td}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Avatar name={`${c.firstName} ${c.lastName}`} size={32} />
+                        <Link href={`/contacts/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)' }}>{c.firstName} {c.lastName}</Link>
+                        <LeadScoreMini contactId={c.id} />
+                      </div>
+                    </td>
+                    <td style={table.td}>{c.title || '—'}</td>
+                    <td style={table.td}>
+                      {c.email ? (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <IconMail size={14} strokeWidth={1.5} />
+                          {c.email}
+                        </span>
+                      ) : (
+                        <button onClick={() => openEdit(c)} style={{ background: 'none', border: 'none', color: 'var(--fg-dimmer)', fontSize: 13, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <IconPlus size={12} /> Add email
+                        </button>
+                      )}
+                    </td>
+                    <td style={table.td}>
+                      {c.phone ? (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <IconPhone size={14} strokeWidth={1.5} />
+                          {c.phone}
+                        </span>
+                      ) : (
+                        <button onClick={() => openEdit(c)} style={{ background: 'none', border: 'none', color: 'var(--fg-dimmer)', fontSize: 13, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <IconPlus size={12} /> Add phone
+                        </button>
+                      )}
+                    </td>
+                    <td style={table.td}>
+                      {c.company ? (
+                        <Link href={`/companies/${c.company.id}`} style={{ color: 'var(--fg-dim)' }}>{c.company.name}</Link>
+                      ) : '—'}
+                    </td>
+                    <td style={{ ...table.td, color: 'var(--fg-dim)', fontSize: 12 }}>{formatDate(c.createdAt)}</td>
+                    <td style={table.td}>
+                      <RowActions onEdit={() => openEdit(c)} onDelete={() => handleDelete(c)} />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalItems={filtered.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
+      </div>
+
+      {/* ── Card Grid View ── */}
+      <div className="card-grid list-card-view" style={{
+        display: viewMode === 'card' ? 'grid' : 'none', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16,
+      }}>
+        {filtered.length === 0 ? (
+          <div className="panel-container" style={{ ...panel.container, gridColumn: '1 / -1', textAlign: 'center', color: 'var(--fg-dim)' }}>No contacts found.</div>
+        ) : (
+          filtered.map((c) => (
+            <Link key={c.id} href={`/contacts/${c.id}`} style={{ textDecoration: 'none' }}>
+              <div className="panel-container" style={{ ...panel.container, height: '100%', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Avatar name={`${c.firstName} ${c.lastName}`} size={36} />
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--fg)' }}>{c.firstName} {c.lastName}</div>
+                      <div style={{ fontSize: 12, color: 'var(--fg-dim)' }}>{c.title || 'No title'}</div>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--fg-dim)', marginBottom: 8 }}>
+                  {c.company ? <Link href={`/companies/${c.company.id}`} style={{ color: 'var(--fg-dim)' }}>{c.company.name}</Link> : 'No company'}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 'auto' }}>
+                  {c.email && <div style={{ fontSize: 12, color: 'var(--fg-dim)', display: 'flex', alignItems: 'center', gap: 6 }}><IconMail size={12} /> {c.email}</div>}
+                  {c.phone && <div style={{ fontSize: 12, color: 'var(--fg-dim)', display: 'flex', alignItems: 'center', gap: 6 }}><IconPhone size={12} /> {c.phone}</div>}
+                </div>
+                <div style={{ marginTop: 12, fontSize: 12, color: 'var(--fg-dimmer)', borderTop: '1px solid var(--panel-border)', paddingTop: 8 }}>
+                  Created {formatDate(c.createdAt)}
+                </div>
+              </div>
+            </Link>
+          ))
+        )}
+      </div>
     </div>
   )
 }

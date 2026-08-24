@@ -4,8 +4,8 @@
 // File: src/app/companies/page.tsx
 // Description: Enhanced companies list with search bar, industry filter, sort,
 //              table/card grid toggle, pagination, and hover row actions.
-//              Phase 1-3 UI/UX: SVG icons, hover-only delete via ⋯ menu,
-//              pagination, search filter bar with icon.
+//              Phase 23: Inline create/edit form (no modal), matching Bryan's
+//              "inline actions over modals" design principle.
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
@@ -16,7 +16,7 @@ import RowActions from '../components/RowActions'
 import Pagination from '../components/Pagination'
 import { IconSearch, IconPlus, IconBuilding, IconMail, IconPhone } from '../components/Icons'
 import { apiFetch } from '../lib/api'
-import { layout, panel, typeography, forms, buttons, table, statusBadge, statusDot } from '../lib/styles'
+import { layout, panel, typeography, forms, buttons, table } from '../lib/styles'
 import type { Company, Tenant } from '../lib/types'
 
 const formatDate = (d?: string) => {
@@ -34,6 +34,8 @@ interface CompanyListItem extends Company {
   lastActivityAt?: string | null
 }
 
+const emptyForm = { tenantId: '', name: '', industry: '', website: '', phone: '', email: '', address: '', description: '' }
+
 function CompaniesContent() {
   const [companies, setCompanies] = useState<CompanyListItem[]>([])
   const [tenants, setTenants] = useState<Tenant[]>([])
@@ -45,10 +47,11 @@ function CompaniesContent() {
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [page, setPage] = useState(1)
 
-  const [modalOpen, setModalOpen] = useState(false)
+  // ── Inline form state (replaces modal) ──
+  const [showForm, setShowForm] = useState(false)
   const [editingCompany, setEditingCompany] = useState<CompanyListItem | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [form, setForm] = useState({ tenantId: '', name: '', industry: '', website: '', phone: '', email: '', address: '', description: '' })
+  const [form, setForm] = useState(emptyForm)
 
   const load = useCallback(async () => {
     try {
@@ -109,14 +112,17 @@ function CompaniesContent() {
 
   const openNew = () => {
     setEditingCompany(null)
-    setForm({ tenantId: tenants[0]?.id || '', name: '', industry: '', website: '', phone: '', email: '', address: '', description: '' })
-    setModalOpen(true)
+    setForm({ ...emptyForm, tenantId: tenants[0]?.id || '' })
+    setShowForm(true)
   }
 
   const openEdit = (c: CompanyListItem) => {
     setEditingCompany(c)
     setForm({ tenantId: c.tenantId, name: c.name, industry: c.industry || '', website: c.website || '', phone: c.phone || '', email: c.email || '', address: c.address || '', description: c.description || '' })
-    setModalOpen(true)
+    setShowForm(true)
+    setTimeout(() => {
+      document.getElementById('inline-company-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 50)
   }
 
   const handleDelete = async (c: CompanyListItem) => {
@@ -130,6 +136,7 @@ function CompaniesContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
+    setError('')
     try {
       const body = { ...form, tenantId: form.tenantId || tenants[0]?.id }
       if (editingCompany) {
@@ -139,7 +146,7 @@ function CompaniesContent() {
         const created = await apiFetch<Company>('/api/companies', { method: 'POST', body: JSON.stringify(body) })
         setCompanies((prev) => [{ ...created, _count: { contacts: 0, deals: 0, activities: 0 } }, ...prev])
       }
-      setModalOpen(false)
+      setShowForm(false)
     } catch (err: any) { setError(err.message || 'Failed to save company') }
     finally { setSubmitting(false) }
   }
@@ -219,7 +226,50 @@ function CompaniesContent() {
         {filtered.length} {filtered.length === 1 ? 'company' : 'companies'}
       </div>
 
-      {/* ── Table View ── Desktop manual toggle via viewMode; mobile: CSS hides automatically */}
+      {/* ── Inline Create/Edit Form ── */}
+      {showForm && (
+        <div id="inline-company-form" className="panel-container" style={{ ...panel.container, marginBottom: 24, animation: 'slideUp 0.25s ease-out' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h2 style={{ ...typeography.subtitle, margin: 0 }}>{editingCompany ? 'Edit Company' : 'New Company'}</h2>
+            <button className="btn-touch" style={{ ...buttons.secondary, padding: '6px 12px', fontSize: 13 }} onClick={() => setShowForm(false)}>✕ Close</button>
+          </div>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <label style={forms.group}>
+              <span style={forms.label}>Tenant</span>
+              <select className="form-select" style={forms.select} required value={form.tenantId} onChange={(e) => setForm({ ...form, tenantId: e.target.value })}>
+                <option value="">Select tenant</option>
+                {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </label>
+            <div className="form-grid" style={forms.row}>
+              <label style={forms.group}><span style={forms.label}>Name</span>
+                <input className="form-input" style={forms.input} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
+              <label style={forms.group}><span style={forms.label}>Industry</span>
+                <input className="form-input" style={forms.input} value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} /></label>
+            </div>
+            <div className="form-grid" style={forms.row}>
+              <label style={forms.group}><span style={forms.label}>Website</span>
+                <input className="form-input" style={forms.input} value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></label>
+              <label style={forms.group}><span style={forms.label}>Phone</span>
+                <input className="form-input" style={forms.input} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
+            </div>
+            <div className="form-grid" style={forms.row}>
+              <label style={forms.group}><span style={forms.label}>Email</span>
+                <input className="form-input" style={forms.input} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
+              <label style={forms.group}><span style={forms.label}>Address</span>
+                <input className="form-input" style={forms.input} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></label>
+            </div>
+            <label style={forms.group}><span style={forms.label}>Description</span>
+              <textarea className="form-textarea" style={forms.textarea} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button type="button" className="btn-touch" style={buttons.secondary} onClick={() => setShowForm(false)}>Cancel</button>
+              <button type="submit" className="btn-touch" style={{ ...buttons.primary, opacity: submitting ? 0.6 : 1 }} disabled={submitting}>{submitting ? 'Saving…' : 'Save'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ── Table View ── */}
       <div className="panel-container list-table-view" style={{ ...panel.container, display: viewMode === 'table' ? 'block' : 'none' }}>
           <div className="table-wrapper" style={{ overflowX: 'auto' }}>
             <table style={table.table}>
@@ -292,7 +342,7 @@ function CompaniesContent() {
             onPageChange={setPage}
           />
         </div>
-      {/* ── Card Grid View ── Desktop: visible only when viewMode=card; Mobile: CSS forces visible */}
+      {/* ── Card Grid View ── */}
       <div className="card-grid list-card-view" style={{
         display: viewMode === 'card' ? 'grid' : 'none', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16,
       }}>
@@ -334,46 +384,6 @@ function CompaniesContent() {
             ))
           )}
       </div>
-
-      {/* ── New/Edit Modal ── */}
-      {modalOpen && (
-        <div className="vega-modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }} onClick={() => setModalOpen(false)}>
-          <div className="vega-modal-content" style={{ ...panel.container, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', boxShadow: 'var(--shadow-lg)' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{editingCompany ? 'Edit Company' : 'New Company'}</h2>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label style={forms.group}>
-                <span style={forms.label}>Tenant</span>
-                <select className="form-select" style={forms.select} required value={form.tenantId} onChange={(e) => setForm({ ...form, tenantId: e.target.value })}>
-                  <option value="">Select tenant</option>
-                  {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-              </label>
-              <div style={forms.row}>
-                <label style={forms.group}><span style={forms.label}>Name</span>
-                  <input className="form-input" style={forms.input} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-                <label style={forms.group}><span style={forms.label}>Industry</span>
-                  <input className="form-input" style={forms.input} value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} /></label>
-              </div>
-              <div style={forms.row}>
-                <label style={forms.group}><span style={forms.label}>Website</span>
-                  <input className="form-input" style={forms.input} value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></label>
-                <label style={forms.group}><span style={forms.label}>Phone</span>
-                  <input className="form-input" style={forms.input} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
-              </div>
-              <label style={forms.group}><span style={forms.label}>Email</span>
-                <input className="form-input" style={forms.input} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
-              <label style={forms.group}><span style={forms.label}>Address</span>
-                <input className="form-input" style={forms.input} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></label>
-              <label style={forms.group}><span style={forms.label}>Description</span>
-                <textarea className="form-textarea" style={forms.textarea} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button type="button" className="btn-touch" style={buttons.secondary} onClick={() => setModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-touch" style={{ ...buttons.primary, opacity: submitting ? 0.6 : 1 }} disabled={submitting}>{submitting ? 'Saving…' : 'Save'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
