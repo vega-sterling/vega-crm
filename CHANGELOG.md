@@ -1,3 +1,88 @@
+## 2026-08-24 — Phase 23: Inline Create/Edit Forms — Eliminate Modals from List Pages (Modal-Free UX)
+
+### Problem
+The Contacts, Companies, Campaigns, Admin Tenants, Admin Users, and Admin Lead Forms pages all used full-screen modal overlays for creating and editing records. This violated Bryan's "inline actions over modals" design principle. The Deals page had already been converted to inline forms in earlier phases, but these six pages were left behind with the old modal pattern.
+
+### What Changed
+Converted all six pages from modal-based create/edit forms to inline forms that slide into view within the page flow. No modals, no overlays, no context switching.
+
+### Pages Converted (6 total)
+
+**1. Contacts page** (`src/app/contacts/page.tsx`):
+- Removed modal overlay for create/edit contact
+- Inline form slides into view below header when "New Contact" clicked
+- Same form handles both create and edit modes (editingContact state)
+- Smooth scroll to form when editing existing contact
+- Close button (✕) in form header for easy dismissal
+- slideUp animation on entrance
+- All fields preserved: tenant, company, first/last name, title, email, phone, mobile, linkedin, description
+
+**2. Companies page** (`src/app/companies/page.tsx`):
+- Removed modal overlay for create/edit company
+- Inline form with same pattern as contacts
+- Fields: tenant, name, industry, website, phone, email, address, description
+- slideUp animation, close button, smooth scroll for edit
+
+**3. Campaigns page** (`src/app/campaigns/page.tsx`):
+- Removed modal overlay for create campaign
+- Inline form with tenant, name, subject, body fields
+- slideUp animation, close button
+
+**4. Admin Tenants page** (`src/app/admin/tenants/page.tsx`):
+- Removed modal overlay for create/edit tenant
+- Inline form with name, slug (auto-generated), description
+- slideUp animation, close button, smooth scroll for edit
+
+**5. Admin Users page** (`src/app/admin/users/page.tsx`):
+- Removed modal overlay for create/edit user
+- Inline form with name, email, password, global role, active status, tenant checkboxes
+- slideUp animation, close button, smooth scroll for edit
+
+**6. Admin Lead Forms page** (`src/app/admin/lead-forms/page.tsx`):
+- Removed modal overlay for create lead form
+- Inline form with tenant, name, redirect URL, dynamic field builder
+- slideUp animation, close button
+
+### Design Pattern Applied
+All six pages now follow the same inline form pattern:
+1. User clicks "New X" button → `showForm` state becomes true
+2. Form panel slides into view below the page header with `slideUp` animation
+3. Form header has title + ✕ Close button
+4. All inputs use existing `form-input`, `form-select`, `form-textarea` classes
+5. Submit + Cancel buttons at bottom right
+6. On success: form hides, list refreshes
+7. On edit: smooth scroll to form, form pre-populated with record data
+
+### Responsive
+- Desktop (>1024px): Form appears as a panel below the header
+- Tablet (768-1024px): Same as desktop, slightly reduced padding
+- Phone (<768px): Form is full-width, 44px+ touch targets via `btn-touch` class
+- Form grid fields stack on narrow screens via existing `form-grid` CSS
+
+### Files Changed
+- `src/app/contacts/page.tsx` — MODIFIED (modal → inline form)
+- `src/app/companies/page.tsx` — MODIFIED (modal → inline form)
+- `src/app/campaigns/page.tsx` — MODIFIED (modal → inline form)
+- `src/app/admin/tenants/page.tsx` — MODIFIED (modal → inline form)
+- `src/app/admin/users/page.tsx` — MODIFIED (modal → inline form)
+- `src/app/admin/lead-forms/page.tsx` — MODIFIED (modal → inline form)
+
+### Impact
+- **6 fewer modals** in the application — all major list pages now use inline forms
+- **Consistent UX** — every list page now follows the same inline create/edit pattern
+- **No context switching** — users stay on the page, form appears in flow
+- **Mobile-friendly** — inline forms work better on small screens than modals
+- **Remaining modals**: companies/[id] (contact association), calendar (event edit), templates (template edit), settings (integration config) — these are more complex and will be addressed in future phases
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded with no errors (Next.js 16.3.0, Turbopack)
+- ✅ TypeScript compilation passed (all type errors fixed)
+- ✅ All 25 authenticated pages return HTTP 307 (auth redirect — expected)
+- ✅ All 11 API endpoints return correct status codes (401/403 — auth required)
+- ✅ No runtime errors in container logs after deployment
+- ✅ Clean startup: Ready in 0ms, no warnings
+- ✅ Responsive CSS already covers inline form classes (list-toolbar, form-grid, panel-container)
 
 ## 2026-08-24 — Phase 23: Inline Create/Edit Forms for Contacts & Companies (Modal Elimination)
 

@@ -1,8 +1,15 @@
 'use client'
 
+// ============================================================================
+// File: src/app/admin/users/page.tsx
+// Description: User management page. Lists all users with inline create/edit.
+//              Phase 23: Converted from modal to inline form pattern.
+// ============================================================================
+
 import { useEffect, useState, useCallback } from 'react'
 import ProtectedLayout from '../../components/ProtectedLayout'
 import Spinner from '../../components/Spinner'
+import { IconPlus } from '../../components/Icons'
 import { apiFetch } from '../../lib/api'
 import { layout, panel, typeography, forms, buttons, table, statusBadge } from '../../lib/styles'
 import type { User, Tenant } from '../../lib/types'
@@ -25,15 +32,12 @@ const roleColor: Record<string, string> = {
   USER: 'var(--blue)',
 }
 
-/**
- * AdminUsersPage — user management for administrators.
- */
 function AdminUsersContent() {
   const [users, setUsers] = useState<UserListItem[]>([])
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
+  const [showForm, setShowForm] = useState(false)
   const [editingUser, setEditingUser] = useState<UserListItem | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -70,7 +74,7 @@ function AdminUsersContent() {
   const openNew = () => {
     setEditingUser(null)
     setForm({ ...emptyForm })
-    setModalOpen(true)
+    setShowForm(true)
   }
 
   const openEdit = (user: UserListItem) => {
@@ -83,7 +87,10 @@ function AdminUsersContent() {
       tenantIds: user.userTenants?.map((ut) => ut.tenant.id) || [],
       isActive: user.isActive ?? true,
     })
-    setModalOpen(true)
+    setShowForm(true)
+    setTimeout(() => {
+      document.getElementById('inline-user-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 50)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -105,7 +112,7 @@ function AdminUsersContent() {
         })
         setUsers((prev) => [created, ...prev])
       }
-      setModalOpen(false)
+      setShowForm(false)
       setEditingUser(null)
       setForm({ ...emptyForm })
     } catch (err: any) {
@@ -136,12 +143,95 @@ function AdminUsersContent() {
     <div style={layout.page}>
       <div style={layout.header}>
         <h1 style={typeography.title}>Users</h1>
-        <button style={buttons.primary} onClick={openNew}>New User</button>
+        <button className="btn-touch" style={{ ...buttons.primary, display: 'flex', alignItems: 'center', gap: 6 }} onClick={openNew}>
+          <IconPlus size={16} /> New User
+        </button>
       </div>
 
       {error && (
         <div style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: 'var(--rust)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>
           {error}
+        </div>
+      )}
+
+      {/* ── Inline Create/Edit Form ── */}
+      {showForm && (
+        <div id="inline-user-form" className="panel-container" style={{ ...panel.container, marginBottom: 24, animation: 'slideUp 0.25s ease-out' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h2 style={{ ...typeography.subtitle, margin: 0 }}>{editingUser ? 'Edit User' : 'New User'}</h2>
+            <button className="btn-touch" style={{ ...buttons.secondary, padding: '6px 12px', fontSize: 13 }} onClick={() => setShowForm(false)}>✕ Close</button>
+          </div>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="form-grid" style={forms.row}>
+              <label style={forms.group}>
+                <span style={forms.label}>Name</span>
+                <input className="form-input" style={forms.input} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </label>
+              <label style={forms.group}>
+                <span style={forms.label}>Email</span>
+                <input className="form-input" style={forms.input} type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </label>
+            </div>
+
+            <label style={forms.group}>
+              <span style={forms.label}>{editingUser ? 'New password (optional)' : 'Password'}</span>
+              <input className="form-input" style={forms.input} type="password" {...(editingUser ? {} : { required: true })} minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            </label>
+
+            <div className="form-grid" style={forms.row}>
+              <label style={forms.group}>
+                <span style={forms.label}>Global role</span>
+                <select className="form-select" style={forms.select} value={form.globalRole} onChange={(e) => setForm({ ...form, globalRole: e.target.value as User['globalRole'] })}>
+                  <option value="USER">User</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="SUPER_ADMIN">Super Admin</option>
+                </select>
+              </label>
+
+              <label style={forms.group}>
+                <span style={forms.label}>Active</span>
+                <select className="form-select" style={forms.select} value={form.isActive ? 'true' : 'false'} onChange={(e) => setForm({ ...form, isActive: e.target.value === 'true' })}>
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
+                </select>
+              </label>
+            </div>
+
+            <div>
+              <span style={forms.label}>Tenants</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                {tenants.map((t) => (
+                  <label
+                    key={t.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '8px 10px',
+                      borderRadius: 8,
+                      backgroundColor: form.tenantIds.includes(t.id) ? 'var(--bg-soft)' : 'transparent',
+                      border: '1px solid var(--panel-border)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.tenantIds.includes(t.id)}
+                      onChange={() => toggleTenant(t.id)}
+                    />
+                    <span>{t.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button type="button" className="btn-touch" style={buttons.secondary} onClick={() => setShowForm(false)}>Cancel</button>
+              <button type="submit" className="btn-touch" style={{ ...buttons.primary, opacity: submitting ? 0.6 : 1 }} disabled={submitting}>
+                {submitting ? 'Saving…' : editingUser ? 'Save Changes' : 'Create User'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -155,7 +245,7 @@ function AdminUsersContent() {
                 <th style={table.th}>Role</th>
                 <th style={table.th}>Active</th>
                 <th style={table.th}>Tenants</th>
-                <th style={table.th}></th>
+                <th style={{ ...table.th, width: 100 }}></th>
               </tr>
             </thead>
             <tbody>
@@ -167,7 +257,7 @@ function AdminUsersContent() {
                 </tr>
               ) : (
                 users.map((u) => (
-                  <tr key={u.id} style={table.tr}>
+                  <tr key={u.id} className="vega-table-row" style={table.tr}>
                     <td style={table.td}><strong>{u.name}</strong></td>
                     <td style={table.td}>{u.email}</td>
                     <td style={table.td}>
@@ -182,7 +272,7 @@ function AdminUsersContent() {
                         : '—'}
                     </td>
                     <td style={table.td}>
-                      <button style={buttons.small} onClick={() => openEdit(u)}>Edit</button>
+                      <button className="btn-touch" style={buttons.small} onClick={() => openEdit(u)}>Edit</button>
                     </td>
                   </tr>
                 ))
@@ -191,123 +281,6 @@ function AdminUsersContent() {
           </table>
         </div>
       </div>
-
-      {modalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 100,
-            padding: 24,
-          }}
-          onClick={() => setModalOpen(false)}
-        >
-          <div style={{ ...panel.container, width: '100%', maxWidth: 520, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{editingUser ? 'Edit User' : 'New User'}</h2>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={forms.row}>
-                <label style={forms.group}>
-                  <span style={forms.label}>Name</span>
-                  <input
-                    style={forms.input}
-                    required
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  />
-                </label>
-                <label style={forms.group}>
-                  <span style={forms.label}>Email</span>
-                  <input
-                    style={forms.input}
-                    type="email"
-                    required
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  />
-                </label>
-              </div>
-
-              <label style={forms.group}>
-                <span style={forms.label}>{editingUser ? 'New password (optional)' : 'Password'}</span>
-                <input
-                  style={forms.input}
-                  type="password"
-                  {...(editingUser ? {} : { required: true })}
-                  minLength={8}
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                />
-              </label>
-
-              <div style={forms.row}>
-                <label style={forms.group}>
-                  <span style={forms.label}>Global role</span>
-                  <select
-                    style={forms.select}
-                    value={form.globalRole}
-                    onChange={(e) => setForm({ ...form, globalRole: e.target.value as User['globalRole'] })}
-                  >
-                    <option value="USER">User</option>
-                    <option value="ADMIN">Admin</option>
-                    <option value="SUPER_ADMIN">Super Admin</option>
-                  </select>
-                </label>
-
-                <label style={forms.group}>
-                  <span style={forms.label}>Active</span>
-                  <select
-                    style={forms.select}
-                    value={form.isActive ? 'true' : 'false'}
-                    onChange={(e) => setForm({ ...form, isActive: e.target.value === 'true' })}
-                  >
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
-                  </select>
-                </label>
-              </div>
-
-              <div>
-                <span style={forms.label}>Tenants</span>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-                  {tenants.map((t) => (
-                    <label
-                      key={t.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        padding: '8px 10px',
-                        borderRadius: 8,
-                        backgroundColor: form.tenantIds.includes(t.id) ? 'var(--bg-soft)' : 'transparent',
-                        border: '1px solid var(--panel-border)',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={form.tenantIds.includes(t.id)}
-                        onChange={() => toggleTenant(t.id)}
-                      />
-                      <span>{t.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button type="button" style={buttons.secondary} onClick={() => setModalOpen(false)}>Cancel</button>
-                <button type="submit" style={buttons.primary} disabled={submitting}>
-                  {submitting ? 'Saving...' : editingUser ? 'Save Changes' : 'Create User'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
