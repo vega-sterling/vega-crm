@@ -22,9 +22,9 @@ export default function ProjectsPage() {
   const [tenants, setTenants] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [showArchived, setShowArchived] = useState(false)
-  const [showCreateModal, setShowCreateModal] = useState(false)
 
-  // Create form state
+  // ── Inline form state (replaces modal) ──
+  const [showCreateForm, setShowCreateForm] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [color, setColor] = useState('#c9a96e')
@@ -51,9 +51,9 @@ export default function ProjectsPage() {
     fetchProjects()
   }, [fetchProjects])
 
-  // Fetch tenants and users for create modal
+  // Fetch tenants and users when inline form opens
   useEffect(() => {
-    if (!showCreateModal) return
+    if (!showCreateForm) return
     apiFetch<{ data: { id: string; name: string }[] }>('/api/admin/tenants').then(res => {
       setTenants(res.data || [])
       if (res.data?.[0] && !tenantId) setTenantId(res.data[0].id)
@@ -61,7 +61,7 @@ export default function ProjectsPage() {
     apiFetch<{ data: User[] }>('/api/admin/users').then(res => {
       setUsers(res.data || [])
     }).catch(() => {})
-  }, [showCreateModal]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showCreateForm]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreate = async () => {
     if (!name.trim() || !tenantId) return
@@ -71,7 +71,7 @@ export default function ProjectsPage() {
         method: 'POST',
         body: JSON.stringify({ tenantId, name, description, color, icon }),
       })
-      setShowCreateModal(false)
+      setShowCreateForm(false)
       setName('')
       setDescription('')
       setColor('#c9a96e')
@@ -121,11 +121,114 @@ export default function ProjectsPage() {
           >
             {showArchived ? '← Active Projects' : 'Archived Projects'}
           </button>
-          <button onClick={() => setShowCreateModal(true)} style={buttons.primary}>
-            + New Project
+          <button onClick={() => setShowCreateForm(!showCreateForm)} style={buttons.primary}>
+            {showCreateForm ? '× Cancel' : '+ New Project'}
           </button>
         </div>
       </div>
+
+      {/* ── Inline Create Form (replaces modal) ── */}
+      {showCreateForm && (
+        <div id="inline-project-form" className="panel-container" style={{ ...panel.container, marginBottom: 24, animation: 'slideUp 0.25s ease-out' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+            <h2 style={{ ...typeography.subtitle, margin: 0 }}>Create New Project</h2>
+            <button type="button" style={{ ...buttons.small, fontSize: 18, lineHeight: 1, padding: '4px 12px' }} onClick={() => setShowCreateForm(false)}>×</button>
+          </div>
+
+          <div style={forms.group}>
+            <label style={forms.label}>Tenant</label>
+            <select
+              className="form-select"
+              style={forms.select}
+              value={tenantId}
+              onChange={e => setTenantId(e.target.value)}
+            >
+              {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+
+          <div style={{ ...forms.group, marginTop: 16 }}>
+            <label style={forms.label}>Name</label>
+            <input
+              className="form-input"
+              style={forms.input}
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g., Q4 Launch Campaign"
+              autoFocus
+            />
+          </div>
+
+          <div style={{ ...forms.group, marginTop: 16 }}>
+            <label style={forms.label}>Description (optional)</label>
+            <textarea
+              className="form-textarea"
+              style={forms.textarea}
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Brief description of the project..."
+            />
+          </div>
+
+          <div style={{ ...forms.group, marginTop: 16 }}>
+            <label style={forms.label}>Icon</label>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {PROJECT_ICONS.map(ic => (
+                <button
+                  key={ic}
+                  onClick={() => setIcon(ic)}
+                  style={{
+                    fontSize: 22,
+                    padding: '6px 10px',
+                    borderRadius: 8,
+                    border: icon === ic ? '2px solid var(--gold)' : '1px solid var(--panel-border)',
+                    backgroundColor: icon === ic ? 'var(--panel-elevated)' : 'var(--bg)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {ic}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ ...forms.group, marginTop: 16 }}>
+            <label style={forms.label}>Color</label>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {PROJECT_COLORS.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setColor(c)}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    backgroundColor: c,
+                    border: color === c ? '3px solid var(--fg)' : '2px solid transparent',
+                    cursor: 'pointer',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'flex-end' }}>
+            <button onClick={() => setShowCreateForm(false)} style={buttons.secondary}>
+              Cancel
+            </button>
+            <button
+              onClick={handleCreate}
+              disabled={!name.trim() || !tenantId || creating}
+              style={{
+                ...buttons.primary,
+                opacity: (!name.trim() || !tenantId || creating) ? 0.5 : 1,
+              }}
+            >
+              {creating ? 'Creating...' : 'Create Project'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ ...panel.container, textAlign: 'center' }}>
@@ -224,124 +327,6 @@ export default function ProjectsPage() {
         </div>
       )}
 
-      {/* Create Project Modal */}
-      {showCreateModal && (
-        <div
-          onClick={() => setShowCreateModal(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 100,
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              ...panel.container,
-              width: 480,
-              maxWidth: '90vw',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-            }}
-          >
-            <h2 style={{ ...typeography.subtitle, marginBottom: 24 }}>Create New Project</h2>
-
-            <div style={forms.group}>
-              <label style={forms.label}>Tenant</label>
-              <select
-                style={forms.select}
-                value={tenantId}
-                onChange={e => setTenantId(e.target.value)}
-              >
-                {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </div>
-
-            <div style={{ ...forms.group, marginTop: 16 }}>
-              <label style={forms.label}>Name</label>
-              <input
-                style={forms.input}
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="e.g., Q4 Launch Campaign"
-                autoFocus
-              />
-            </div>
-
-            <div style={{ ...forms.group, marginTop: 16 }}>
-              <label style={forms.label}>Description (optional)</label>
-              <textarea
-                style={forms.textarea}
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                placeholder="Brief description of the project..."
-              />
-            </div>
-
-            <div style={{ ...forms.group, marginTop: 16 }}>
-              <label style={forms.label}>Icon</label>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {PROJECT_ICONS.map(ic => (
-                  <button
-                    key={ic}
-                    onClick={() => setIcon(ic)}
-                    style={{
-                      fontSize: 22,
-                      padding: '6px 10px',
-                      borderRadius: 8,
-                      border: icon === ic ? '2px solid var(--gold)' : '1px solid var(--panel-border)',
-                      backgroundColor: icon === ic ? 'var(--panel-elevated)' : 'var(--bg)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {ic}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ ...forms.group, marginTop: 16 }}>
-              <label style={forms.label}>Color</label>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {PROJECT_COLORS.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => setColor(c)}
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 8,
-                      backgroundColor: c,
-                      border: color === c ? '3px solid var(--fg)' : '2px solid transparent',
-                      cursor: 'pointer',
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowCreateModal(false)} style={buttons.secondary}>
-                Cancel
-              </button>
-              <button
-                onClick={handleCreate}
-                disabled={!name.trim() || !tenantId || creating}
-                style={{
-                  ...buttons.primary,
-                  opacity: (!name.trim() || !tenantId || creating) ? 0.5 : 1,
-                }}
-              >
-                {creating ? 'Creating...' : 'Create Project'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       <ConfirmDialog
         open={!!confirmDelete}
         title="Delete Project?"

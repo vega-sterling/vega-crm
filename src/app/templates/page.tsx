@@ -25,8 +25,9 @@ function TemplatesContent() {
   const [submitting, setSubmitting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<any>(null)
 
-  const [templateModal, setTemplateModal] = useState<EmailTemplate | null>(null)
-  const [sequenceModal, setSequenceModal] = useState<EmailSequence | null>(null)
+  // Inline form state (replaces modals)
+  const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null)
+  const [editingSequence, setEditingSequence] = useState<EmailSequence | null>(null)
   const [enrollSequence, setEnrollSequence] = useState<EmailSequence | null>(null)
   const [enrollContactId, setEnrollContactId] = useState('')
 
@@ -64,7 +65,7 @@ function TemplatesContent() {
     } else {
       setTemplateForm({ name: '', subject: '', body: '' })
     }
-    setTemplateModal(t || ({} as EmailTemplate))
+    setEditingTemplate(t || ({} as EmailTemplate))
   }
 
   const openSequence = (s?: EmailSequence) => {
@@ -73,7 +74,7 @@ function TemplatesContent() {
     } else {
       setSequenceForm({ name: '', description: '', steps: [{ subject: '', body: '', delayDays: 1 }] })
     }
-    setSequenceModal(s || ({} as EmailSequence))
+    setEditingSequence(s || ({} as EmailSequence))
   }
 
   const insertVar = (key: string) => {
@@ -117,14 +118,14 @@ function TemplatesContent() {
         ...templateForm,
         variables: extractVariables(`${templateForm.subject} ${templateForm.body}`),
       }
-      if (templateModal?.id) {
-        const updated = await apiFetch<EmailTemplate>(`/api/email/templates/${templateModal.id}`, { method: 'PUT', body: JSON.stringify(body) })
+      if (editingTemplate?.id) {
+        const updated = await apiFetch<EmailTemplate>(`/api/email/templates/${editingTemplate.id}`, { method: 'PUT', body: JSON.stringify(body) })
         setTemplates((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
       } else {
         const created = await apiFetch<EmailTemplate>('/api/email/templates', { method: 'POST', body: JSON.stringify(body) })
         setTemplates((prev) => [created, ...prev])
       }
-      setTemplateModal(null)
+      setEditingTemplate(null)
     } catch (err: any) {
       setError(err.message || 'Failed to save template')
     } finally {
@@ -150,14 +151,14 @@ function TemplatesContent() {
     setSubmitting(true)
     try {
       const body = sequenceForm
-      if (sequenceModal?.id) {
-        const updated = await apiFetch<EmailSequence>(`/api/email/sequences/${sequenceModal.id}`, { method: 'PUT', body: JSON.stringify(body) })
+      if (editingSequence?.id) {
+        const updated = await apiFetch<EmailSequence>(`/api/email/sequences/${editingSequence.id}`, { method: 'PUT', body: JSON.stringify(body) })
         setSequences((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
       } else {
         const created = await apiFetch<EmailSequence>('/api/email/sequences', { method: 'POST', body: JSON.stringify(body) })
         setSequences((prev) => [created, ...prev])
       }
-      setSequenceModal(null)
+      setEditingSequence(null)
     } catch (err: any) {
       setError(err.message || 'Failed to save sequence')
     } finally {
@@ -240,7 +241,134 @@ function TemplatesContent() {
         ))}
       </div>
 
-      {tab === 'templates' && (
+      {/* ── Inline Template Form (replaces modal) ── */}
+      {tab === 'templates' && editingTemplate && (
+        <div id="inline-template-form" className="panel-container" style={{ ...panel.container, marginBottom: 24, animation: 'slideUp 0.25s ease-out' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <h2 style={{ ...typeography.subtitle, margin: 0 }}>{editingTemplate.id ? 'Edit Template' : 'New Template'}</h2>
+            <button type="button" style={{ ...buttons.small, fontSize: 18, lineHeight: 1, padding: '4px 12px' }} onClick={() => setEditingTemplate(null)}>×</button>
+          </div>
+          <form onSubmit={handleSaveTemplate} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <label style={forms.group}>
+              <span style={forms.label}>Name</span>
+              <input className="form-input" style={forms.input} required value={templateForm.name} onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })} placeholder="e.g., Welcome email" autoFocus />
+            </label>
+            <label style={forms.group}>
+              <span style={forms.label}>Subject</span>
+              <input className="form-input" style={forms.input} required value={templateForm.subject} onChange={(e) => setTemplateForm({ ...templateForm, subject: e.target.value })} placeholder="Email subject line" />
+            </label>
+            <label style={forms.group}>
+              <span style={forms.label}>Body</span>
+              <textarea className="form-textarea" style={forms.textarea} rows={8} value={templateForm.body} onChange={(e) => setTemplateForm({ ...templateForm, body: e.target.value })} placeholder="Hi {contact.firstName}, ..." />
+            </label>
+            <div style={forms.group}>
+              <span style={forms.label}>Insert variable</span>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {TEMPLATE_VARS.map((v) => (
+                  <button key={v.key} type="button" style={buttons.small} onClick={() => insertVar(v.key)}>
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button type="button" style={buttons.secondary} onClick={() => setEditingTemplate(null)}>Cancel</button>
+              <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Save Template'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ── Inline Sequence Form (replaces modal) ── */}
+      {tab === 'sequences' && editingSequence && (
+        <div id="inline-sequence-form" className="panel-container" style={{ ...panel.container, marginBottom: 24, animation: 'slideUp 0.25s ease-out' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <h2 style={{ ...typeography.subtitle, margin: 0 }}>{editingSequence.id ? 'Edit Sequence' : 'New Sequence'}</h2>
+            <button type="button" style={{ ...buttons.small, fontSize: 18, lineHeight: 1, padding: '4px 12px' }} onClick={() => setEditingSequence(null)}>×</button>
+          </div>
+          <form onSubmit={handleSaveSequence} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <label style={forms.group}>
+              <span style={forms.label}>Name</span>
+              <input className="form-input" style={forms.input} required value={sequenceForm.name} onChange={(e) => setSequenceForm({ ...sequenceForm, name: e.target.value })} placeholder="e.g., Onboarding sequence" autoFocus />
+            </label>
+            <label style={forms.group}>
+              <span style={forms.label}>Description</span>
+              <input className="form-input" style={forms.input} value={sequenceForm.description} onChange={(e) => setSequenceForm({ ...sequenceForm, description: e.target.value })} placeholder="What does this sequence do?" />
+            </label>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ ...layout.header, marginBottom: 0 }}>
+                <span style={forms.label}>Steps</span>
+                <button type="button" style={buttons.small} onClick={addStep}>+ Add step</button>
+              </div>
+              {sequenceForm.steps.map((step, idx) => (
+                <div key={idx} style={{ ...panel.compact, padding: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>Step {idx + 1}</span>
+                    <button type="button" style={buttons.danger} onClick={() => removeStep(idx)}>Remove</button>
+                  </div>
+                  <div style={forms.row}>
+                    <label style={forms.group}>
+                      <span style={forms.label}>Subject</span>
+                      <input className="form-input" style={forms.input} value={step.subject} onChange={(e) => updateStep(idx, { subject: e.target.value })} placeholder="Email subject" />
+                    </label>
+                    <label style={forms.group}>
+                      <span style={forms.label}>Delay (days)</span>
+                      <input className="form-input" style={forms.input} type="number" min={0} value={step.delayDays} onChange={(e) => updateStep(idx, { delayDays: Number(e.target.value) })} />
+                    </label>
+                  </div>
+                  <label style={forms.group}>
+                    <span style={forms.label}>Body</span>
+                    <textarea className="form-textarea" style={forms.textarea} rows={4} value={step.body} onChange={(e) => updateStep(idx, { body: e.target.value })} placeholder="Hi {contact.firstName}, ..." />
+                  </label>
+                  <div style={forms.group}>
+                    <span style={forms.label}>Insert variable</span>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {TEMPLATE_VARS.map((v) => (
+                        <button key={v.key} type="button" style={buttons.small} onClick={() => insertSeqVar(v.key, idx)}>
+                          {v.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button type="button" style={buttons.secondary} onClick={() => setEditingSequence(null)}>Cancel</button>
+              <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Save Sequence'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ── Inline Enroll Form (replaces modal) ── */}
+      {enrollSequence && (
+        <div id="inline-enroll-form" className="panel-container" style={{ ...panel.container, marginBottom: 24, animation: 'slideUp 0.25s ease-out' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <h2 style={{ ...typeography.subtitle, margin: 0 }}>Enroll contact in “{enrollSequence.name}”</h2>
+            <button type="button" style={{ ...buttons.small, fontSize: 18, lineHeight: 1, padding: '4px 12px' }} onClick={() => setEnrollSequence(null)}>×</button>
+          </div>
+          <form onSubmit={handleEnroll} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <label style={forms.group}>
+              <span style={forms.label}>Contact</span>
+              <select className="form-select" style={forms.select} required value={enrollContactId} onChange={(e) => setEnrollContactId(e.target.value)}>
+                <option value="">Select contact</option>
+                {contacts.map((c) => (
+                  <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
+                ))}
+              </select>
+            </label>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button type="button" style={buttons.secondary} onClick={() => setEnrollSequence(null)}>Cancel</button>
+              <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Enrolling...' : 'Enroll'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {tab === 'templates' && !editingTemplate && (
         <div className="panel-container" style={panel.container}>
           <div className="table-wrapper">
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -273,7 +401,7 @@ function TemplatesContent() {
         </div>
       )}
 
-      {tab === 'sequences' && (
+      {tab === 'sequences' && !editingSequence && !enrollSequence && (
         <div className="panel-container" style={panel.container}>
           <div className="table-wrapper">
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -310,138 +438,6 @@ function TemplatesContent() {
         </div>
       )}
 
-      {templateModal && (
-        <div
-          className="modal-overlay"
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-          onClick={() => setTemplateModal(null)}
-        >
-          <div className="modal-content" style={{ ...panel.container, width: '100%', maxWidth: 640, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{templateModal.id ? 'Edit Template' : 'New Template'}</h2>
-            <form onSubmit={handleSaveTemplate} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label style={forms.group}>
-                <span style={forms.label}>Name</span>
-                <input style={forms.input} required value={templateForm.name} onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })} />
-              </label>
-              <label style={forms.group}>
-                <span style={forms.label}>Subject</span>
-                <input style={forms.input} required value={templateForm.subject} onChange={(e) => setTemplateForm({ ...templateForm, subject: e.target.value })} />
-              </label>
-              <label style={forms.group}>
-                <span style={forms.label}>Body</span>
-                <textarea style={forms.textarea} rows={8} value={templateForm.body} onChange={(e) => setTemplateForm({ ...templateForm, body: e.target.value })} />
-              </label>
-              <div style={forms.group}>
-                <span style={forms.label}>Insert variable</span>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {TEMPLATE_VARS.map((v) => (
-                    <button key={v.key} type="button" style={buttons.small} onClick={() => insertVar(v.key)}>
-                      {v.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button type="button" style={buttons.secondary} onClick={() => setTemplateModal(null)}>Cancel</button>
-                <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Save Template'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {sequenceModal && (
-        <div
-          className="modal-overlay"
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-          onClick={() => setSequenceModal(null)}
-        >
-          <div className="modal-content" style={{ ...panel.container, width: '100%', maxWidth: 700, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{sequenceModal.id ? 'Edit Sequence' : 'New Sequence'}</h2>
-            <form onSubmit={handleSaveSequence} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label style={forms.group}>
-                <span style={forms.label}>Name</span>
-                <input style={forms.input} required value={sequenceForm.name} onChange={(e) => setSequenceForm({ ...sequenceForm, name: e.target.value })} />
-              </label>
-              <label style={forms.group}>
-                <span style={forms.label}>Description</span>
-                <input style={forms.input} value={sequenceForm.description} onChange={(e) => setSequenceForm({ ...sequenceForm, description: e.target.value })} />
-              </label>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ ...layout.header, marginBottom: 0 }}>
-                  <span style={forms.label}>Steps</span>
-                  <button type="button" style={buttons.small} onClick={addStep}>+ Add step</button>
-                </div>
-                {sequenceForm.steps.map((step, idx) => (
-                  <div key={idx} style={{ ...panel.compact, padding: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                      <span style={{ fontWeight: 700, fontSize: 14 }}>Step {idx + 1}</span>
-                      <button type="button" style={buttons.danger} onClick={() => removeStep(idx)}>Remove</button>
-                    </div>
-                    <div style={forms.row}>
-                      <label style={forms.group}>
-                        <span style={forms.label}>Subject</span>
-                        <input style={forms.input} value={step.subject} onChange={(e) => updateStep(idx, { subject: e.target.value })} />
-                      </label>
-                      <label style={forms.group}>
-                        <span style={forms.label}>Delay (days)</span>
-                        <input style={forms.input} type="number" min={0} value={step.delayDays} onChange={(e) => updateStep(idx, { delayDays: Number(e.target.value) })} />
-                      </label>
-                    </div>
-                    <label style={forms.group}>
-                      <span style={forms.label}>Body</span>
-                      <textarea style={forms.textarea} rows={4} value={step.body} onChange={(e) => updateStep(idx, { body: e.target.value })} />
-                    </label>
-                    <div style={forms.group}>
-                      <span style={forms.label}>Insert variable</span>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {TEMPLATE_VARS.map((v) => (
-                          <button key={v.key} type="button" style={buttons.small} onClick={() => insertSeqVar(v.key, idx)}>
-                            {v.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button type="button" style={buttons.secondary} onClick={() => setSequenceModal(null)}>Cancel</button>
-                <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Save Sequence'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {enrollSequence && (
-        <div
-          className="modal-overlay"
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-          onClick={() => setEnrollSequence(null)}
-        >
-          <div className="modal-content" style={{ ...panel.container, width: '100%', maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Enroll contact in “{enrollSequence.name}”</h2>
-            <form onSubmit={handleEnroll} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label style={forms.group}>
-                <span style={forms.label}>Contact</span>
-                <select style={forms.select} required value={enrollContactId} onChange={(e) => setEnrollContactId(e.target.value)}>
-                  <option value="">Select contact</option>
-                  {contacts.map((c) => (
-                    <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
-                  ))}
-                </select>
-              </label>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button type="button" style={buttons.secondary} onClick={() => setEnrollSequence(null)}>Cancel</button>
-                <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Enrolling...' : 'Enroll'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
       <ConfirmDialog
         open={!!confirmDelete}
         title={confirmDelete?._type === 'sequence' ? 'Delete Sequence?' : 'Delete Template?'}

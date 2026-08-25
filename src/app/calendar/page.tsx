@@ -7,7 +7,7 @@ import Spinner from '../components/Spinner'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { apiFetch } from '../lib/api'
 import { layout, panel, typeography, forms, buttons, statusBadge } from '../lib/styles'
-import type { CalendarEvent, BookingSlot, Contact, Company } from '../lib/types'
+import type { CalendarEvent, Contact, Company } from '../lib/types'
 
 const formatDate = (d?: string | null) => {
   if (!d) return '—'
@@ -21,16 +21,28 @@ const formatTime = (d?: string | null) => {
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+interface BookingSlot {
+  id: string
+  userId: string
+  tenantId: string
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+  durationMin: number
+  isActive: boolean
+}
+
 function CalendarContent() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [slots, setSlots] = useState<BookingSlot[]>([])
   const [contacts, setContacts] = useState<Contact[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
+  const [tenants, setTenants] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [syncing, setSyncing] = useState(false)
 
-  const [showEventModal, setShowEventModal] = useState(false)
+  const [showEventForm, setShowEventForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<any>(null)
 
@@ -47,30 +59,36 @@ function CalendarContent() {
   })
 
   const [slotForm, setSlotForm] = useState<{
-    weekday: number
+    dayOfWeek: number
     startTime: string
     endTime: string
-    durationMinutes: number
-  }>({ weekday: 1, startTime: '09:00', endTime: '17:00', durationMinutes: 30 })
+    durationMin: number
+    tenantId: string
+  }>({ dayOfWeek: 1, startTime: '09:00', endTime: '17:00', durationMin: 30, tenantId: '' })
 
   const load = useCallback(async () => {
     try {
-      const [eventsRes, slotsRes, contactsRes, companiesRes] = await Promise.all([
+      const [eventsRes, slotsRes, contactsRes, companiesRes, tenantsRes] = await Promise.all([
         apiFetch<{ data: CalendarEvent[] }>('/api/calendar/events'),
-        apiFetch<{ data: BookingSlot[] }>('/api/calendar/booking-slots'),
+        apiFetch<{ data: BookingSlot[] }>('/api/bookings/slots?limit=100'),
         apiFetch<{ data: Contact[] }>('/api/contacts'),
         apiFetch<{ data: Company[] }>('/api/companies'),
+        apiFetch<{ data: { id: string; name: string }[] }>('/api/admin/tenants').catch(() => ({ data: [] as { id: string; name: string }[] })),
       ])
       setEvents(eventsRes.data || [])
       setSlots(slotsRes.data || [])
       setContacts(contactsRes.data || [])
       setCompanies(companiesRes.data || [])
+      setTenants(tenantsRes.data || [])
+      if (tenantsRes.data?.[0] && !slotForm.tenantId) {
+        setSlotForm((prev) => ({ ...prev, tenantId: tenantsRes.data[0].id }))
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load calendar')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     load()
@@ -129,7 +147,7 @@ function CalendarContent() {
           description: eventForm.description,
         }),
       })
-      setShowEventModal(false)
+      setShowEventForm(false)
       setEventForm({ title: '', date: '', time: '', duration: 60, attendees: '', location: '', contactId: '', companyId: '', description: '' })
       await load()
     } catch (err: any) {
@@ -143,9 +161,15 @@ function CalendarContent() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      await apiFetch('/api/calendar/booking-slots', {
+      await apiFetch('/api/bookings/slots', {
         method: 'POST',
-        body: JSON.stringify(slotForm),
+        body: JSON.stringify({
+          tenantId: slotForm.tenantId,
+          weekday: slotForm.dayOfWeek,
+          startTime: slotForm.startTime,
+          endTime: slotForm.endTime,
+          durationMinutes: slotForm.durationMin,
+        }),
       })
       await load()
     } catch (err: any) {
@@ -155,20 +179,18 @@ function CalendarContent() {
     }
   }
 
-  const handleDeleteSlot = (slot: any) => {
+  const handleDeleteSlot = (slot: BookingSlot) => {
     setConfirmDelete(slot)
   }
 
-  const performDeleteSlot = async (slot: any) => {
+  const performDeleteSlot = async (slot: BookingSlot) => {
     try {
-      await apiFetch(`/api/calendar/booking-slots/${slot.id}`, { method: 'DELETE' })
+      await apiFetch(`/api/bookings/slots/${slot.id}`, { method: 'DELETE' })
       setSlots((prev) => prev.filter((s) => s.id !== slot.id))
     } catch (err: any) {
       setError(err.message || 'Failed to delete slot')
     }
   }
-
-  const publicBookingLink = typeof window !== 'undefined' ? `${window.location.origin}/book/me` : ''
 
   if (loading) {
     return (
@@ -184,13 +206,85 @@ function CalendarContent() {
         <h1 style={{ ...typeography.title, marginBottom: 0 }}>Calendar</h1>
         <div style={{ display: 'flex', gap: 12 }}>
           <button style={buttons.secondary} onClick={handleSync} disabled={syncing}>{syncing ? 'Syncing...' : 'Sync Calendar'}</button>
-          <button style={buttons.primary} onClick={() => setShowEventModal(true)}>+ New Event</button>
+          <button style={buttons.primary} onClick={() => setShowEventForm(!showEventForm)}>{showEventForm ? '× Cancel' : '+ New Event'}</button>
         </div>
       </div>
 
       {error && (
         <div style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: 'var(--rust)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>
           {error}
+        </div>
+      )}
+
+      {/* ── Inline New Event Form (replaces modal) ── */}
+      {showEventForm && (
+        <div id="inline-event-form" className="panel-container" style={{ ...panel.container, marginBottom: 24, animation: 'slideUp 0.25s ease-out' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <h2 style={{ ...typeography.subtitle, margin: 0 }}>New event</h2>
+            <button type="button" style={{ ...buttons.small, fontSize: 18, lineHeight: 1, padding: '4px 12px' }} onClick={() => setShowEventForm(false)}>×</button>
+          </div>
+          <form onSubmit={handleCreateEvent} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <label style={forms.group}>
+              <span style={forms.label}>Title</span>
+              <input className="form-input" style={forms.input} required value={eventForm.title} onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })} placeholder="e.g., Discovery call with Acme Corp" autoFocus />
+            </label>
+
+            <div style={forms.row}>
+              <label style={forms.group}>
+                <span style={forms.label}>Date</span>
+                <input className="form-input" style={forms.input} type="date" required value={eventForm.date} onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })} />
+              </label>
+              <label style={forms.group}>
+                <span style={forms.label}>Time</span>
+                <input className="form-input" style={forms.input} type="time" required value={eventForm.time} onChange={(e) => setEventForm({ ...eventForm, time: e.target.value })} />
+              </label>
+              <label style={forms.group}>
+                <span style={forms.label}>Duration (min)</span>
+                <input className="form-input" style={forms.input} type="number" min={5} value={eventForm.duration} onChange={(e) => setEventForm({ ...eventForm, duration: Number(e.target.value) })} />
+              </label>
+            </div>
+
+            <label style={forms.group}>
+              <span style={forms.label}>Attendees (comma-separated emails)</span>
+              <input className="form-input" style={forms.input} value={eventForm.attendees} onChange={(e) => setEventForm({ ...eventForm, attendees: e.target.value })} placeholder="alice@example.com, bob@example.com" />
+            </label>
+
+            <label style={forms.group}>
+              <span style={forms.label}>Location</span>
+              <input className="form-input" style={forms.input} value={eventForm.location} onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })} placeholder="Zoom link, office address, etc." />
+            </label>
+
+            <div style={forms.row}>
+              <label style={forms.group}>
+                <span style={forms.label}>Linked contact</span>
+                <select className="form-select" style={forms.select} value={eventForm.contactId} onChange={(e) => setEventForm({ ...eventForm, contactId: e.target.value })}>
+                  <option value="">None</option>
+                  {contacts.map((c) => (
+                    <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={forms.group}>
+                <span style={forms.label}>Linked company</span>
+                <select className="form-select" style={forms.select} value={eventForm.companyId} onChange={(e) => setEventForm({ ...eventForm, companyId: e.target.value })}>
+                  <option value="">None</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <label style={forms.group}>
+              <span style={forms.label}>Description</span>
+              <textarea className="form-textarea" style={forms.textarea} value={eventForm.description} onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })} placeholder="Agenda, notes, etc." />
+            </label>
+
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button type="button" style={buttons.secondary} onClick={() => setShowEventForm(false)}>Cancel</button>
+              <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Create event'}</button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -233,18 +327,21 @@ function CalendarContent() {
           <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Booking pages</h2>
           <p style={{ ...typeography.muted, marginBottom: 12 }}>Configure your availability and share your public link.</p>
 
-          {publicBookingLink && (
-            <div style={{ ...panel.compact, marginBottom: 16, wordBreak: 'break-all' }}>
-              <div style={{ ...typeography.small, marginBottom: 4 }}>Your public link</div>
-              <Link href={publicBookingLink} target="_blank" style={{ color: 'var(--gold)', fontSize: 13 }}>{publicBookingLink}</Link>
-            </div>
-          )}
-
           <form onSubmit={handleSaveSlot} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {tenants.length > 1 && (
+              <label style={forms.group}>
+                <span style={forms.label}>Tenant</span>
+                <select className="form-select" style={forms.select} value={slotForm.tenantId} onChange={(e) => setSlotForm({ ...slotForm, tenantId: e.target.value })}>
+                  {tenants.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             <div style={forms.row}>
               <label style={forms.group}>
                 <span style={forms.label}>Weekday</span>
-                <select className="form-select" style={forms.select} value={slotForm.weekday} onChange={(e) => setSlotForm({ ...slotForm, weekday: Number(e.target.value) })}>
+                <select className="form-select" style={forms.select} value={slotForm.dayOfWeek} onChange={(e) => setSlotForm({ ...slotForm, dayOfWeek: Number(e.target.value) })}>
                   {WEEKDAYS.map((name, i) => (
                     <option key={i} value={i}>{name}</option>
                   ))}
@@ -252,7 +349,7 @@ function CalendarContent() {
               </label>
               <label style={forms.group}>
                 <span style={forms.label}>Duration (min)</span>
-                <select className="form-select" style={forms.select} value={slotForm.durationMinutes} onChange={(e) => setSlotForm({ ...slotForm, durationMinutes: Number(e.target.value) })}>
+                <select className="form-select" style={forms.select} value={slotForm.durationMin} onChange={(e) => setSlotForm({ ...slotForm, durationMin: Number(e.target.value) })}>
                   {[15, 30, 45, 60, 90, 120].map((m) => (
                     <option key={m} value={m}>{m} min</option>
                   ))}
@@ -269,100 +366,28 @@ function CalendarContent() {
                 <input className="form-input" style={forms.input} type="time" value={slotForm.endTime} onChange={(e) => setSlotForm({ ...slotForm, endTime: e.target.value })} />
               </label>
             </div>
-            <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Add availability'}</button>
+            <button type="submit" style={buttons.primary} disabled={submitting || !slotForm.tenantId}>{submitting ? 'Saving...' : 'Add availability'}</button>
           </form>
 
           <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
             {slots.map((slot) => (
               <div key={slot.id} style={{ ...panel.compact, padding: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ fontSize: 14 }}>
-                  <span style={{ fontWeight: 600 }}>{WEEKDAYS[slot.weekday]}</span>
-                  {' '}<span style={{ color: 'var(--fg-dim)' }}>{slot.startTime.slice(0, 5)}–{slot.endTime.slice(0, 5)} · {slot.durationMinutes} min</span>
+                  <span style={{ fontWeight: 600 }}>{WEEKDAYS[slot.dayOfWeek]}</span>
+                  {' '}<span style={{ color: 'var(--fg-dim)' }}>{slot.startTime.slice(0, 5)}–{slot.endTime.slice(0, 5)} · {slot.durationMin} min</span>
                 </div>
                 <button style={buttons.danger} onClick={() => handleDeleteSlot(slot)}>Delete</button>
               </div>
             ))}
+            {slots.length === 0 && <p style={{ ...typeography.small, color: 'var(--fg-dim)' }}>No availability configured yet.</p>}
           </div>
         </div>
       </div>
 
-      {showEventModal && (
-        <div
-          className="modal-overlay"
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-          onClick={() => setShowEventModal(false)}
-        >
-          <div className="modal-content" style={{ ...panel.container, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>New event</h2>
-            <form onSubmit={handleCreateEvent} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label style={forms.group}>
-                <span style={forms.label}>Title</span>
-                <input className="form-input" style={forms.input} required value={eventForm.title} onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })} />
-              </label>
-
-              <div style={forms.row}>
-                <label style={forms.group}>
-                  <span style={forms.label}>Date</span>
-                  <input className="form-input" style={forms.input} type="date" required value={eventForm.date} onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })} />
-                </label>
-                <label style={forms.group}>
-                  <span style={forms.label}>Time</span>
-                  <input className="form-input" style={forms.input} type="time" required value={eventForm.time} onChange={(e) => setEventForm({ ...eventForm, time: e.target.value })} />
-                </label>
-                <label style={forms.group}>
-                  <span style={forms.label}>Duration (min)</span>
-                  <input className="form-input" style={forms.input} type="number" min={5} value={eventForm.duration} onChange={(e) => setEventForm({ ...eventForm, duration: Number(e.target.value) })} />
-                </label>
-              </div>
-
-              <label style={forms.group}>
-                <span style={forms.label}>Attendees (comma-separated emails)</span>
-                <input className="form-input" style={forms.input} value={eventForm.attendees} onChange={(e) => setEventForm({ ...eventForm, attendees: e.target.value })} />
-              </label>
-
-              <label style={forms.group}>
-                <span style={forms.label}>Location</span>
-                <input className="form-input" style={forms.input} value={eventForm.location} onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })} />
-              </label>
-
-              <div style={forms.row}>
-                <label style={forms.group}>
-                  <span style={forms.label}>Linked contact</span>
-                  <select className="form-select" style={forms.select} value={eventForm.contactId} onChange={(e) => setEventForm({ ...eventForm, contactId: e.target.value })}>
-                    <option value="">None</option>
-                    {contacts.map((c) => (
-                      <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
-                    ))}
-                  </select>
-                </label>
-                <label style={forms.group}>
-                  <span style={forms.label}>Linked company</span>
-                  <select className="form-select" style={forms.select} value={eventForm.companyId} onChange={(e) => setEventForm({ ...eventForm, companyId: e.target.value })}>
-                    <option value="">None</option>
-                    {companies.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <label style={forms.group}>
-                <span style={forms.label}>Description</span>
-                <textarea className="form-textarea" style={forms.textarea} value={eventForm.description} onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })} />
-              </label>
-
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                <button type="button" style={buttons.secondary} onClick={() => setShowEventModal(false)}>Cancel</button>
-                <button type="submit" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Create event'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
       <ConfirmDialog
         open={!!confirmDelete}
         title="Delete Booking Slot?"
-        itemName={confirmDelete ? `${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][confirmDelete.weekday]} ${confirmDelete.startTime}-${confirmDelete.endTime}` : undefined}
+        itemName={confirmDelete ? `${WEEKDAYS[confirmDelete.dayOfWeek]} ${confirmDelete.startTime}-${confirmDelete.endTime}` : undefined}
         onCancel={() => setConfirmDelete(null)}
         onConfirm={() => { performDeleteSlot(confirmDelete); setConfirmDelete(null) }}
       />
