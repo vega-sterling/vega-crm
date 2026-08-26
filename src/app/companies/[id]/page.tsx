@@ -61,7 +61,7 @@ function CompanyDetailContent() {
   const [activeTab, setActiveTab] = useState<'timeline' | 'contacts' | 'tasks'>('timeline')
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>('ALL')
 
-  const [contactModal, setContactModal] = useState(false)
+  const [showAddContact, setShowAddContact] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [following, setFollowing] = useState(false)
 
@@ -191,7 +191,7 @@ function CompanyDetailContent() {
         method: 'POST', body: JSON.stringify({ ...contactForm, companyId, tenantId: company.tenantId }),
       })
       setContacts((prev) => [created, ...prev])
-      setContactModal(false)
+      setShowAddContact(false)
       setContactForm({ firstName: '', lastName: '', email: '', phone: '', title: '' })
     } catch (err: any) { setError(err.message || 'Failed to add contact') }
     finally { setSubmitting(false) }
@@ -216,7 +216,7 @@ function CompanyDetailContent() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button className="btn-touch" style={buttons.secondary} onClick={() => setContactModal(true)}>Add Contact</button>
+          <button className="btn-touch" style={buttons.secondary} onClick={() => { setShowAddContact(true); setActiveTab('contacts') }}>Add Contact</button>
         </div>
       </div>
 
@@ -237,7 +237,7 @@ function CompanyDetailContent() {
         {/* ════════════════ LEFT SIDEBAR ════════════════ */}
         <div className="record-left" style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 80 }}>
           {/* Key Properties Card */}
-          <div className="panel-container" style={panel.container}>
+          <div id="company-properties" className="panel-container" style={panel.container}>
             <h2 style={{ ...typeography.subtitle, marginTop: 0, marginBottom: 16 }}>Properties</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <PropertyQuickEdit label="Phone" value={company.phone} type="tel" onSave={(v) => handlePropertySave('phone', v)} />
@@ -278,7 +278,7 @@ function CompanyDetailContent() {
             <button
               className="btn-touch"
               style={{ ...buttons.secondary, width: '100%' }}
-              onClick={() => setContactModal(true)}
+              onClick={() => document.getElementById('company-properties')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
             >Edit Details</button>
             <button
               className="btn-touch"
@@ -400,24 +400,89 @@ function CompanyDetailContent() {
           {/* Contacts Tab */}
           {activeTab === 'contacts' && (
             <div className="panel-container" style={panel.container}>
-              {contacts.length === 0 ? (
+              {/* Inline Add Contact Form */}
+              {showAddContact && (
+                <div style={{
+                  animation: 'slideUp 0.2s ease-out',
+                  marginBottom: 20,
+                  padding: 16,
+                  backgroundColor: 'var(--panel-elevated)',
+                  borderRadius: 12,
+                  border: '1px solid var(--panel-border)',
+                }}>
+                  <h3 style={{ ...typeography.subtitle, marginTop: 0, marginBottom: 16 }}>Add Contact</h3>
+                  <form onSubmit={handleAddContact} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div style={forms.row}>
+                      <label style={forms.group}><span style={forms.label}>First name</span><input className="form-input" style={forms.input} required autoFocus value={contactForm.firstName} onChange={(e) => setContactForm({ ...contactForm, firstName: e.target.value })} /></label>
+                      <label style={forms.group}><span style={forms.label}>Last name</span><input className="form-input" style={forms.input} required value={contactForm.lastName} onChange={(e) => setContactForm({ ...contactForm, lastName: e.target.value })} /></label>
+                    </div>
+                    <div style={forms.row}>
+                      <label style={forms.group}><span style={forms.label}>Email</span><input className="form-input" style={forms.input} type="email" value={contactForm.email} onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })} /></label>
+                      <label style={forms.group}><span style={forms.label}>Phone</span><input className="form-input" style={forms.input} value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} /></label>
+                    </div>
+                    <label style={forms.group}><span style={forms.label}>Title</span><input className="form-input" style={forms.input} value={contactForm.title} onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })} /></label>
+                    <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
+                      <button type="button" className="btn-touch" style={buttons.secondary} onClick={() => setShowAddContact(false)}>Cancel</button>
+                      <button type="submit" className="btn-touch" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Save Contact'}</button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {contacts.length === 0 && !showAddContact ? (
                 <p style={{ color: 'var(--fg-dim)' }}>No contacts yet.</p>
               ) : (
-                <div className="table-wrapper" style={{ overflowX: 'auto' }}>
-                  <table style={table.table}>
-                    <thead><tr><th style={table.th}>Name</th><th style={table.th}>Email</th><th style={table.th}>Phone</th><th style={table.th}>Title</th></tr></thead>
-                    <tbody>
-                      {contacts.map((c) => (
-                        <tr key={c.id} style={table.tr}>
-                          <td style={table.td}><Link href={`/contacts/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)' }}>{c.firstName} {c.lastName}</Link></td>
-                          <td style={table.td}>{c.email || '—'}</td>
-                          <td style={table.td}>{c.phone || '—'}</td>
-                          <td style={table.td}>{c.title || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <>
+                  {/* Desktop / Tablet Table View */}
+                  <div className="list-table-view" style={{ overflowX: 'auto' }}>
+                    <table style={table.table}>
+                      <thead><tr><th style={table.th}>Name</th><th style={table.th}>Email</th><th style={table.th}>Phone</th><th style={table.th}>Title</th></tr></thead>
+                      <tbody>
+                        {contacts.map((c) => (
+                          <tr key={c.id} style={table.tr}>
+                            <td style={table.td}><Link href={`/contacts/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)' }}>{c.firstName} {c.lastName}</Link></td>
+                            <td style={table.td}>{c.email || '—'}</td>
+                            <td style={table.td}>{c.phone || '—'}</td>
+                            <td style={table.td}>{c.title || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Card View */}
+                  <div className="list-card-view" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {contacts.map((c) => (
+                      <div key={c.id} style={{
+                        padding: 16,
+                        borderRadius: 12,
+                        border: '1px solid var(--panel-border)',
+                        backgroundColor: 'var(--panel-elevated)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
+                      }}>
+                        <Link href={`/contacts/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)', fontSize: 15, minHeight: 44, display: 'flex', alignItems: 'center' }}>
+                          {c.firstName} {c.lastName}
+                        </Link>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <div style={{ fontSize: 13, color: 'var(--fg-dim)', minHeight: 44, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, opacity: 0.7 }}>Email</span>
+                            <span style={{ color: 'var(--fg)' }}>{c.email || '—'}</span>
+                          </div>
+                          <div style={{ fontSize: 13, color: 'var(--fg-dim)', minHeight: 44, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, opacity: 0.7 }}>Phone</span>
+                            <span style={{ color: 'var(--fg)' }}>{c.phone || '—'}</span>
+                          </div>
+                          <div style={{ fontSize: 13, color: 'var(--fg-dim)', minHeight: 44, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, opacity: 0.7 }}>Title</span>
+                            <span style={{ color: 'var(--fg)' }}>{c.title || '—'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -442,30 +507,6 @@ function CompanyDetailContent() {
           <TasksCard tasks={tasks} />
         </div>
       </div>
-
-      {/* Add Contact Modal */}
-      {contactModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }} onClick={() => setContactModal(false)}>
-          <div className="modal-content" style={{ ...panel.container, width: '100%', maxWidth: 520, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Add Contact</h2>
-            <form onSubmit={handleAddContact} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={forms.row}>
-                <label style={forms.group}><span style={forms.label}>First name</span><input className="form-input" style={forms.input} required value={contactForm.firstName} onChange={(e) => setContactForm({ ...contactForm, firstName: e.target.value })} /></label>
-                <label style={forms.group}><span style={forms.label}>Last name</span><input className="form-input" style={forms.input} required value={contactForm.lastName} onChange={(e) => setContactForm({ ...contactForm, lastName: e.target.value })} /></label>
-              </div>
-              <div style={forms.row}>
-                <label style={forms.group}><span style={forms.label}>Email</span><input className="form-input" style={forms.input} type="email" value={contactForm.email} onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })} /></label>
-                <label style={forms.group}><span style={forms.label}>Phone</span><input className="form-input" style={forms.input} value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} /></label>
-              </div>
-              <label style={forms.group}><span style={forms.label}>Title</span><input className="form-input" style={forms.input} value={contactForm.title} onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })} /></label>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button type="button" className="btn-touch" style={buttons.secondary} onClick={() => setContactModal(false)}>Cancel</button>
-                <button type="submit" className="btn-touch" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Save Contact'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
     </div>
   )
