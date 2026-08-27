@@ -4,21 +4,88 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import ProtectedLayout from '../components/ProtectedLayout'
 import Spinner from '../components/Spinner'
 import { apiFetch } from '../lib/api'
-import { layout, panel, typeography, forms, buttons, statusBadge } from '../lib/styles'
-import type { Deal, PipelineStage, Tenant, Activity, User } from '../lib/types'
+import { layout, panel, typeography, forms, buttons } from '../lib/styles'
+import type { Tenant } from '../lib/types'
+
+// ============================================================================
+// Helpers
+// ============================================================================
 
 const currencyFmt = (n: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n || 0)
 
-const formatDate = (d?: string | null) => {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+const compactCurrency = (n: number) => {
+  const v = n || 0
+  if (Math.abs(v) >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`
+  if (Math.abs(v) >= 1_000) return `$${(v / 1_000).toFixed(1)}K`
+  return currencyFmt(v)
 }
 
-interface DealsResponse {
-  stages?: PipelineStage[]
-  deals?: Deal[]
+// ── Date range presets ──────────────────────────────────────────────────────
+
+type PresetKey = 'today' | 'week' | 'month' | 'quarter' | 'year' | 'all'
+
+interface DateRange { from: string; to: string }
+
+function presetRange(preset: PresetKey): DateRange | null {
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+  const iso = (d: Date) => d.toISOString().slice(0, 10)
+
+  switch (preset) {
+    case 'today':
+      return { from: iso(today), to: iso(today) }
+    case 'week': {
+      const day = today.getDay() // 0 = Sunday
+      const from = new Date(today)
+      from.setDate(today.getDate() - day)
+      const to = new Date(from)
+      to.setDate(from.getDate() + 6)
+      return { from: iso(from), to: iso(to) }
+    }
+    case 'month': {
+      const from = new Date(now.getFullYear(), now.getMonth(), 1)
+      const to = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      return { from: iso(from), to: iso(to) }
+    }
+    case 'quarter': {
+      const q = Math.floor(now.getMonth() / 3)
+      const from = new Date(now.getFullYear(), q * 3, 1)
+      const to = new Date(now.getFullYear(), q * 3 + 3, 0)
+      return { from: iso(from), to: iso(to) }
+    }
+    case 'year': {
+      const from = new Date(now.getFullYear(), 0, 1)
+      const to = new Date(now.getFullYear(), 11, 31)
+      return { from: iso(from), to: iso(to) }
+    }
+    case 'all':
+      return null
+  }
 }
+
+/** Returns the previous equal-length period for period-over-period comparison. */
+function previousRange(range: DateRange | null): DateRange | null {
+  if (!range) return null
+  const from = new Date(range.from)
+  const to = new Date(range.to)
+  const len = to.getTime() - from.getTime()
+  const prevTo = new Date(from.getTime() - 86400000) // day before `from`
+  const prevFrom = new Date(prevTo.getTime() - len)
+  return { from: prevFrom.toISOString().slice(0, 10), to: prevTo.toISOString().slice(0, 10) }
+}
+
+const PRESETS: { key: PresetKey; label: string }[] = [
+  { key: 'today', label: 'Today' },
+  { key: 'week', label: 'This Week' },
+  { key: 'month', label: 'This Month' },
+  { key: 'quarter', label: 'This Quarter' },
+  { key: 'year', label: 'This Year' },
+  { key: 'all', label: 'All Time' },
+]
+
+// ── Chart components (kept from original, lightly enhanced) ─────────────────
 
 function Bar({ value, max, color, label, suffix }: { value: number; max: number; color: string; label: string; suffix?: string }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0
@@ -36,7 +103,7 @@ function Bar({ value, max, color, label, suffix }: { value: number; max: number;
   )
 }
 
-function Donut({ segments }: { segments: { label: string; value: number; color: string }[] }) {
+function Donut({ segments, centerLabel, centerValue }: { segments: { label: string; value: number; color: string }[]; centerLabel?: string; centerValue?: string }) {
   const total = segments.reduce((s, seg) => s + seg.value, 0)
   let acc = 0
   const size = 140
@@ -50,7 +117,7 @@ function Donut({ segments }: { segments: { label: string; value: number; color: 
           const pct = total > 0 ? seg.value / total : 0
           const offset = circumference - pct * circumference
           const dash = `${pct * circumference} ${circumference}`
-          const rot = (acc / total) * 360 - 90
+          const rot = total > 0 ? (acc / total) * 360 - 90 : -90
           acc += seg.value
           return (
             <circle
@@ -69,8 +136,13 @@ function Donut({ segments }: { segments: { label: string; value: number; color: 
           )
         })}
         <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" fill="var(--fg)" fontSize="16" fontWeight="700">
-          {total}
+          {centerValue ?? total}
         </text>
+        {centerLabel && (
+          <text x="50%" y="68%" textAnchor="middle" dominantBaseline="middle" fill="var(--fg-dim)" fontSize="9" fontWeight="500">
+            {centerLabel}
+          </text>
+        )}
       </svg>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {segments.map((seg, i) => (
@@ -85,127 +157,345 @@ function Donut({ segments }: { segments: { label: string; value: number; color: 
   )
 }
 
+/** Progress ring — circular gauge for completion rate. */
+function ProgressRing({ pct, color, label }: { pct: number; color: string; label: string }) {
+  const size = 120
+  const stroke = 12
+  const radius = (size - stroke) / 2
+  const circumference = 2 * Math.PI * radius
+  const dash = `${(pct / 100) * circumference} ${circumference}`
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--panel-border)" strokeWidth={stroke} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth={stroke}
+          strokeDasharray={dash}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          style={{ transition: 'stroke-dasharray .6s ease' }}
+        />
+        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" fill="var(--fg)" fontSize="22" fontWeight="700">
+          {pct}%
+        </text>
+      </svg>
+      <span style={{ color: 'var(--fg-dim)', fontSize: 13 }}>{label}</span>
+    </div>
+  )
+}
+
+// ── KPI card ─────────────────────────────────────────────────────────────────
+
+function KpiCard({ label, value, color, delta }: { label: string; value: string | number; color: string; delta?: { pct: number; positive: boolean } | null }) {
+  return (
+    <div className="panel-container" style={{ ...panel.container, position: 'relative' }}>
+      <div style={{ fontSize: 28, fontWeight: 800, color, letterSpacing: '-0.02em' }}>{value}</div>
+      <div style={{ color: 'var(--fg-dim)', fontSize: 14, marginTop: 6 }}>{label}</div>
+      {delta && (
+        <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600, color: delta.positive ? 'var(--emerald)' : 'var(--rust)' }}>
+          <span>{delta.positive ? '↑' : '↓'}</span>
+          <span>{Math.abs(delta.pct).toFixed(1)}%</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MiniKpi({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="panel-container" style={{ ...panel.compact, textAlign: 'center' }}>
+      <div style={{ fontSize: 24, fontWeight: 800, color }}>{value}</div>
+      <div style={{ color: 'var(--fg-dim)', fontSize: 12, marginTop: 4 }}>{label}</div>
+    </div>
+  )
+}
+
+// ============================================================================
+// Report type definitions (matching server responses)
+// ============================================================================
+
+interface FunnelStage {
+  stageId: string
+  name: string
+  color: string
+  position: number
+  probability: number
+  dealCount: number
+  totalValue: number
+  avgDealValue: number
+}
+interface FunnelData { stages: FunnelStage[] }
+
+interface ForecastMonth { month: string; count: number; weighted: number; raw: number }
+interface ForecastData {
+  periodStart: string
+  periodEnd: string
+  totalOpenValue: number
+  totalWeightedValue: number
+  byMonth: ForecastMonth[]
+}
+
+interface VelocityData {
+  totalClosed: number
+  averageDaysToClose: number
+  won: { count: number; value: number }
+  lost: { count: number; value: number }
+}
+
+interface ConversionStage {
+  stageId: string
+  name: string
+  count: number
+  isWonStage: boolean
+  isLostStage: boolean
+}
+interface ConversionData {
+  totalDeals: number
+  wonDeals: number
+  conversionRate: number
+  byStage: ConversionStage[]
+}
+
+interface ActivityData {
+  periodDays: number
+  dealsCreated: number
+  dealsUpdated: number
+  activitiesByType: { type: string; count: number }[]
+}
+
+interface LeadSourceData {
+  sources: { leadSource: string; dealCount: number; totalValue: number; avgValue: number }[]
+}
+
+interface RevenueByTenantData {
+  tenants: { tenantId: string; name: string; revenue: number; wonDeals: number }[]
+  totalRevenue: number
+}
+
+interface TaskCompletionData {
+  total: number
+  completed: number
+  overdue: number
+  dueSoon: number
+  completionRate: number
+  byStatus: {
+    PENDING: number
+    IN_PROGRESS: number
+    COMPLETED: number
+    CANCELLED: number
+  }
+}
+
+// ============================================================================
+// Main content
+// ============================================================================
+
 function ReportsContent() {
-  const [stages, setStages] = useState<PipelineStage[]>([])
-  const [deals, setDeals] = useState<Deal[]>([])
-  const [activities, setActivities] = useState<Activity[]>([])
   const [tenants, setTenants] = useState<Tenant[]>([])
-  const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  const [preset, setPreset] = useState<PresetKey>('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [tenantFilter, setTenantFilter] = useState('')
 
-  const load = useCallback(async () => {
+  // Report data
+  const [funnel, setFunnel] = useState<FunnelData | null>(null)
+  const [forecast, setForecast] = useState<ForecastData | null>(null)
+  const [velocity, setVelocity] = useState<VelocityData | null>(null)
+  const [conversion, setConversion] = useState<ConversionData | null>(null)
+  const [activity, setActivity] = useState<ActivityData | null>(null)
+  const [leadSource, setLeadSource] = useState<LeadSourceData | null>(null)
+  const [revenueByTenant, setRevenueByTenant] = useState<RevenueByTenantData | null>(null)
+  const [taskCompletion, setTaskCompletion] = useState<TaskCompletionData | null>(null)
+
+  // Previous-period data for comparison
+  const [prevForecast, setPrevForecast] = useState<ForecastData | null>(null)
+
+  // ── Load tenants (for the filter dropdown) ────────────────────────────────
+  useEffect(() => {
+    apiFetch<{ data: Tenant[] }>('/api/admin/tenants?limit=100')
+      .then((res) => setTenants(res.data || []))
+      .catch(() => {/* non-admins can't list tenants — silently ignore */})
+  }, [])
+
+  // ── Apply a preset ────────────────────────────────────────────────────────
+  const applyPreset = useCallback((key: PresetKey) => {
+    setPreset(key)
+    const range = presetRange(key)
+    if (range) {
+      setDateFrom(range.from)
+      setDateTo(range.to)
+    } else {
+      setDateFrom('')
+      setDateTo('')
+    }
+  }, [])
+
+  // ── Build query string ───────────────────────────────────────────────────
+  const buildQuery = useCallback((extra?: { dateFrom?: string; dateTo?: string }) => {
+    const params = new URLSearchParams()
+    if (tenantFilter) params.set('tenantId', tenantFilter)
+    const df = extra?.dateFrom ?? dateFrom
+    const dt = extra?.dateTo ?? dateTo
+    if (df) params.set('dateFrom', df)
+    if (dt) params.set('dateTo', dt)
+    return params.toString()
+  }, [tenantFilter, dateFrom, dateTo])
+
+  // ── Load all reports ──────────────────────────────────────────────────────
+  const loadReports = useCallback(async () => {
+    setLoading(true)
+    setError('')
     try {
-      const [dealsRes, actsRes, tenantsRes, usersRes] = await Promise.all([
-        apiFetch<DealsResponse>('/api/deals'),
-        apiFetch<{ data: Activity[] }>('/api/activities'),
-        apiFetch<{ data: Tenant[] }>('/api/admin/tenants'),
-        apiFetch<{ data: User[] }>('/api/admin/users'),
+      const q = buildQuery()
+      const qStr = q ? `?${q}` : ''
+
+      const [
+        funnelRes, forecastRes, velocityRes, conversionRes,
+        activityRes, leadSourceRes, revenueRes, taskRes,
+      ] = await Promise.all([
+        apiFetch<{ type: string; data: FunnelData }>(`/api/reports?type=funnel${qStr ? `&${q}` : ''}`),
+        apiFetch<{ type: string; data: ForecastData }>(`/api/reports?type=forecast${qStr ? `&${q}` : ''}`),
+        apiFetch<{ type: string; data: VelocityData }>(`/api/reports?type=velocity${qStr ? `&${q}` : ''}`),
+        apiFetch<{ type: string; data: ConversionData }>(`/api/reports?type=conversion${qStr ? `&${q}` : ''}`),
+        apiFetch<{ type: string; data: ActivityData }>(`/api/reports?type=activity${qStr ? `&${q}` : ''}`),
+        apiFetch<{ type: string; data: LeadSourceData }>(`/api/reports?type=lead-source${qStr ? `&${q}` : ''}`),
+        apiFetch<{ type: string; data: RevenueByTenantData }>(`/api/reports?type=revenue-by-tenant${qStr ? `&${q}` : ''}`),
+        apiFetch<{ type: string; data: TaskCompletionData }>(`/api/reports?type=task-completion${qStr ? `&${q}` : ''}`),
       ])
-      setStages(dealsRes.stages || [])
-      setDeals(dealsRes.deals || [])
-      setActivities(actsRes.data || [])
-      setTenants(tenantsRes.data || [])
-      setUsers(usersRes.data || [])
+
+      setFunnel(funnelRes.data)
+      setForecast(forecastRes.data)
+      setVelocity(velocityRes.data)
+      setConversion(conversionRes.data)
+      setActivity(activityRes.data)
+      setLeadSource(leadSourceRes.data)
+      setRevenueByTenant(revenueRes.data)
+      setTaskCompletion(taskRes.data)
+
+      // Period-over-period: fetch previous-period forecast for comparison.
+      // Only when we have an actual date range.
+      if (dateFrom && dateTo) {
+        const prev = previousRange({ from: dateFrom, to: dateTo })
+        if (prev) {
+          const prevQ = new URLSearchParams()
+          if (tenantFilter) prevQ.set('tenantId', tenantFilter)
+          prevQ.set('dateFrom', prev.from)
+          prevQ.set('dateTo', prev.to)
+          try {
+            const prevForecastRes = await apiFetch<{ type: string; data: ForecastData }>(
+              `/api/reports?type=forecast&${prevQ.toString()}`
+            )
+            setPrevForecast(prevForecastRes.data)
+          } catch {
+            setPrevForecast(null)
+          }
+        } else {
+          setPrevForecast(null)
+        }
+      } else {
+        setPrevForecast(null)
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load reports')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [buildQuery, dateFrom, dateTo, tenantFilter])
 
   useEffect(() => {
-    load()
-  }, [load])
+    loadReports()
+  }, [loadReports])
 
-  const filteredDeals = useMemo(() => {
-    return deals.filter((d) => {
-      if (dateFrom && d.expectedCloseDate && new Date(d.expectedCloseDate) < new Date(dateFrom)) return false
-      if (dateTo && d.expectedCloseDate && new Date(d.expectedCloseDate) > new Date(dateTo)) return false
-      return true
-    })
-  }, [deals, dateFrom, dateTo])
+  // ── Derived values ────────────────────────────────────────────────────────
+  const totalPipeline = useMemo(() => {
+    return funnel?.stages.reduce((s, st) => s + st.totalValue, 0) ?? 0
+  }, [funnel])
 
-  const funnel = useMemo(() => {
-    return stages.map((stage) => {
-      const stageDeals = filteredDeals.filter((d) => d.stageId === stage.id)
-      return {
-        stage,
-        count: stageDeals.length,
-        value: stageDeals.reduce((sum, d) => sum + (d.value || 0), 0),
-        weighted: stageDeals.reduce((sum, d) => sum + (d.value || 0) * (d.probability || 0) / 100, 0),
-      }
-    })
-  }, [stages, filteredDeals])
+  const weightedForecast = useMemo(() => {
+    return funnel?.stages.reduce((s, st) => s + st.totalValue * (st.probability / 100), 0) ?? 0
+  }, [funnel])
 
-  const revenueForecast = useMemo(() => funnel.reduce((s, f) => s + f.weighted, 0), [funnel])
+  const prevTotalPipeline = useMemo(() => {
+    if (!prevForecast) return null
+    // Note: forecast returns open deals in a future window, so we approximate
+    // previous-period "total pipeline" via totalOpenValue.
+    return prevForecast.totalOpenValue
+  }, [prevForecast])
 
-  const velocity = useMemo(() => {
-    return stages.map((stage) => {
-      const stageDeals = filteredDeals.filter((d) => d.stageId === stage.id)
-      const avgDays = stageDeals.length
-        ? stageDeals.reduce((sum, d) => {
-            const created = new Date(d.createdAt).getTime()
-            const now = Date.now()
-            return sum + (now - created) / 86400000
-          }, 0) / stageDeals.length
-        : 0
-      return { stage, avgDays }
-    })
-  }, [stages, filteredDeals])
+  const prevWeightedForecast = useMemo(() => {
+    if (!prevForecast) return null
+    return prevForecast.totalWeightedValue
+  }, [prevForecast])
 
-  const conversion = useMemo(() => {
-    return stages.map((stage) => {
-      const inStage = filteredDeals.filter((d) => d.stageId === stage.id)
-      const wonFromStage = inStage.filter((d) => d.status === 'WON').length
-      const pct = inStage.length ? Math.round((wonFromStage / inStage.length) * 100) : 0
-      return { stage, pct }
-    })
-  }, [stages, filteredDeals])
+  const deltaPct = (current: number, previous: number | null): { pct: number; positive: boolean } | null => {
+    if (previous === null || previous === 0) return null
+    const diff = current - previous
+    const pct = (diff / previous) * 100
+    return { pct, positive: pct >= 0 }
+  }
 
-  const activityByUser = useMemo(() => {
-    const counts: Record<string, number> = {}
-    activities.forEach((a) => {
-      counts[a.userId] = (counts[a.userId] || 0) + 1
-    })
-    return Object.entries(counts).map(([userId, count]) => ({
-      user: users.find((u) => u.id === userId),
-      count,
-    }))
-  }, [activities, users])
+  const totalPipelineDelta = deltaPct(totalPipeline, prevTotalPipeline)
+  const weightedForecastDelta = deltaPct(weightedForecast, prevWeightedForecast)
 
-  const leadSources = useMemo(() => {
-    const map: Record<string, number> = {}
-    filteredDeals.forEach((d) => {
-      const src = d.leadSource || 'Unknown'
-      map[src] = (map[src] || 0) + 1
-    })
+  const maxFunnelValue = Math.max(...(funnel?.stages.map((f) => f.totalValue) ?? [1]), 1)
+
+  // Win/loss derived
+  const winRate = velocity && (velocity.won.count + velocity.lost.count) > 0
+    ? Math.round((velocity.won.count / (velocity.won.count + velocity.lost.count)) * 100)
+    : 0
+
+  // Activity colors
+  const activityColors: Record<string, string> = {
+    CALL: 'var(--gold)',
+    EMAIL: 'var(--blue)',
+    NOTE: 'var(--emerald)',
+    MEETING: 'var(--violet)',
+  }
+  const maxActivity = Math.max(...(activity?.activitiesByType.map((a) => a.count) ?? [1]), 1)
+
+  // Lead source donut
+  const leadSourceSegments = useMemo(() => {
+    if (!leadSource) return []
     const colors = ['var(--gold)', 'var(--blue)', 'var(--emerald)', 'var(--violet)', 'var(--cyan)', 'var(--rust)']
-    return Object.entries(map).map(([label, value], i) => ({ label, value, color: colors[i % colors.length] }))
-  }, [filteredDeals])
+    return leadSource.sources.map((s, i) => ({ label: s.leadSource, value: s.dealCount, color: colors[i % colors.length] }))
+  }, [leadSource])
 
-  const revenueByTenant = useMemo(() => {
-    const map: Record<string, number> = {}
-    filteredDeals.forEach((d) => {
-      map[d.tenantId] = (map[d.tenantId] || 0) + (d.value || 0)
-    })
-    const max = Math.max(...Object.values(map), 1)
-    return { rows: Object.entries(map).map(([tenantId, value]) => ({ tenant: tenants.find((t) => t.id === tenantId), value })), max }
-  }, [filteredDeals, tenants])
+  // Revenue by tenant max
+  const maxRevenue = Math.max(...(revenueByTenant?.tenants.map((t) => t.revenue) ?? [1]), 1)
 
-  const handleExport = () => {
+  // Task completion donut
+  const taskStatusSegments = useMemo(() => {
+    if (!taskCompletion) return []
+    return [
+      { label: 'Pending', value: taskCompletion.byStatus.PENDING, color: 'var(--gold)' },
+      { label: 'In Progress', value: taskCompletion.byStatus.IN_PROGRESS, color: 'var(--blue)' },
+      { label: 'Completed', value: taskCompletion.byStatus.COMPLETED, color: 'var(--emerald)' },
+      { label: 'Cancelled', value: taskCompletion.byStatus.CANCELLED, color: 'var(--fg-dimmer)' },
+    ]
+  }, [taskCompletion])
+
+  // ── Export handlers ──────────────────────────────────────────────────────
+  const handleExportJSON = () => {
     const data = {
       generatedAt: new Date().toISOString(),
       dateRange: { from: dateFrom || null, to: dateTo || null },
+      tenantFilter: tenantFilter || null,
       funnel,
-      revenueForecast,
+      forecast,
       velocity,
       conversion,
-      activityByUser,
-      leadSources,
-      revenueByTenant: revenueByTenant.rows,
+      activity,
+      leadSource,
+      revenueByTenant,
+      taskCompletion,
     }
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -216,7 +506,28 @@ function ReportsContent() {
     URL.revokeObjectURL(url)
   }
 
-  if (loading) {
+  const handleExportCSV = () => {
+    if (!funnel) return
+    const header = ['Stage Name', 'Deal Count', 'Total Value', 'Avg Value', 'Weighted Value']
+    const rows = funnel.stages.map((s) => [
+      `"${s.name}"`,
+      s.dealCount,
+      s.totalValue.toFixed(2),
+      s.avgDealValue.toFixed(2),
+      (s.totalValue * (s.probability / 100)).toFixed(2),
+    ].join(','))
+    const csv = [header.join(','), ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vega-funnel-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  if (loading && !funnel) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
         <Spinner size={32} />
@@ -224,19 +535,46 @@ function ReportsContent() {
     )
   }
 
-  const maxFunnelValue = Math.max(...funnel.map((f) => f.value), 1)
-  const maxVelocity = Math.max(...velocity.map((v) => v.avgDays), 1)
-  const maxActivity = Math.max(...activityByUser.map((a) => a.count), 1)
-
   return (
     <div style={layout.page}>
-      <div className="reports-header" style={layout.header}>
-        <h1 style={{ ...typeography.title, marginBottom: 0 }}>Reports</h1>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <input className="form-input" style={{ ...forms.input, width: 'auto' }} type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-          <input className="form-input" style={{ ...forms.input, width: 'auto' }} type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-          <button style={buttons.primary} onClick={handleExport}>Export JSON</button>
+      {/* Header */}
+      <div style={layout.header}>
+        <h1 style={{ ...typeography.title, fontSize: 40, fontWeight: 700, marginBottom: 0 }}>Reports & Analytics</h1>
+        <div className="reports-controls" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <input className="form-input" style={{ ...forms.input, width: 'auto' }} type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPreset('all') }} />
+          <input className="form-input" style={{ ...forms.input, width: 'auto' }} type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPreset('all') }} />
+          {tenants.length > 0 && (
+            <select
+              className="form-input"
+              style={{ ...forms.select, width: 'auto' }}
+              value={tenantFilter}
+              onChange={(e) => setTenantFilter(e.target.value)}
+            >
+              <option value="">All Tenants</option>
+              {tenants.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          )}
+          <button style={buttons.secondary} onClick={handleExportCSV}>Export CSV</button>
+          <button style={buttons.primary} onClick={handleExportJSON}>Export JSON</button>
         </div>
+      </div>
+
+      {/* Date range presets */}
+      <div className="reports-preset-row" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
+        {PRESETS.map((p) => (
+          <button
+            key={p.key}
+            className="reports-preset-btn"
+            style={preset === p.key
+              ? { ...buttons.primary, fontSize: 13, padding: '8px 14px' }
+              : { ...buttons.secondary, fontSize: 13, padding: '8px 14px' }}
+            onClick={() => applyPreset(p.key)}
+          >
+            {p.label}
+          </button>
+        ))}
       </div>
 
       {error && (
@@ -245,66 +583,182 @@ function ReportsContent() {
         </div>
       )}
 
+      {/* KPI cards row */}
       <div className="stat-grid" style={layout.grid}>
-        {[
-          { label: 'Total pipeline', value: currencyFmt(filteredDeals.reduce((s, d) => s + (d.value || 0), 0)), color: 'var(--gold)' },
-          { label: 'Weighted forecast', value: currencyFmt(revenueForecast), color: 'var(--emerald)' },
-          { label: 'Open deals', value: filteredDeals.filter((d) => d.status === 'OPEN').length, color: 'var(--blue)' },
-          { label: 'Won deals', value: filteredDeals.filter((d) => d.status === 'WON').length, color: 'var(--violet)' },
-        ].map((s) => (
-          <div key={s.label} className="panel-container" style={panel.container}>
-            <div style={{ fontSize: 24, fontWeight: 800, color: s.color }}>{s.value}</div>
-            <div style={{ color: 'var(--fg-dim)', fontSize: 14, marginTop: 6 }}>{s.label}</div>
-          </div>
-        ))}
+        <KpiCard label="Total Pipeline" value={compactCurrency(totalPipeline)} color="var(--gold)" delta={totalPipelineDelta} />
+        <KpiCard label="Weighted Forecast" value={compactCurrency(weightedForecast)} color="var(--emerald)" delta={weightedForecastDelta} />
+        <KpiCard label="Open Deals Value" value={compactCurrency(forecast?.totalOpenValue ?? 0)} color="var(--blue)" />
+        <KpiCard label="Won Revenue" value={compactCurrency(velocity?.won.value ?? 0)} color="var(--violet)" />
       </div>
 
-      <div className="project-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 24 }}>
+      {/* Two-column analytics grid */}
+      <div className="reports-analytics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginTop: 24 }}>
+
+        {/* Sales Funnel */}
         <div className="panel-container" style={panel.container}>
-          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Sales funnel</h2>
-          {funnel.map((f) => (
-            <Bar key={f.stage.id} label={f.stage.name} value={f.value} max={maxFunnelValue} color={f.stage.color} suffix={`${f.count} · ${currencyFmt(f.value)}`} />
+          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Sales Funnel</h2>
+          {funnel?.stages.map((f) => (
+            <Bar key={f.stageId} label={f.name} value={f.totalValue} max={maxFunnelValue} color={f.color} suffix={`${f.dealCount} · ${compactCurrency(f.totalValue)}`} />
           ))}
+          {funnel && funnel.stages.length === 0 && <p style={typeography.muted}>No deals in pipeline.</p>}
         </div>
 
+        {/* Monthly Forecast Chart */}
         <div className="panel-container" style={panel.container}>
-          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Revenue forecast</h2>
-          <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--emerald)' }}>{currencyFmt(revenueForecast)}</div>
-          <p style={{ ...typeography.muted, marginTop: 8 }}>Weighted pipeline value based on deal probability.</p>
+          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Monthly Forecast</h2>
+          <div className="reports-forecast-chart" style={{ display: 'flex', gap: 16, alignItems: 'flex-end', height: 180, marginTop: 16, paddingBottom: 8 }}>
+            {forecast?.byMonth.map((m) => {
+              const maxVal = Math.max(...(forecast.byMonth.map((x) => Math.max(x.weighted, x.raw))), 1)
+              const wH = (m.weighted / maxVal) * 140
+              const rH = (m.raw / maxVal) * 140
+              return (
+                <div key={m.month} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flex: 1, minWidth: 80 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 150 }}>
+                    <div title={`Raw: ${currencyFmt(m.raw)}`} style={{ width: 24, height: `${rH}px`, backgroundColor: 'var(--gold)', borderRadius: '4px 4px 0 0', transition: 'height .4s ease', opacity: 0.7 }} />
+                    <div title={`Weighted: ${currencyFmt(m.weighted)}`} style={{ width: 24, height: `${wH}px`, backgroundColor: 'var(--emerald)', borderRadius: '4px 4px 0 0', transition: 'height .4s ease' }} />
+                  </div>
+                  <span style={{ fontSize: 12, color: 'var(--fg-dim)' }}>
+                    {new Date(m.month + '-01').toLocaleDateString(undefined, { month: 'short' })}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--fg-dimmer)' }}>{m.count} deals</span>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: 16, marginTop: 12, fontSize: 12, color: 'var(--fg-dim)' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: 'var(--gold)', opacity: 0.7 }} />Raw Value</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: 'var(--emerald)' }} />Weighted</span>
+          </div>
         </div>
 
+        {/* Win/Loss Analysis */}
         <div className="panel-container" style={panel.container}>
-          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Pipeline velocity</h2>
-          {velocity.map((v) => (
-            <Bar key={v.stage.id} label={v.stage.name} value={v.avgDays} max={maxVelocity} color="var(--blue)" suffix={`${Math.round(v.avgDays)} days`} />
+          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Win / Loss Analysis</h2>
+          {velocity && (velocity.won.count + velocity.lost.count) > 0 ? (
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Donut
+                segments={[
+                  { label: 'Won', value: velocity.won.count, color: 'var(--emerald)' },
+                  { label: 'Lost', value: velocity.lost.count, color: 'var(--rust)' },
+                ]}
+                centerLabel="win rate"
+                centerValue={`${winRate}%`}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: 1, minWidth: 200 }}>
+                <div>
+                  <div style={{ fontSize: 13, color: 'var(--fg-dim)' }}>Win Rate</div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--emerald)' }}>{winRate}%</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, color: 'var(--fg-dim)' }}>Won Revenue</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--fg)' }}>{currencyFmt(velocity.won.value)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, color: 'var(--fg-dim)' }}>Lost Value</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--rust)' }}>{currencyFmt(velocity.lost.value)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, color: 'var(--fg-dim)' }}>Avg Days to Close</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--fg)' }}>{Math.round(velocity.averageDaysToClose)} days</div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p style={typeography.muted}>No closed deals to analyse.</p>
+          )}
+        </div>
+
+        {/* Task Completion Panel */}
+        <div className="panel-container" style={panel.container}>
+          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Task Completion</h2>
+          {taskCompletion ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+                <ProgressRing pct={taskCompletion.completionRate} color="var(--emerald)" label="Completion Rate" />
+                <Donut
+                  segments={taskStatusSegments}
+                  centerLabel="tasks"
+                  centerValue={`${taskCompletion.total}`}
+                />
+              </div>
+              <div className="reports-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                <MiniKpi label="Total" value={taskCompletion.total} color="var(--fg)" />
+                <MiniKpi label="Completed" value={taskCompletion.completed} color="var(--emerald)" />
+                <MiniKpi label="Overdue" value={taskCompletion.overdue} color="var(--rust)" />
+                <MiniKpi label="Due Soon" value={taskCompletion.dueSoon} color="var(--gold)" />
+              </div>
+            </div>
+          ) : (
+            <p style={typeography.muted}>No task data.</p>
+          )}
+        </div>
+
+        {/* Pipeline Velocity by Stage */}
+        <div className="panel-container" style={panel.container}>
+          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Conversion by Stage</h2>
+          {conversion?.byStage.map((s) => (
+            <Bar key={s.stageId} label={s.name} value={s.count} max={Math.max(...conversion.byStage.map((x) => x.count), 1)} color={s.isWonStage ? 'var(--emerald)' : s.isLostStage ? 'var(--rust)' : 'var(--blue)'} suffix={`${s.count}`} />
           ))}
+          {conversion && (
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--panel-border)' }}>
+              <div style={{ fontSize: 13, color: 'var(--fg-dim)' }}>Overall Conversion Rate</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--emerald)' }}>{conversion.conversionRate.toFixed(1)}%</div>
+            </div>
+          )}
         </div>
 
+        {/* Activity Breakdown */}
         <div className="panel-container" style={panel.container}>
-          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Deal conversion rates</h2>
-          {conversion.map((c) => (
-            <Bar key={c.stage.id} label={c.stage.name} value={c.pct} max={100} color={c.stage.color} suffix={`${c.pct}%`} />
+          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Activity Breakdown (30 days)</h2>
+          {activity?.activitiesByType.map((a) => (
+            <Bar key={a.type} label={a.type.charAt(0) + a.type.slice(1).toLowerCase()} value={a.count} max={maxActivity} color={activityColors[a.type] || 'var(--cyan)'} suffix={`${a.count}`} />
           ))}
+          {activity && (
+            <div style={{ display: 'flex', gap: 24, marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--panel-border)' }}>
+              <div>
+                <div style={{ fontSize: 13, color: 'var(--fg-dim)' }}>Deals Created</div>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>{activity.dealsCreated}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 13, color: 'var(--fg-dim)' }}>Deals Updated</div>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>{activity.dealsUpdated}</div>
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Lead Source Breakdown */}
         <div className="panel-container" style={panel.container}>
-          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Activity by team member</h2>
-          {activityByUser.length === 0 && <p style={typeography.muted}>No activity data.</p>}
-          {activityByUser.map((a) => (
-            <Bar key={a.user?.id || 'unknown'} label={a.user?.name || 'Unknown'} value={a.count} max={maxActivity} color="var(--cyan)" suffix={`${a.count}`} />
+          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Lead Source Breakdown</h2>
+          {leadSourceSegments.length > 0 ? (
+            <Donut segments={leadSourceSegments} />
+          ) : (
+            <p style={typeography.muted}>No lead source data.</p>
+          )}
+          {leadSource && leadSource.sources.length > 0 && (
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--panel-border)' }}>
+              {leadSource.sources.map((s) => (
+                <div key={s.leadSource} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+                  <span style={{ color: 'var(--fg-dim)' }}>{s.leadSource}</span>
+                  <span style={{ fontWeight: 600 }}>{s.dealCount} · {compactCurrency(s.totalValue)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Revenue by Tenant */}
+        <div className="panel-container" style={panel.container}>
+          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Revenue by Tenant</h2>
+          {revenueByTenant?.tenants.map((t) => (
+            <Bar key={t.tenantId} label={t.name} value={t.revenue} max={maxRevenue} color="var(--gold)" suffix={`${compactCurrency(t.revenue)} · ${t.wonDeals} won`} />
           ))}
-        </div>
-
-        <div className="panel-container" style={panel.container}>
-          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Lead source breakdown</h2>
-          <Donut segments={leadSources} />
-        </div>
-
-        <div className="panel-container" style={panel.container}>
-          <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>Revenue by tenant</h2>
-          {revenueByTenant.rows.map((r) => (
-            <Bar key={r.tenant?.id || 'unknown'} label={r.tenant?.name || 'Unknown'} value={r.value} max={revenueByTenant.max} color="var(--gold)" />
-          ))}
+          {revenueByTenant && (
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--panel-border)' }}>
+              <div style={{ fontSize: 13, color: 'var(--fg-dim)' }}>Total Won Revenue</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--gold)' }}>{currencyFmt(revenueByTenant.totalRevenue)}</div>
+            </div>
+          )}
         </div>
       </div>
     </div>

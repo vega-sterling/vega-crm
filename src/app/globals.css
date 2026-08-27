@@ -1503,3 +1503,79 @@ input[type="checkbox"] {
 }
 
 /* Phase 20 CSS END */
+
+/* ============================================================================
+   PHASE 26 CSS — Enhanced Reports & Analytics Dashboard Responsive
+   ============================================================================ */
+
+/* Reports analytics grid: 2 columns desktop → 1 column tablet/phone */
+.reports-analytics-grid {
+  grid-template-columns: repeat(2, 1fr) !important;
+}
+
+@media (max-width: 1024px) {
+  .reports-analytics-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* KPI mini-card grid for task completion: 4 cols → 2 → 1 */
+.reports-kpi-grid {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+
+@media (max-width: 768px) {
+  .reports-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .reports-kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Reports preset button row — wrap on small screens */
+.reports-preset-row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reports-preset-btn {
+  padding: 8px 14px !important;
+  font-size: 13px !important;
+}
+
+@media (max-width: 768px) {
+  .reports-preset-btn {
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+    flex: 1 1 auto !important;
+    min-height: 44px !important;
+  }
+}
+
+/* Reports controls row — stack on phone */
+.reports-controls {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .reports-controls {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .reports-controls input,
+  .reports-controls select {
+    width: 100% !important;
+  }
+}
+
+/* Monthly forecast chart bars — horizontal scroll on small screens */
+.reports-forecast-chart {
+  overflow-x: auto;
+}
+
+/* Phase 26 CSS END */

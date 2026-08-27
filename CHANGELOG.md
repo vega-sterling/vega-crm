@@ -1,4 +1,63 @@
-## 2026-08-24 — Phase 23: Inline Create/Edit Forms — Eliminate Modals from List Pages (Modal-Free UX)
+## 2026-08-27 — Phase 26: Enhanced Reports & Analytics Dashboard
+
+### Problem
+The Reports page ignored the existing server-side Reports API (7 report types: funnel, forecast, velocity, conversion, activity, lead-source, revenue-by-tenant) and computed everything client-side from raw deals data. This meant velocity (days-to-close), conversion rates, monthly forecasts, and win/loss analysis were never displayed. There were no date range presets, no tenant filter, no CSV export, no task completion metrics, and no period-over-period comparison.
+
+### What Changed
+Complete rewrite of the Reports page to use the server-side API and add comprehensive analytics features.
+
+### Features Added
+
+**1. Server-Side API Integration** — Reports page now calls `/api/reports?type=X` for all 7 existing report types plus the new task-completion type, instead of computing client-side.
+
+**2. New API: Task Completion Report** (`src/app/api/reports/route.ts`):
+- Added `task-completion` report type to existing API
+- Returns total/completed/overdue/due-soon task counts
+- Status breakdown by PENDING/IN_PROGRESS/DONE/CANCELLED
+- Completion rate percentage
+- Accepts optional dateFrom/dateTo query params
+
+**3. Date Range Presets** — Quick-select buttons: Today, This Week, This Month, This Quarter, This Year, All Time. Manual date pickers also available.
+
+**4. Tenant Filter** — Dropdown to filter all reports by tenant (for multi-tenant admins).
+
+**5. Win/Loss Analysis Panel** — From velocity report data:
+- Win rate percentage (won / (won + lost))
+- Total won revenue vs total lost value
+- Average days to close
+- Donut chart for won vs lost
+
+**6. Monthly Forecast Chart** — From forecast report data:
+- Bar chart showing each month weighted vs raw value
+- 3-month rolling forecast
+
+**7. Task Completion Panel** — From new task-completion report:
+- Completion rate as prominent KPI with progress ring
+- Total / Completed / Overdue / Due Soon as KPI mini-cards
+- Task status breakdown donut chart
+
+**8. CSV Export** — Downloads funnel data as CSV (stage name, deal count, total value, avg value, weighted value).
+
+**9. Period-over-Period Comparison** — KPI cards show delta arrows with percentage change vs the previous equal-length period. E.g., viewing This Month compares vs last month.
+
+**10. Responsive Design**:
+- Desktop (>1024px): 2-column grid of report panels
+- Tablet (768-1024px): Single column, reduced padding
+- Phone (<768px): Single column, full-width, touch-friendly
+
+### Files Changed
+- `src/app/reports/page.tsx` — REWRITTEN (320 to 773 lines)
+- `src/app/api/reports/route.ts` — MODIFIED (added task-completion report type)
+- `src/app/globals.css` — MODIFIED (added Phase 26 responsive CSS)
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded with no errors (Next.js 16.3.0, Turbopack)
+- ✅ Container started cleanly, no runtime errors in logs
+- ✅ /reports -> 307 (protected page exists)
+- ✅ /api/reports -> 401 (API requires auth, correctly wired)
+- ✅ /api/reports?type=task-completion -> 401 (new endpoint wired up)
+- ✅ /dashboard, /deals, /contacts, /companies -> all 307 (no regressions)## 2026-08-24 — Phase 23: Inline Create/Edit Forms — Eliminate Modals from List Pages (Modal-Free UX)
 
 ### Problem
 The Contacts, Companies, Campaigns, Admin Tenants, Admin Users, and Admin Lead Forms pages all used full-screen modal overlays for creating and editing records. This violated Bryan's "inline actions over modals" design principle. The Deals page had already been converted to inline forms in earlier phases, but these six pages were left behind with the old modal pattern.

@@ -3,7 +3,7 @@
 // ============================================================================
 // Returns aggregated pipeline data for dashboards. Report types:
 //   funnel, forecast, velocity, conversion, activity, lead-source,
-//   revenue-by-tenant
+//   revenue-by-tenant, task-completion
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -23,6 +23,7 @@ const ReportTypeSchema = z.enum([
   'activity',
   'lead-source',
   'revenue-by-tenant',
+  'task-completion',
 ]);
 
 const VALID_REPORT_TYPES = ReportTypeSchema.options;
@@ -313,10 +314,89 @@ async function runRevenueByTenantReport(
 }
 
 /**
+ * Task completion report.
+ *
+ * Returns total / completed / overdue / due-soon task counts, a status
+ * breakdown, and the completion-rate percentage.  Accepts optional
+ * dateFrom / dateTo query params which restrict the set of tasks
+ * considered (filtered by dueDate).  Tenant filtering reuses the
+ * existing accessibleWhere pattern.
+ */
+async function runTaskCompletionReport(
+  tenantIds: string[] | null,
+  tenantId?: string | null,
+  dateFrom?: string | null,
+  dateTo?: string | null
+): Promise<unknown> {
+  const baseWhere = accessibleWhere(tenantIds, tenantId);
+
+  const dueDateFilter: Record<string, unknown> = {};
+  if (dateFrom) dueDateFilter.gte = new Date(dateFrom);
+  if (dateTo) dueDateFilter.lte = new Date(dateTo + 'T23:59:59');
+
+  const where: Record<string, unknown> = {
+    ...baseWhere,
+  };
+  if (dateFrom || dateTo) {
+    where.dueDate = dueDateFilter;
+  }
+
+  const now = new Date();
+  const in7Days = new Date(now);
+  in7Days.setDate(in7Days.getDate() + 7);
+
+  // Status counts grouped by the TaskStatus enum.
+  const [statusGroups, totalTasks, completedTasks, overdueTasks, dueSoonTasks] =
+    await Promise.all([
+      prisma.task.groupBy({
+        by: ['status'],
+        where,
+        _count: { id: true },
+      }),
+      prisma.task.count({ where }),
+      prisma.task.count({
+        where: { ...where, status: 'COMPLETED' },
+      }),
+      prisma.task.count({
+        where: {
+          ...where,
+          status: { notIn: ['COMPLETED', 'CANCELLED'] },
+          dueDate: { lt: now },
+        },
+      }),
+      prisma.task.count({
+        where: {
+          ...where,
+          status: { notIn: ['COMPLETED', 'CANCELLED'] },
+          dueDate: { gte: now, lte: in7Days },
+        },
+      }),
+    ]);
+
+  const statusCounts = new Map(statusGroups.map((g) => [g.status, g._count.id]));
+
+  return {
+    total: totalTasks,
+    completed: completedTasks,
+    overdue: overdueTasks,
+    dueSoon: dueSoonTasks,
+    completionRate: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
+    byStatus: {
+      PENDING: statusCounts.get('PENDING') ?? 0,
+      IN_PROGRESS: statusCounts.get('IN_PROGRESS') ?? 0,
+      COMPLETED: statusCounts.get('COMPLETED') ?? 0,
+      CANCELLED: statusCounts.get('CANCELLED') ?? 0,
+    },
+  };
+}
+
+/**
  * GET /api/reports
  *
- * @query type - one of funnel, forecast, velocity, conversion, activity, lead-source, revenue-by-tenant
+ * @query type - one of funnel, forecast, velocity, conversion, activity, lead-source, revenue-by-tenant, task-completion
  * @query tenantId - restrict to tenant
+ * @query dateFrom - ISO date string (used by task-completion)
+ * @query dateTo - ISO date string (used by task-completion)
  * @returns Aggregated report JSON
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -331,6 +411,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
   const type = searchParams.get('type');
   const tenantId = searchParams.get('tenantId');
+  const dateFrom = searchParams.get('dateFrom');
+  const dateTo = searchParams.get('dateTo');
 
   if (tenantId && tenantIds && !tenantIds.includes(tenantId)) {
     return errorResponse('Forbidden', 403);
@@ -367,6 +449,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       break;
     case 'revenue-by-tenant':
       data = await runRevenueByTenantReport(tenantIds, tenantId);
+      break;
+    case 'task-completion':
+      data = await runTaskCompletionReport(tenantIds, tenantId, dateFrom, dateTo);
       break;
     default:
       return errorResponse('Invalid report type', 400);
