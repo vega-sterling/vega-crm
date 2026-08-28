@@ -39,8 +39,10 @@ export default function SettingsPage() {
   const [google, setGoogle] = useState<{ connected: boolean; email?: string | null }>({ connected: false });
   const [properties, setProperties] = useState<CustomProperty[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
-  const [propModal, setPropModal] = useState<Partial<CustomProperty> | null>(null);
-  const [workflowModal, setWorkflowModal] = useState<Partial<Workflow> | null>(null);
+  const [showPropForm, setShowPropForm] = useState(false);
+  const [editingProp, setEditingProp] = useState<CustomProperty | null>(null);
+  const [showWorkflowForm, setShowWorkflowForm] = useState(false);
+  const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<any>(null);
   const [error, setError] = useState("");
@@ -123,6 +125,7 @@ export default function SettingsPage() {
         isRequired: p.isRequired,
         isVisible: p.isVisible,
       });
+      setEditingProp(p);
     } else {
       setPropForm({
         name: "",
@@ -133,8 +136,14 @@ export default function SettingsPage() {
         isRequired: false,
         isVisible: true,
       });
+      setEditingProp(null);
     }
-    setPropModal(p || {});
+    setShowPropForm(true);
+  };
+
+  const closePropForm = () => {
+    setShowPropForm(false);
+    setEditingProp(null);
   };
 
   const handleSaveProperty = async (e: React.FormEvent) => {
@@ -142,14 +151,15 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       const body = propForm;
-      if ("id" in (propModal || {}) && propModal?.id) {
-        const updated = await apiFetch<CustomProperty>(`/api/custom-properties/${propModal.id}`, { method: "PUT", body: JSON.stringify(body) });
+      if (editingProp?.id) {
+        const updated = await apiFetch<CustomProperty>(`/api/custom-properties/${editingProp.id}`, { method: "PUT", body: JSON.stringify(body) });
         setProperties((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       } else {
         const created = await apiFetch<CustomProperty>("/api/custom-properties", { method: "POST", body: JSON.stringify(body) });
         setProperties((prev) => [created, ...prev]);
       }
-      setPropModal(null);
+      setShowPropForm(false);
+      setEditingProp(null);
     } catch (err: any) {
       setError(err.message || "Failed to save property");
     } finally {
@@ -180,6 +190,7 @@ export default function SettingsPage() {
         actions: (w.actions || []).map((a) => ({ type: a.type, config: (a.config || {}) as Record<string, string> })),
         isActive: w.isActive,
       });
+      setEditingWorkflow(w);
     } else {
       setWorkflowForm({
         name: "",
@@ -189,8 +200,14 @@ export default function SettingsPage() {
         actions: [{ type: "SEND_EMAIL", config: { subject: "", body: "" } }],
         isActive: true,
       });
+      setEditingWorkflow(null);
     }
-    setWorkflowModal(w || {});
+    setShowWorkflowForm(true);
+  };
+
+  const closeWorkflowForm = () => {
+    setShowWorkflowForm(false);
+    setEditingWorkflow(null);
   };
 
   const handleSaveWorkflow = async (e: React.FormEvent) => {
@@ -201,14 +218,15 @@ export default function SettingsPage() {
         ...workflowForm,
         conditions: workflowForm.conditions.map((c) => ({ ...c, value: c.value })),
       };
-      if ("id" in (workflowModal || {}) && workflowModal?.id) {
-        const updated = await apiFetch<Workflow>(`/api/workflows/${workflowModal.id}`, { method: "PUT", body: JSON.stringify(body) });
+      if (editingWorkflow?.id) {
+        const updated = await apiFetch<Workflow>(`/api/workflows/${editingWorkflow.id}`, { method: "PUT", body: JSON.stringify(body) });
         setWorkflows((prev) => prev.map((w) => (w.id === updated.id ? updated : w)));
       } else {
         const created = await apiFetch<Workflow>("/api/workflows", { method: "POST", body: JSON.stringify(body) });
         setWorkflows((prev) => [created, ...prev]);
       }
-      setWorkflowModal(null);
+      setShowWorkflowForm(false);
+      setEditingWorkflow(null);
     } catch (err: any) {
       setError(err.message || "Failed to save workflow");
     } finally {
@@ -361,116 +379,37 @@ export default function SettingsPage() {
       <div style={{ ...panel.container, marginBottom: 24 }}>
         <div style={{ ...layout.header, marginBottom: 8 }}>
           <h2 style={typeography.subtitle}>Custom Properties</h2>
-          <button style={buttons.primary} onClick={() => openProperty()}>+ Add Property</button>
+          <button
+            style={showPropForm ? buttons.secondary : buttons.primary}
+            onClick={() => (showPropForm ? closePropForm() : openProperty())}
+          >
+            {showPropForm ? "× Cancel" : "+ Add Property"}
+          </button>
         </div>
-        <div className="table-wrapper">
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Label</th>
-                <th style={{ textAlign: "left", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Entity</th>
-                <th style={{ textAlign: "left", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Type</th>
-                <th style={{ textAlign: "left", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Flags</th>
-                <th style={{ textAlign: "right", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {properties.map((p) => (
-                <tr key={p.id} style={{ transition: "background .2s" }}>
-                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14 }}>{p.label}</td>
-                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14, color: "var(--fg-dim)" }}>{p.entityType}</td>
-                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14, color: "var(--fg-dim)" }}>{p.fieldType}</td>
-                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14 }}>
-                    {p.isRequired && <span style={statusBadge("var(--rust)")}>Required</span>}
-                    {p.isVisible && <span style={statusBadge("var(--emerald)")}>Visible</span>}
-                  </td>
-                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14, textAlign: "right" }}>
-                    <button style={buttons.small} onClick={() => openProperty(p)}>Edit</button>
-                    {" "}
-                    <button style={buttons.danger} onClick={() => handleDeleteProperty(p)}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-      {/* Workflows */}
-      <div style={{ ...panel.container, marginBottom: 24 }}>
-        <div style={{ ...layout.header, marginBottom: 8 }}>
-          <h2 style={typeography.subtitle}>Workflows</h2>
-          <button style={buttons.primary} onClick={() => openWorkflow()}>+ New Workflow</button>
-        </div>
-        <div className="table-wrapper">
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Workflow</th>
-                <th style={{ textAlign: "left", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Trigger</th>
-                <th style={{ textAlign: "left", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Status</th>
-                <th style={{ textAlign: "right", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {workflows.map((w) => (
-                <tr key={w.id} style={{ transition: "background .2s" }}>
-                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14 }}>
-                    <div style={{ fontWeight: 600 }}>{w.name}</div>
-                    <div style={{ color: "var(--fg-dim)", fontSize: 12 }}>{w.description}</div>
-                  </td>
-                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14, color: "var(--fg-dim)" }}>{w.triggerType}</td>
-                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14 }}>
-                    <button
-                      style={w.isActive ? statusBadge("var(--emerald)") : statusBadge("var(--fg-dim)")}
-                      onClick={() => toggleWorkflow(w)}
-                    >
-                      {w.isActive ? "On" : "Off"}
-                    </button>
-                  </td>
-                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14, textAlign: "right" }}>
-                    <button style={buttons.small} onClick={() => openWorkflow(w)}>Edit</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Security Section */}
-      <div style={{ ...panel.container, marginBottom: 24 }}>
-        <div style={panel.header}>
-          <h2 style={typeography.subtitle}>{t("settings.security")}</h2>
-        </div>
-        <p style={typeography.muted}>
-          <a href="/setup-2fa" style={{ color: "var(--gold)" }}>
-            {t("auth.2fa_setup_title")} →
-          </a>
-        </p>
-      </div>
-
-      {/* Account Section */}
-      <div className="panel-container" style={panel.container}>
-        <div style={panel.header}>
-          <h2 style={typeography.subtitle}>{t("settings.account")}</h2>
-        </div>
-        <p style={typeography.muted}>Manage your account preferences here.</p>
-      </div>
-
-      {propModal && (
-        <div
-          className="modal-overlay"
-          style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
-          onClick={() => setPropModal(null)}
-        >
-          <div className="modal-content" style={{ ...panel.container, width: "100%", maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{propModal?.id ? "Edit Property" : "New Property"}</h2>
+        {showPropForm && (
+          <div
+            style={{
+              ...panel.compact,
+              marginBottom: 16,
+              backgroundColor: "var(--panel-elevated)",
+              animation: "slideUp 0.2s ease-out",
+            }}
+          >
+            <h3 style={{ ...typeography.subtitle, marginBottom: 16 }}>
+              {editingProp?.id ? "Edit Property" : "New Property"}
+            </h3>
             <form onSubmit={handleSaveProperty} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={forms.row}>
                 <label style={forms.group}>
                   <span style={forms.label}>Label</span>
-                  <input style={forms.input} required value={propForm.label} onChange={(e) => setPropForm({ ...propForm, label: e.target.value, name: e.target.value.toLowerCase().replace(/\s+/g, "_") })} />
+                  <input
+                    style={forms.input}
+                    required
+                    autoFocus
+                    value={propForm.label}
+                    onChange={(e) => setPropForm({ ...propForm, label: e.target.value, name: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
+                  />
                 </label>
                 <label style={forms.group}>
                   <span style={forms.label}>Key (name)</span>
@@ -529,26 +468,74 @@ export default function SettingsPage() {
               </div>
 
               <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                <button type="button" style={buttons.secondary} onClick={() => setPropModal(null)}>Cancel</button>
+                <button type="button" style={buttons.secondary} onClick={closePropForm}>Cancel</button>
                 <button type="submit" style={buttons.primary} disabled={saving}>{saving ? "Saving..." : "Save Property"}</button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
 
-      {workflowModal && (
-        <div
-          className="modal-overlay"
-          style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
-          onClick={() => setWorkflowModal(null)}
-        >
-          <div className="modal-content" style={{ ...panel.container, width: "100%", maxWidth: 720, maxHeight: "90vh", overflow: "auto" }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{workflowModal?.id ? "Edit Workflow" : "New Workflow"}</h2>
+        <div className="table-wrapper">
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Label</th>
+                <th style={{ textAlign: "left", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Entity</th>
+                <th style={{ textAlign: "left", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Type</th>
+                <th style={{ textAlign: "left", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Flags</th>
+                <th style={{ textAlign: "right", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {properties.map((p) => (
+                <tr key={p.id} style={{ transition: "background .2s" }}>
+                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14 }}>{p.label}</td>
+                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14, color: "var(--fg-dim)" }}>{p.entityType}</td>
+                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14, color: "var(--fg-dim)" }}>{p.fieldType}</td>
+                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14 }}>
+                    {p.isRequired && <span style={statusBadge("var(--rust)")}>Required</span>}
+                    {p.isVisible && <span style={statusBadge("var(--emerald)")}>Visible</span>}
+                  </td>
+                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14, textAlign: "right" }}>
+                    <button style={buttons.small} onClick={() => openProperty(p)}>Edit</button>
+                    {" "}
+                    <button style={buttons.danger} onClick={() => handleDeleteProperty(p)}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Workflows */}
+      <div style={{ ...panel.container, marginBottom: 24 }}>
+        <div style={{ ...layout.header, marginBottom: 8 }}>
+          <h2 style={typeography.subtitle}>Workflows</h2>
+          <button
+            style={showWorkflowForm ? buttons.secondary : buttons.primary}
+            onClick={() => (showWorkflowForm ? closeWorkflowForm() : openWorkflow())}
+          >
+            {showWorkflowForm ? "× Cancel" : "+ New Workflow"}
+          </button>
+        </div>
+
+        {showWorkflowForm && (
+          <div
+            style={{
+              ...panel.compact,
+              marginBottom: 16,
+              backgroundColor: "var(--panel-elevated)",
+              animation: "slideUp 0.2s ease-out",
+            }}
+          >
+            <h3 style={{ ...typeography.subtitle, marginBottom: 16 }}>
+              {editingWorkflow?.id ? "Edit Workflow" : "New Workflow"}
+            </h3>
             <form onSubmit={handleSaveWorkflow} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <label style={forms.group}>
                 <span style={forms.label}>Name</span>
-                <input style={forms.input} required value={workflowForm.name} onChange={(e) => setWorkflowForm({ ...workflowForm, name: e.target.value })} />
+                <input style={forms.input} required autoFocus value={workflowForm.name} onChange={(e) => setWorkflowForm({ ...workflowForm, name: e.target.value })} />
               </label>
               <label style={forms.group}>
                 <span style={forms.label}>Description</span>
@@ -675,13 +662,69 @@ export default function SettingsPage() {
               </div>
 
               <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                <button type="button" style={buttons.secondary} onClick={() => setWorkflowModal(null)}>Cancel</button>
+                <button type="button" style={buttons.secondary} onClick={closeWorkflowForm}>Cancel</button>
                 <button type="submit" style={buttons.primary} disabled={saving}>{saving ? "Saving..." : "Save Workflow"}</button>
               </div>
             </form>
           </div>
+        )}
+
+        <div className="table-wrapper">
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Workflow</th>
+                <th style={{ textAlign: "left", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Trigger</th>
+                <th style={{ textAlign: "left", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Status</th>
+                <th style={{ textAlign: "right", padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", color: "var(--fg-dim)", fontSize: 12, textTransform: "uppercase" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {workflows.map((w) => (
+                <tr key={w.id} style={{ transition: "background .2s" }}>
+                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14 }}>
+                    <div style={{ fontWeight: 600 }}>{w.name}</div>
+                    <div style={{ color: "var(--fg-dim)", fontSize: 12 }}>{w.description}</div>
+                  </td>
+                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14, color: "var(--fg-dim)" }}>{w.triggerType}</td>
+                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14 }}>
+                    <button
+                      style={w.isActive ? statusBadge("var(--emerald)") : statusBadge("var(--fg-dim)")}
+                      onClick={() => toggleWorkflow(w)}
+                    >
+                      {w.isActive ? "On" : "Off"}
+                    </button>
+                  </td>
+                  <td style={{ padding: "12px 8px", borderBottom: "1px solid var(--panel-border)", fontSize: 14, textAlign: "right" }}>
+                    <button style={buttons.small} onClick={() => openWorkflow(w)}>Edit</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
+
+      {/* Security Section */}
+      <div style={{ ...panel.container, marginBottom: 24 }}>
+        <div style={panel.header}>
+          <h2 style={typeography.subtitle}>{t("settings.security")}</h2>
+        </div>
+        <p style={typeography.muted}>
+          <a href="/setup-2fa" style={{ color: "var(--gold)" }}>
+            {t("auth.2fa_setup_title")} →
+          </a>
+        </p>
+      </div>
+
+      {/* Account Section */}
+      <div className="panel-container" style={panel.container}>
+        <div style={panel.header}>
+          <h2 style={typeography.subtitle}>{t("settings.account")}</h2>
+        </div>
+        <p style={typeography.muted}>Manage your account preferences here.</p>
+      </div>
+
       <ConfirmDialog
         open={!!confirmDelete}
         title="Delete Custom Property?"

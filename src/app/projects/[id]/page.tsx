@@ -24,6 +24,10 @@ const PRIORITY_LABELS: Record<string, string> = {
 
 const LABEL_COLORS = ['#e57373', '#f59e0b', '#4ade80', '#60a5fa', '#a78bfa', '#22d3ee', '#ec4899', '#8b8d98']
 
+const COLUMN_COLORS = ['#8b8d98', '#60a5fa', '#c9a96e', '#4ade80', '#a78bfa', '#e57373', '#22d3ee', '#f59e0b']
+const PROJECT_COLORS = ['#c9a96e', '#60a5fa', '#4ade80', '#a78bfa', '#e57373', '#22d3ee', '#f59e0b', '#ec4899']
+const PROJECT_ICONS = ['📋', '🚀', '🎨', '📦', '🔧', '📊', '🎯', '💡', '🔥', '⚙️']
+
 function getLabelColor(label: string): string {
   let hash = 0
   for (let i = 0; i < label.length; i++) hash = label.charCodeAt(i) + ((hash << 5) - hash)
@@ -72,12 +76,21 @@ export default function KanbanBoardPage() {
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null)
   const dragOverColumnRef = useRef<string | null>(null)
 
-  // Modal state
+  // Modal state (converted to inline)
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null)
   const [editingColumn, setEditingColumn] = useState<ProjectColumn | null>(null)
   const [showAddColumn, setShowAddColumn] = useState(false)
   const [showEditProject, setShowEditProject] = useState(false)
   const [taskComments, setTaskComments] = useState<TaskComment[]>([])
+
+  // Column form state
+  const [colForm, setColForm] = useState({ name: '', color: '#8b8d98', wipLimit: '', isDoneColumn: false })
+  const [showColDeleteConfirm, setShowColDeleteConfirm] = useState(false)
+
+  // Project settings form state
+  const [projForm, setProjForm] = useState({ name: '', description: '', color: '#c9a96e', icon: '📋' })
+  const [savingProject, setSavingProject] = useState(false)
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
 
   // Confirm delete dialog state
   const [confirmDelete, setConfirmDelete] = useState<any>(null)
@@ -301,6 +314,52 @@ export default function KanbanBoardPage() {
   }
 
   // === Column CRUD ===
+  const openAddColumn = () => {
+    setColForm({ name: '', color: '#8b8d98', wipLimit: '', isDoneColumn: false })
+    setShowAddColumn(true)
+    setShowColDeleteConfirm(false)
+  }
+
+  const closeAddColumn = () => {
+    setShowAddColumn(false)
+    setShowColDeleteConfirm(false)
+  }
+
+  const openEditColumn = (column: ProjectColumn) => {
+    setColForm({
+      name: column.name,
+      color: column.color || '#8b8d98',
+      wipLimit: column.wipLimit?.toString() || '',
+      isDoneColumn: column.isDoneColumn || false,
+    })
+    setEditingColumn(column)
+    setShowColDeleteConfirm(false)
+  }
+
+  const closeEditColumn = () => {
+    setEditingColumn(null)
+    setShowColDeleteConfirm(false)
+  }
+
+  const handleSaveColumn = async () => {
+    if (!colForm.name.trim()) return
+    const wipNum = colForm.wipLimit ? parseInt(colForm.wipLimit) : undefined
+    if (editingColumn) {
+      await handleUpdateColumn(editingColumn.id, { name: colForm.name, color: colForm.color, wipLimit: wipNum, isDoneColumn: colForm.isDoneColumn })
+    } else {
+      try {
+        const column = await apiFetch<ProjectColumn>(`/api/projects/${projectId}/columns`, {
+          method: 'POST',
+          body: JSON.stringify({ name: colForm.name, color: colForm.color, wipLimit: wipNum || null }),
+        })
+        setColumns([...columns, { ...column, tasks: [] }])
+        setShowAddColumn(false)
+      } catch (e) {
+        alert('Failed to create column')
+      }
+    }
+  }
+
   const handleCreateColumn = async (name: string, color: string, wipLimit?: number) => {
     try {
       const column = await apiFetch<ProjectColumn>(`/api/projects/${projectId}/columns`, {
@@ -338,6 +397,54 @@ export default function KanbanBoardPage() {
       setEditingColumn(null)
     } catch (e) {
       alert('Failed to delete column')
+    }
+  }
+
+  // === Project settings inline ===
+  const openEditProject = () => {
+    if (project) {
+      setProjForm({
+        name: project.name,
+        description: project.description || '',
+        color: project.color,
+        icon: project.icon || '📋',
+      })
+    }
+    setShowArchiveConfirm(false)
+    setShowEditProject(true)
+  }
+
+  const closeEditProject = () => {
+    setShowEditProject(false)
+    setShowArchiveConfirm(false)
+  }
+
+  const handleSaveProject = async () => {
+    setSavingProject(true)
+    try {
+      await apiFetch(`/api/projects/${projectId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name: projForm.name, description: projForm.description, color: projForm.color, icon: projForm.icon }),
+      })
+      setShowEditProject(false)
+      fetchBoard()
+    } catch (e) {
+      alert('Failed to save project')
+    } finally {
+      setSavingProject(false)
+    }
+  }
+
+  const handleArchiveProject = async () => {
+    try {
+      await apiFetch(`/api/projects/${projectId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ isArchived: true }),
+      })
+      setShowEditProject(false)
+      fetchBoard()
+    } catch (e) {
+      alert('Failed to archive project')
     }
   }
 
@@ -417,6 +524,126 @@ export default function KanbanBoardPage() {
     )
   }
 
+  // Inline column form JSX (shared for add and edit)
+  const columnFormJsx = (isEdit: boolean) => (
+    <div
+      style={{
+        ...panel.compact,
+        backgroundColor: 'var(--panel-elevated)',
+        animation: 'slideUp 0.2s ease-out',
+      }}
+    >
+      <h3 style={{ ...typeography.subtitle, marginBottom: 16 }}>
+        {isEdit ? 'Edit Column' : 'Add Column'}
+      </h3>
+
+      <div style={forms.group}>
+        <label style={forms.label}>Column Name</label>
+        <input
+          style={forms.input}
+          value={colForm.name}
+          onChange={e => setColForm({ ...colForm, name: e.target.value })}
+          placeholder="e.g., In Progress"
+          autoFocus
+          onKeyDown={e => { if (e.key === 'Enter' && colForm.name.trim()) handleSaveColumn() }}
+        />
+      </div>
+
+      <div style={{ ...forms.group, marginTop: 16 }}>
+        <label style={forms.label}>Color</label>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {COLUMN_COLORS.map(c => (
+            <button
+              key={c}
+              onClick={() => setColForm({ ...colForm, color: c })}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 6,
+                backgroundColor: c,
+                border: colForm.color === c ? '3px solid var(--fg)' : '2px solid transparent',
+                cursor: 'pointer',
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div style={{ ...forms.group, marginTop: 16 }}>
+        <label style={forms.label}>WIP Limit (optional — max cards in column)</label>
+        <input
+          type="number"
+          min={1}
+          max={100}
+          style={forms.input}
+          value={colForm.wipLimit}
+          onChange={e => setColForm({ ...colForm, wipLimit: e.target.value })}
+          placeholder="e.g., 5 (leave empty for unlimited)"
+        />
+      </div>
+
+      <div style={{ ...forms.group, marginTop: 16 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={colForm.isDoneColumn}
+            onChange={e => setColForm({ ...colForm, isDoneColumn: e.target.checked })}
+            style={{ accentColor: 'var(--emerald)' }}
+          />
+          <span style={{ fontSize: 14 }}>Done column (tasks here auto-complete)</span>
+        </label>
+      </div>
+
+      {/* Inline delete confirm */}
+      {isEdit && showColDeleteConfirm && (
+        <div style={{
+          ...panel.compact,
+          marginTop: 16,
+          borderColor: 'var(--rust)',
+          backgroundColor: 'var(--rust)11',
+        }}>
+          <p style={{ fontSize: 13, marginBottom: 12 }}>
+            Delete this column and all its tasks? This cannot be undone.
+          </p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => handleDeleteColumn(editingColumn)}
+              style={{ ...buttons.danger, fontSize: 12 }}
+            >
+              Yes, Delete
+            </button>
+            <button onClick={() => setShowColDeleteConfirm(false)} style={buttons.small}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'space-between' }}>
+        <div>
+          {isEdit && !showColDeleteConfirm && (
+            <button
+              onClick={() => setShowColDeleteConfirm(true)}
+              style={{ ...buttons.danger, fontSize: 12 }}
+            >
+              Delete Column
+            </button>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button onClick={() => (isEdit ? closeEditColumn() : closeAddColumn())} style={buttons.secondary}>Cancel</button>
+          <button
+            onClick={handleSaveColumn}
+            disabled={!colForm.name.trim()}
+            style={{ ...buttons.primary, opacity: colForm.name.trim() ? 1 : 0.5 }}
+          >
+            {isEdit ? 'Save' : 'Add Column'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <ProtectedLayout>
     <div style={{ padding: '88px 24px 24px' }}>
@@ -446,13 +673,135 @@ export default function KanbanBoardPage() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
-            onClick={() => setShowEditProject(true)}
-            style={buttons.secondary}
+            onClick={() => (showEditProject ? closeEditProject() : openEditProject())}
+            style={showEditProject ? buttons.secondary : buttons.secondary}
           >
-            ⚙ Board Settings
+            {showEditProject ? '× Close' : '⚙ Board Settings'}
           </button>
         </div>
       </div>
+
+      {/* Inline Project Settings Panel */}
+      {showEditProject && (
+        <div
+          style={{
+            ...panel.container,
+            marginBottom: 24,
+            backgroundColor: 'var(--panel-elevated)',
+            animation: 'slideUp 0.2s ease-out',
+          }}
+        >
+          <h2 style={{ ...typeography.subtitle, marginBottom: 24 }}>Board Settings</h2>
+
+          <div style={forms.group}>
+            <label style={forms.label}>Name</label>
+            <input
+              style={forms.input}
+              value={projForm.name}
+              onChange={e => setProjForm({ ...projForm, name: e.target.value })}
+              autoFocus
+            />
+          </div>
+
+          <div style={{ ...forms.group, marginTop: 16 }}>
+            <label style={forms.label}>Description</label>
+            <textarea
+              style={forms.textarea}
+              value={projForm.description}
+              onChange={e => setProjForm({ ...projForm, description: e.target.value })}
+            />
+          </div>
+
+          <div style={{ ...forms.group, marginTop: 16 }}>
+            <label style={forms.label}>Icon</label>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {PROJECT_ICONS.map(ic => (
+                <button
+                  key={ic}
+                  onClick={() => setProjForm({ ...projForm, icon: ic })}
+                  style={{
+                    fontSize: 22,
+                    padding: '6px 10px',
+                    borderRadius: 8,
+                    border: projForm.icon === ic ? '2px solid var(--gold)' : '1px solid var(--panel-border)',
+                    backgroundColor: projForm.icon === ic ? 'var(--panel-elevated)' : 'var(--bg)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {ic}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ ...forms.group, marginTop: 16 }}>
+            <label style={forms.label}>Color</label>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {PROJECT_COLORS.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setProjForm({ ...projForm, color: c })}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    backgroundColor: c,
+                    border: projForm.color === c ? '3px solid var(--fg)' : '2px solid transparent',
+                    cursor: 'pointer',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setShowArchiveConfirm(true)}
+              style={{ ...buttons.danger, fontSize: 12 }}
+            >
+              Archive Project
+            </button>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={closeEditProject} style={buttons.secondary}>Cancel</button>
+              <button
+                onClick={handleSaveProject}
+                disabled={!projForm.name.trim() || savingProject}
+                style={{ ...buttons.primary, opacity: (!projForm.name.trim() || savingProject) ? 0.5 : 1 }}
+              >
+                {savingProject ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+
+          {showArchiveConfirm && (
+            <div style={{
+              ...panel.compact,
+              marginTop: 16,
+              borderColor: 'var(--rust)',
+              backgroundColor: 'var(--rust)11',
+            }}>
+              <p style={{ fontSize: 13, marginBottom: 12 }}>
+                Archive this project? It will be hidden from the active board list but can be restored later.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={handleArchiveProject} style={{ ...buttons.danger, fontSize: 12 }}>
+                  Yes, Archive
+                </button>
+                <button onClick={() => setShowArchiveConfirm(false)} style={buttons.small}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Inline Add Column Form (above the board) */}
+      {showAddColumn && !editingColumn && (
+        <div style={{ marginBottom: 16, maxWidth: 360 }}>
+          {columnFormJsx(false)}
+        </div>
+      )}
 
       {/* Kanban Board */}
       <div className="kanban-board-scroll" style={{
@@ -491,122 +840,133 @@ export default function KanbanBoardPage() {
                 transition: 'border .2s',
               }}
             >
-              {/* Column Header */}
-              <div
-                draggable={!draggingTaskId}
-                onDragStart={e => handleColumnDragStart(e, column.id)}
-                onDragEnd={handleColumnDragEnd}
-                onDragOver={e => { if (draggingColumnId && draggingColumnId !== column.id) e.preventDefault() }}
-                onDrop={e => { if (draggingColumnId) handleColumnReorder(e, column.id) }}
-                onClick={() => setEditingColumn(column)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 14px',
-                  borderBottom: '1px solid var(--panel-border)',
-                  cursor: 'grab',
-                  borderRadius: '12px 12px 0 0',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    backgroundColor: column.color,
-                  }} />
-                  <span style={{ fontWeight: 700, fontSize: 14 }}>{column.name}</span>
-                  <span style={{
-                    ...typeography.small,
-                    backgroundColor: wipExceeded ? 'var(--rust)' : 'var(--panel-elevated)',
-                    color: wipExceeded ? '#fff' : 'var(--fg-dim)',
-                    borderRadius: 10,
-                    padding: '2px 8px',
-                    fontSize: 11,
-                    fontWeight: 600,
-                  }}>
-                    {tasks.length}{column.wipLimit ? `/${column.wipLimit}` : ''}
-                  </span>
-                  {column.isDoneColumn && (
-                    <span style={{ fontSize: 12, color: 'var(--emerald)' }}>✓</span>
-                  )}
+              {/* Inline Edit Column Form (inside the column, above the header) */}
+              {editingColumn?.id === column.id && (
+                <div style={{ padding: 8 }}>
+                  {columnFormJsx(true)}
                 </div>
-              </div>
+              )}
+
+              {/* Column Header */}
+              {editingColumn?.id !== column.id && (
+                <div
+                  draggable={!draggingTaskId}
+                  onDragStart={e => handleColumnDragStart(e, column.id)}
+                  onDragEnd={handleColumnDragEnd}
+                  onDragOver={e => { if (draggingColumnId && draggingColumnId !== column.id) e.preventDefault() }}
+                  onDrop={e => { if (draggingColumnId) handleColumnReorder(e, column.id) }}
+                  onClick={() => openEditColumn(column)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 14px',
+                    borderBottom: '1px solid var(--panel-border)',
+                    cursor: 'grab',
+                    borderRadius: '12px 12px 0 0',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: '50%',
+                      backgroundColor: column.color,
+                    }} />
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>{column.name}</span>
+                    <span style={{
+                      ...typeography.small,
+                      backgroundColor: wipExceeded ? 'var(--rust)' : 'var(--panel-elevated)',
+                      color: wipExceeded ? '#fff' : 'var(--fg-dim)',
+                      borderRadius: 10,
+                      padding: '2px 8px',
+                      fontSize: 11,
+                      fontWeight: 600,
+                    }}>
+                      {tasks.length}{column.wipLimit ? `/${column.wipLimit}` : ''}
+                    </span>
+                    {column.isDoneColumn && (
+                      <span style={{ fontSize: 12, color: 'var(--emerald)' }}>✓</span>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Tasks */}
-              <div style={{
-                flex: 1,
-                padding: '8px 8px',
-                overflowY: 'auto',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-              }}>
-                {tasks.map(task => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    isDragging={draggingTaskId === task.id}
-                    onDragStart={e => handleTaskDragStart(e, task.id)}
-                    onDragEnd={handleTaskDragEnd}
-                    onClick={() => { setSelectedTask(task); fetchComments(task.id) }}
-                  />
-                ))}
-
-                {/* Add task inline */}
-                {addingToColumn === column.id ? (
-                  <div style={{
-                    ...panel.compact,
-                    padding: 8,
-                  }}>
-                    <textarea
-                      style={{
-                        ...forms.textarea,
-                        minHeight: 48,
-                        fontSize: 13,
-                      }}
-                      value={newTaskTitle}
-                      onChange={e => setNewTaskTitle(e.target.value)}
-                      placeholder="Task title..."
-                      autoFocus
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCreateTask(column.id) }
-                        if (e.key === 'Escape') { setAddingToColumn(null); setNewTaskTitle('') }
-                      }}
+              {editingColumn?.id !== column.id && (
+                <div style={{
+                  flex: 1,
+                  padding: '8px 8px',
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                }}>
+                  {tasks.map(task => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      isDragging={draggingTaskId === task.id}
+                      onDragStart={e => handleTaskDragStart(e, task.id)}
+                      onDragEnd={handleTaskDragEnd}
+                      onClick={() => { setSelectedTask(task); fetchComments(task.id) }}
                     />
-                    <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-                      <button
-                        onClick={() => handleCreateTask(column.id)}
-                        style={{ ...buttons.small, backgroundColor: 'var(--gold)', color: 'var(--bg)', border: 'none' }}
-                      >
-                        Add
-                      </button>
-                      <button
-                        onClick={() => { setAddingToColumn(null); setNewTaskTitle('') }}
-                        style={buttons.small}
-                      >
-                        Cancel
-                      </button>
+                  ))}
+
+                  {/* Add task inline */}
+                  {addingToColumn === column.id ? (
+                    <div style={{
+                      ...panel.compact,
+                      padding: 8,
+                    }}>
+                      <textarea
+                        style={{
+                          ...forms.textarea,
+                          minHeight: 48,
+                          fontSize: 13,
+                        }}
+                        value={newTaskTitle}
+                        onChange={e => setNewTaskTitle(e.target.value)}
+                        placeholder="Task title..."
+                        autoFocus
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCreateTask(column.id) }
+                          if (e.key === 'Escape') { setAddingToColumn(null); setNewTaskTitle('') }
+                        }}
+                      />
+                      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                        <button
+                          onClick={() => handleCreateTask(column.id)}
+                          style={{ ...buttons.small, backgroundColor: 'var(--gold)', color: 'var(--bg)', border: 'none' }}
+                        >
+                          Add
+                        </button>
+                        <button
+                          onClick={() => { setAddingToColumn(null); setNewTaskTitle('') }}
+                          style={buttons.small}
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setAddingToColumn(column.id)}
-                    style={{
-                      ...buttons.small,
-                      border: '1px dashed var(--panel-border)',
-                      backgroundColor: 'transparent',
-                      width: '100%',
-                      padding: '8px 12px',
-                      textAlign: 'left',
-                      color: 'var(--fg-dimmer)',
-                    }}
-                  >
-                    + Add task
-                  </button>
-                )}
-              </div>
+                  ) : (
+                    <button
+                      onClick={() => setAddingToColumn(column.id)}
+                      style={{
+                        ...buttons.small,
+                        border: '1px dashed var(--panel-border)',
+                        backgroundColor: 'transparent',
+                        width: '100%',
+                        padding: '8px 12px',
+                        textAlign: 'left',
+                        color: 'var(--fg-dimmer)',
+                      }}
+                    >
+                      + Add task
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )
         })}
@@ -614,7 +974,7 @@ export default function KanbanBoardPage() {
         {/* Add Column button */}
         <div style={{ minWidth: 60, flexShrink: 0, display: 'flex', alignItems: 'flex-start', paddingTop: 12 }}>
           <button
-            onClick={() => setShowAddColumn(true)}
+            onClick={() => showAddColumn ? closeAddColumn() : openAddColumn()}
             style={{
               ...buttons.secondary,
               width: 48,
@@ -626,7 +986,7 @@ export default function KanbanBoardPage() {
               fontSize: 24,
             }}
           >
-            +
+            {showAddColumn ? '×' : '+'}
           </button>
         </div>
       </div>
@@ -648,36 +1008,18 @@ export default function KanbanBoardPage() {
         />
       )}
 
-      {/* Add Column Modal */}
-      {showAddColumn && (
-        <ColumnModal
-          title="Add Column"
-          onClose={() => setShowAddColumn(false)}
-          onSave={handleCreateColumn}
-        />
-      )}
-
-      {/* Edit Column Modal */}
-      {editingColumn && (
-        <ColumnModal
-          title="Edit Column"
-          column={editingColumn}
-          onClose={() => setEditingColumn(null)}
-          onSave={(name, color, wipLimit, isDoneColumn) =>
-            handleUpdateColumn(editingColumn.id, { name, color, wipLimit, isDoneColumn })
-          }
-          onDelete={() => handleDeleteColumn(editingColumn)}
-        />
-      )}
-
-      {/* Edit Project Modal */}
-      {showEditProject && (
-        <ProjectSettingsModal
-          project={project}
-          onClose={() => setShowEditProject(false)}
-          onSaved={() => { setShowEditProject(false); fetchBoard() }}
-        />
-      )}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title={confirmDelete?._type === 'task' ? 'Delete Task?' : confirmDelete?._type === 'column' ? 'Delete Column?' : 'Delete Subtask?'}
+        itemName={confirmDelete?.title || confirmDelete?.name}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          if (confirmDelete?._type === 'task') performDeleteTask(confirmDelete)
+          else if (confirmDelete?._type === 'column') performDeleteColumn(confirmDelete)
+          else if (confirmDelete?._type === 'subtask') performDeleteSubtask(confirmDelete)
+          setConfirmDelete(null)
+        }}
+      />
     </div>
     </ProtectedLayout>
   )
@@ -1241,307 +1583,5 @@ function TaskDetailDrawer({
         </div>
       </div>
     </>
-  )
-}
-
-// ============================================================================
-// ColumnModal Component (add/edit column)
-// ============================================================================
-
-function ColumnModal({
-  title,
-  column,
-  onClose,
-  onSave,
-  onDelete,
-}: {
-  title: string
-  column?: ProjectColumn
-  onClose: () => void
-  onSave: (name: string, color: string, wipLimit?: number, isDoneColumn?: boolean) => void
-  onDelete?: () => void
-}) {
-  const [name, setName] = useState(column?.name || '')
-  const [color, setColor] = useState(column?.color || '#8b8d98')
-  const [wipLimit, setWipLimit] = useState(column?.wipLimit?.toString() || '')
-  const [isDoneColumn, setIsDoneColumn] = useState(column?.isDoneColumn || false)
-
-  const COLUMN_COLORS = ['#8b8d98', '#60a5fa', '#c9a96e', '#4ade80', '#a78bfa', '#e57373', '#22d3ee', '#f59e0b']
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 100,
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          ...panel.container,
-          width: 420,
-          maxWidth: '90vw',
-        }}
-      >
-        <h2 style={{ ...typeography.subtitle, marginBottom: 24 }}>{title}</h2>
-
-        <div style={forms.group}>
-          <label style={forms.label}>Column Name</label>
-          <input
-            style={forms.input}
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="e.g., In Progress"
-            autoFocus
-            onKeyDown={e => { if (e.key === 'Enter' && name.trim()) onSave(name, color, wipLimit ? parseInt(wipLimit) : undefined, isDoneColumn) }}
-          />
-        </div>
-
-        <div style={{ ...forms.group, marginTop: 16 }}>
-          <label style={forms.label}>Color</label>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {COLUMN_COLORS.map(c => (
-              <button
-                key={c}
-                onClick={() => setColor(c)}
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 6,
-                  backgroundColor: c,
-                  border: color === c ? '3px solid var(--fg)' : '2px solid transparent',
-                  cursor: 'pointer',
-                }}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div style={{ ...forms.group, marginTop: 16 }}>
-          <label style={forms.label}>WIP Limit (optional — max cards in column)</label>
-          <input
-            type="number"
-            min={1}
-            max={100}
-            style={forms.input}
-            value={wipLimit}
-            onChange={e => setWipLimit(e.target.value)}
-            placeholder="e.g., 5 (leave empty for unlimited)"
-          />
-        </div>
-
-        <div style={{ ...forms.group, marginTop: 16 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={isDoneColumn}
-              onChange={e => setIsDoneColumn(e.target.checked)}
-              style={{ accentColor: 'var(--emerald)' }}
-            />
-            <span style={{ fontSize: 14 }}>Done column (tasks here auto-complete)</span>
-          </label>
-        </div>
-
-        <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'space-between' }}>
-          <div>
-            {onDelete && (
-              <button
-                onClick={onDelete}
-                style={{ ...buttons.danger, fontSize: 12 }}
-              >
-                Delete Column
-              </button>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button onClick={onClose} style={buttons.secondary}>Cancel</button>
-            <button
-              onClick={() => name.trim() && onSave(name, color, wipLimit ? parseInt(wipLimit) : undefined, isDoneColumn)}
-              disabled={!name.trim()}
-              style={{ ...buttons.primary, opacity: name.trim() ? 1 : 0.5 }}
-            >
-              {column ? 'Save' : 'Add Column'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ============================================================================
-// ProjectSettingsModal Component
-// ============================================================================
-
-function ProjectSettingsModal({
-  project,
-  onClose,
-  onSaved,
-}: {
-  project: Project
-  onClose: () => void
-  onSaved: () => void
-}) {
-  const [name, setName] = useState(project.name)
-  const [description, setDescription] = useState(project.description || '')
-  const [color, setColor] = useState(project.color)
-  const [icon, setIcon] = useState(project.icon || '📋')
-  const [saving, setSaving] = useState(false)
-  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
-
-  const PROJECT_COLORS = ['#c9a96e', '#60a5fa', '#4ade80', '#a78bfa', '#e57373', '#22d3ee', '#f59e0b', '#ec4899']
-  const PROJECT_ICONS = ['📋', '🚀', '🎨', '📦', '🔧', '📊', '🎯', '💡', '🔥', '⚙️']
-
-  const handleSave = async () => {
-    setSaving(true)
-    try {
-      await apiFetch(`/api/projects/${project.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ name, description, color, icon }),
-      })
-      onSaved()
-    } catch (e) {
-      alert('Failed to save project')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleArchive = async () => {
-    try {
-      await apiFetch(`/api/projects/${project.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ isArchived: true }),
-      })
-      onSaved()
-    } catch (e) {
-      alert('Failed to archive project')
-    }
-  }
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 100,
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          ...panel.container,
-          width: 480,
-          maxWidth: '90vw',
-          maxHeight: '90vh',
-          overflowY: 'auto',
-        }}
-      >
-        <h2 style={{ ...typeography.subtitle, marginBottom: 24 }}>Board Settings</h2>
-
-        <div style={forms.group}>
-          <label style={forms.label}>Name</label>
-          <input style={forms.input} value={name} onChange={e => setName(e.target.value)} />
-        </div>
-
-        <div style={{ ...forms.group, marginTop: 16 }}>
-          <label style={forms.label}>Description</label>
-          <textarea style={forms.textarea} value={description} onChange={e => setDescription(e.target.value)} />
-        </div>
-
-        <div style={{ ...forms.group, marginTop: 16 }}>
-          <label style={forms.label}>Icon</label>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {PROJECT_ICONS.map(ic => (
-              <button
-                key={ic}
-                onClick={() => setIcon(ic)}
-                style={{
-                  fontSize: 22,
-                  padding: '6px 10px',
-                  borderRadius: 8,
-                  border: icon === ic ? '2px solid var(--gold)' : '1px solid var(--panel-border)',
-                  backgroundColor: icon === ic ? 'var(--panel-elevated)' : 'var(--bg)',
-                  cursor: 'pointer',
-                }}
-              >
-                {ic}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ ...forms.group, marginTop: 16 }}>
-          <label style={forms.label}>Color</label>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {PROJECT_COLORS.map(c => (
-              <button
-                key={c}
-                onClick={() => setColor(c)}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  backgroundColor: c,
-                  border: color === c ? '3px solid var(--fg)' : '2px solid transparent',
-                  cursor: 'pointer',
-                }}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setShowArchiveConfirm(true)}
-            style={{ ...buttons.danger, fontSize: 12 }}
-          >
-            Archive Project
-          </button>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button onClick={onClose} style={buttons.secondary}>Cancel</button>
-            <button
-              onClick={handleSave}
-              disabled={!name.trim() || saving}
-              style={{ ...buttons.primary, opacity: (!name.trim() || saving) ? 0.5 : 1 }}
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </div>
-
-        {showArchiveConfirm && (
-          <div style={{
-            ...panel.compact,
-            marginTop: 16,
-            borderColor: 'var(--rust)',
-            backgroundColor: 'var(--rust)11',
-          }}>
-            <p style={{ fontSize: 13, marginBottom: 12 }}>
-              Archive this project? It will be hidden from the active board list but can be restored later.
-            </p>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={handleArchive} style={{ ...buttons.danger, fontSize: 12 }}>
-                Yes, Archive
-              </button>
-              <button onClick={() => setShowArchiveConfirm(false)} style={buttons.small}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
   )
 }
