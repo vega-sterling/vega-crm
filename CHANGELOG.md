@@ -1515,3 +1515,64 @@ Eliminated the last remaining modal in the Vega CRM — the "Add Contact" modal 
 - Company page Contacts tab is now fully responsive (table on desktop, cards on phone)
 - "Edit Details" button now does the right thing (scrolls to properties, not opens a contact form)
 - Bryan's design principle of inline actions over modals is fully and completely realized
+
+---
+
+## 2026-08-28 — Phase 27: Eliminate Last 4 Modals → Inline Forms (Settings + Projects)
+
+### Problem
+The Settings page still had two modals (Custom Properties editor + Workflow editor) and the Project detail page had two modals (ColumnModal + ProjectSettingsModal). Bryan's design principle is "inline actions over modals" — no exceptions. These were the last 4 modals in the entire CRM.
+
+### What Changed
+
+#### Settings Page (src/app/settings/page.tsx)
+**1. Custom Properties modal → inline form**
+- Removed `propModal` state and `modal-overlay` div
+- Added `showPropForm` boolean state + `editingProp` for edit mode
+- Inline form appears above the properties table with slide-up animation
+- Form fields: Label, Key, Entity type, Field type, Options (if DROPDOWN), Required, Visible checkboxes
+- "+ Add Property" button toggles to "× Cancel" when form is showing
+- autoFocus on first field, backgroundColor: var(--panel-elevated)
+
+**2. Workflow modal → inline form**
+- Removed `workflowModal` state and `modal-overlay` div
+- Added `showWorkflowForm` boolean state + `editingWorkflow` for edit mode
+- Inline form appears above the workflows table with slide-up animation
+- Form fields: Name, Description, Trigger, Conditions (field/operator/value rows), Actions (type-specific config)
+- "+ New Workflow" button toggles to "× Cancel" when form is showing
+
+#### Project Detail Page (src/app/projects/[id]/page.tsx)
+**3. ColumnModal component → inline form**
+- Removed entire ColumnModal component function (was ~125 lines)
+- Add Column: inline form appears at top of board area with slide-up animation
+- Edit Column: inline form appears within the column being edited
+- Form fields: Name, Color picker (8 colors), WIP Limit, Done column checkbox
+- Delete uses inline confirm pattern
+
+**4. ProjectSettingsModal component → inline panel**
+- Removed entire ProjectSettingsModal component function (was ~165 lines)
+- Inline settings panel appears at top of page with slide-up animation
+- Form fields: Name, Description, Icon picker (10 emojis), Color picker (8 colors)
+- Archive uses inline confirm with warning panel
+- "⚙ Board Settings" button toggles to "× Close"
+
+### QA Results
+- Health check: 307 redirect to /login (healthy) ✓
+- All 17 authenticated pages return 307 (auth redirect — expected) ✓
+- All 9 API endpoints return 401 (auth required — expected) ✓
+- Build succeeded: Next.js 16.3.0, Turbopack, Ready in 0ms ✓
+- Zero runtime errors in container logs ✓
+- Zero modal-overlay references in entire CRM codebase ✓
+- Zero ColumnModal/ProjectSettingsModal component references ✓
+- Zero propModal/workflowModal state references ✓
+
+### Files Changed
+- src/app/settings/page.tsx — MODIFIED (2 modals → 2 inline forms, 297 lines changed)
+- src/app/projects/[id]/page.tsx — MODIFIED (2 modal components removed, inline forms added, 936 lines changed)
+
+### Impact
+- **ZERO modals remain** across the entire Vega CRM — every single create/edit flow is now inline
+- This completes the multi-phase modal elimination that started in Phase 23
+- Every form uses consistent slide-up animation, autoFocus, and toggle button pattern
+- Bryan's design principle of "inline actions over modals" is now 100% realized
+- Total modal elimination history: Phase 23 (6 pages) → Phase 24 (3 pages) → Phase 25 (company page) → Phase 27 (settings + projects)
