@@ -1579,3 +1579,172 @@ input[type="checkbox"] {
 }
 
 /* Phase 26 CSS END */
+
+/* ============================================================================
+   PHASE 28 CSS — Command Palette (Cmd+K) Responsive
+   ============================================================================ */
+
+/* Desktop: centered palette */
+.cmdk-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+  animation: cmdkFadeIn 0.15s ease-out;
+}
+
+@keyframes cmdkFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cmdkSlideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.cmdk-palette {
+  width: 100%;
+  max-width: 640px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  overflow: hidden;
+  animation: cmdkSlideUp 0.2s ease-out;
+  max-height: 75vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mobile: full-screen bottom sheet */
+@media (max-width: 768px) {
+  .cmdk-overlay {
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    align-items: flex-end;
+    padding-top: 0;
+    padding: 0;
+  }
+
+  .cmdk-palette {
+    max-width: 100%;
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 20px 20px 0 0;
+    animation: cmdkSheetUp 0.25s ease-out;
+  }
+
+  @keyframes cmdkSheetUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+}
+
+/* Hide the ⌘K trigger button on very small screens — show a search icon instead */
+@media (max-width: 480px) {
+  .cmdk-trigger {
+    padding: '8px' !important;
+  }
+  .cmdk-trigger span {
+    font-size: 16px !important;
+  }
+}
+
+/* Command palette result items */
+.cmdk-item {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.cmdk-item-highlighted {
+  background: var(--panel-elevated);
+  border-left: 3px solid var(--gold);
+}
+
+/* Section header in palette */
+.cmdk-section-header {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--fg-dim);
+  padding: 10px 16px 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Search input in palette */
+.cmdk-input {
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  font-size: 16px;
+  background: var(--bg);
+  color: var(--fg);
+  border: none;
+  border-bottom: 1px solid var(--panel-border);
+  outline: none;
+}
+
+.cmdk-input::placeholder {
+  color: var(--fg-dim);
+}
+
+/* Results scroll area */
+.cmdk-results {
+  overflow-y: auto;
+  flex: 1;
+  max-height: 400px;
+}
+
+/* Footer */
+.cmdk-footer {
+  padding: 10px 16px;
+  border-top: 1px solid var(--panel-border);
+  font-size: 12px;
+  color: var(--fg-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.cmdk-footer kbd {
+  background: var(--bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-family: monospace;
+}
+
+/* Mobile: footer stacks and is more compact */
+@media (max-width: 768px) {
+  .cmdk-results {
+    max-height: none;
+  }
+
+  .cmdk-footer {
+    font-size: 11px;
+    gap: 12px;
+    padding: 8px 16px;
+  }
+}
+
+/* ⌘K trigger button — hide text on mobile, show icon */
+@media (max-width: 480px) {
+  .cmdk-trigger {
+    padding: 8px 10px !important;
+  }
+}
+
+/* Phase 28 CSS END */

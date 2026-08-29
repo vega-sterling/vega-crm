@@ -16,6 +16,7 @@ import { apiFetch } from '../lib/api'
 import type { User } from '../lib/types'
 import NotificationBell from './NotificationBell'
 import GlobalSearch from './GlobalSearch'
+import CommandPalette from './CommandPalette'
 import Breadcrumbs from './Breadcrumbs'
 import { RecentlyViewedTracker, RecentlyViewedDropdown, RecentlyViewedSidebar } from './RecentlyViewed'
 import { navIconMap, IconX, IconMenu, IconChevronRight } from './Icons'
@@ -141,6 +142,9 @@ export default function AppShell({ user, children }: { user: User; children: Rea
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       {/* ── Recently Viewed Tracker (invisible — records page visits) ── */}
       <RecentlyViewedTracker />
+
+      {/* ── Command Palette (Cmd+K) ── */}
+      <CommandPalette />
 
       {/* ── Mobile overlay backdrop ── */}
       {sidebarOpen && (
@@ -330,6 +334,30 @@ export default function AppShell({ user, children }: { user: User; children: Rea
             aria-label="Open menu"
           >
             <IconMenu size={22} />
+          </button>
+
+          {/* Command Palette trigger — shows ⌘K hint */}
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('vega-command-palette-open'))}
+            className="cmdk-trigger"
+            style={{
+              background: 'var(--bg)',
+              border: '1px solid var(--panel-border)',
+              borderRadius: 8,
+              padding: '8px 12px',
+              fontSize: 13,
+              color: 'var(--fg-dim)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              whiteSpace: 'nowrap',
+              height: 40,
+              flexShrink: 0,
+            }}
+            aria-label="Open command palette"
+          >
+            <span style={{ fontSize: 14 }}>⌘K</span>
           </button>
 
           {/* Global Search — in header, works on all pages */}
