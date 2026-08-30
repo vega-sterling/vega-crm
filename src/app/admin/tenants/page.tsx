@@ -4,6 +4,8 @@
 // File: src/app/admin/tenants/page.tsx
 // Description: Tenant management page. Lists all tenants with inline create/edit.
 //              Phase 23: Converted from modal to inline form pattern.
+//              Per-tenant 'Outbound Email' settings section (settings API keys:
+//              outbound_email.provider / .from / .from_name).
 //              Requires SUPER_ADMIN access (enforced by API route).
 // ============================================================================
 
@@ -14,6 +16,7 @@ import { IconPlus } from "../../components/Icons";
 import { apiFetch } from "../../lib/api";
 import { layout, panel, typeography, forms, buttons, table } from "../../lib/styles";
 import type { Tenant } from "../../lib/types";
+import OutboundEmailSection from "./OutboundEmailSection";
 
 const emptyForm = { name: "", slug: "", description: "" };
 
@@ -25,6 +28,7 @@ export default function TenantsPage() {
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [saving, setSaving] = useState(false);
+  const [expandedTenantId, setExpandedTenantId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -58,6 +62,10 @@ export default function TenantsPage() {
     setTimeout(() => {
       document.getElementById("inline-tenant-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 50);
+  };
+
+  const toggleExpanded = (tenantId: string) => {
+    setExpandedTenantId((prev) => (prev === tenantId ? null : tenantId));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -155,19 +163,38 @@ export default function TenantsPage() {
                   </tr>
                 ) : (
                   tenants.map((t) => (
-                    <tr key={t.id} className="vega-table-row" style={table.tr}>
-                      <td style={table.td}>{t.name}</td>
-                      <td style={table.td}><code style={{ fontSize: 13, color: "var(--fg-dim)" }}>{t.slug}</code></td>
-                      <td style={table.td}>{t.description || "—"}</td>
-                      <td style={table.td}>
-                        <span style={{ color: t.isActive !== false ? "var(--emerald)" : "var(--rust)", fontSize: 14 }}>
-                          {t.isActive !== false ? "✓ Active" : "✕ Inactive"}
-                        </span>
-                      </td>
-                      <td style={table.td}>
-                        <button className="btn-touch" style={buttons.small} onClick={() => openEdit(t)}>Edit</button>
-                      </td>
-                    </tr>
+                    <>
+                      <tr key={t.id} className="vega-table-row" style={table.tr}>
+                        <td style={table.td}>{t.name}</td>
+                        <td style={table.td}><code style={{ fontSize: 13, color: "var(--fg-dim)" }}>{t.slug}</code></td>
+                        <td style={table.td}>{t.description || "—"}</td>
+                        <td style={table.td}>
+                          <span style={{ color: t.isActive !== false ? "var(--emerald)" : "var(--rust)", fontSize: 14 }}>
+                            {t.isActive !== false ? "✓ Active" : "✕ Inactive"}
+                          </span>
+                        </td>
+                        <td style={table.td}>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button className="btn-touch" style={buttons.small} onClick={() => openEdit(t)}>Edit</button>
+                            <button
+                              className="btn-touch"
+                              style={{ ...buttons.small, ...(expandedTenantId === t.id ? { backgroundColor: "var(--gold)", color: "var(--bg)", borderColor: "var(--gold)" } : {}) }}
+                              onClick={() => toggleExpanded(t.id)}
+                              aria-expanded={expandedTenantId === t.id}
+                            >
+                              {expandedTenantId === t.id ? "▾ Hide Email" : "▸ Outbound Email"}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedTenantId === t.id && (
+                        <tr key={`${t.id}-outbound`}>
+                          <td style={{ padding: 0 }} colSpan={5}>
+                            <OutboundEmailSection tenantId={t.id} tenantName={t.name} />
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))
                 )}
               </tbody>
