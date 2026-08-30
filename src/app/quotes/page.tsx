@@ -1,9 +1,18 @@
 'use client'
 
+// ============================================================================
+// File: src/app/quotes/page.tsx
+// Description: Quotes & Proposals list page with inline create form.
+//              Phase 29: Converted from modal to inline form (matching Phase 23
+//              pattern). Quote rows now link to /quotes/[id] detail page.
+// ============================================================================
+
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import Link from 'next/link'
 import ProtectedLayout from '../components/ProtectedLayout'
 import Spinner from '../components/Spinner'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { IconPlus, IconTrash, IconX, IconFileText } from '../components/Icons'
 import { apiFetch } from '../lib/api'
 import { layout, panel, typeography, forms, buttons, table, statusBadge } from '../lib/styles'
 import type { Deal } from '../lib/types'
@@ -38,7 +47,7 @@ interface Quote {
 }
 
 const currencyFmt = (n: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n)
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n || 0)
 
 const formatDate = (d?: string | null) => {
   if (!d) return '—'
@@ -120,6 +129,7 @@ function QuotesContent() {
     setForm({ dealId: deals[0]?.id || '', notes: '', validUntil: '' })
     setLineItems([{ description: '', quantity: '1', unitPrice: '' }])
     setShowNew(true)
+    setError('')
   }
 
   const updateLineItem = (index: number, field: keyof typeof lineItems[number], value: string) => {
@@ -169,10 +179,6 @@ function QuotesContent() {
     }
   }
 
-  const handleDelete = (quote: Quote) => {
-    setConfirmDelete(quote)
-  }
-
   const performDelete = async (quote: any) => {
     try {
       await apiFetch<{ success: boolean }>(`/api/quotes/${quote.id}`, { method: 'DELETE' })
@@ -184,97 +190,60 @@ function QuotesContent() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
-        <Spinner size={32} />
-      </div>
+      <ProtectedLayout>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
+          <Spinner size={32} />
+        </div>
+      </ProtectedLayout>
     )
   }
 
   return (
-    <div style={layout.page}>
-      <div style={layout.header}>
-        <div>
-          <h1 style={{ ...typeography.title, marginBottom: 4 }}>Quotes & Proposals</h1>
-          <div style={{ color: 'var(--fg-dim)', fontSize: 14 }}>
-            {quotes.length} quote{quotes.length === 1 ? '' : 's'} · Total {currencyFmt(quotes.reduce((sum, q) => sum + (q.total || 0), 0))}
+    <ProtectedLayout>
+      <div style={layout.page}>
+        <div style={layout.header}>
+          <div>
+            <h1 style={{ ...typeography.title, marginBottom: 4 }}>Quotes & Proposals</h1>
+            <div style={{ color: 'var(--fg-dim)', fontSize: 14 }}>
+              {quotes.length} quote{quotes.length === 1 ? '' : 's'} · Total {currencyFmt(quotes.reduce((sum, q) => sum + (q.total || 0), 0))}
+            </div>
           </div>
+          <button style={buttons.primary} onClick={openNew}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <IconPlus size={16} /> New Quote
+            </span>
+          </button>
         </div>
-        <button style={buttons.primary} onClick={openNew}>+ New Quote</button>
-      </div>
 
-      {error && (
-        <div style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: 'var(--rust)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>
-          {error}
-        </div>
-      )}
-
-      <div style={panel.compact}>
-        {quotes.length === 0 ? (
-          <p style={typeography.muted}>No quotes yet. Create your first quote to get started.</p>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={table.table}>
-              <thead>
-                <tr>
-                  <th style={table.th}>Quote #</th>
-                  <th style={table.th}>Deal</th>
-                  <th style={table.th}>Status</th>
-                  <th style={{ ...table.th, textAlign: 'right' }}>Total</th>
-                  <th style={table.th}>Valid Until</th>
-                  <th style={table.th}>Created</th>
-                  <th style={table.th}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {quotes.map((quote) => (
-                  <tr key={quote.id} style={table.tr}>
-                    <td style={table.td}>
-                      <div style={{ fontWeight: 600 }}>{quote.number}</div>
-                      <div style={typeography.small}>{quote.tenant?.name || '—'}</div>
-                    </td>
-                    <td style={table.td}>{quote.deal?.title || '—'}</td>
-                    <td style={table.td}>
-                      <span style={statusBadge(statusColor(quote.status))}>{quote.status}</span>
-                    </td>
-                    <td style={{ ...table.td, textAlign: 'right', fontWeight: 700, color: 'var(--gold)' }}>
-                      {currencyFmt(quote.total || 0)}
-                    </td>
-                    <td style={table.td}>{formatDate(quote.validUntil)}</td>
-                    <td style={table.td}>{formatDate(quote.createdAt)}</td>
-                    <td style={table.td}>
-                      <button style={buttons.danger} onClick={() => handleDelete(quote)}>Delete</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {error && (
+          <div style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: 'var(--rust)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>
+            {error}
           </div>
         )}
-      </div>
 
-      {showNew && (
-        <div
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-          onClick={() => setShowNew(false)}
-        >
-          <div style={{ ...panel.container, width: '100%', maxWidth: 720, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
+        {/* ── Inline Create Form (slides into view, no modal) ── */}
+        {showNew && (
+          <div className="panel-container" style={{ ...panel.container, marginBottom: 24, animation: 'slideUp 0.2s ease-out' }}>
             <div style={{ ...layout.header, marginBottom: 16 }}>
-              <h2 style={{ ...typeography.subtitle, margin: 0 }}>New Quote</h2>
-              <button style={{ ...buttons.small, fontSize: 16 }} onClick={() => setShowNew(false)}>✕</button>
+              <h2 style={{ ...typeography.subtitle, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <IconFileText size={20} /> New Quote
+              </h2>
+              <button style={{ ...buttons.small, fontSize: 16, display: 'flex', alignItems: 'center', gap: 4 }} onClick={() => setShowNew(false)}>
+                <IconX size={16} /> Close
+              </button>
             </div>
 
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label style={forms.group}>
-                <span style={forms.label}>Deal</span>
-                <select style={forms.select} value={form.dealId} onChange={(e) => setForm({ ...form, dealId: e.target.value })}>
-                  <option value="">Select a deal</option>
-                  {deals.map((d) => (
-                    <option key={d.id} value={d.id}>{d.title}</option>
-                  ))}
-                </select>
-              </label>
-
               <div style={forms.row}>
+                <label style={forms.group}>
+                  <span style={forms.label}>Deal</span>
+                  <select style={forms.select} value={form.dealId} onChange={(e) => setForm({ ...form, dealId: e.target.value })}>
+                    <option value="">Select a deal</option>
+                    {deals.map((d) => (
+                      <option key={d.id} value={d.id}>{d.title}</option>
+                    ))}
+                  </select>
+                </label>
                 <label style={forms.group}>
                   <span style={forms.label}>Valid Until</span>
                   <input style={forms.input} type="date" value={form.validUntil} onChange={(e) => setForm({ ...form, validUntil: e.target.value })} />
@@ -283,20 +252,22 @@ function QuotesContent() {
 
               <label style={forms.group}>
                 <span style={forms.label}>Notes</span>
-                <textarea style={forms.textarea} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+                <textarea style={forms.textarea} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes..." />
               </label>
 
               <div>
                 <div style={{ ...layout.header, marginBottom: 12 }}>
                   <h3 style={{ ...typeography.subtitle, margin: 0, fontSize: 16 }}>Line Items</h3>
-                  <button type="button" style={buttons.small} onClick={addLineItem}>+ Add row</button>
+                  <button type="button" style={{ ...buttons.small, display: 'flex', alignItems: 'center', gap: 4 }} onClick={addLineItem}>
+                    <IconPlus size={14} /> Add row
+                  </button>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {lineItems.map((item, index) => (
-                    <div key={index} style={{ ...forms.row, alignItems: 'end' }}>
-                      <label style={{ ...forms.group, flex: 2 }}>
-                        <span style={forms.label}>Description</span>
+                    <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 120px 120px auto', gap: 8, alignItems: 'end' }} className="line-item-row">
+                      <label style={forms.group}>
+                        {index === 0 && <span style={forms.label}>Description</span>}
                         <input
                           style={forms.input}
                           value={item.description}
@@ -305,7 +276,7 @@ function QuotesContent() {
                         />
                       </label>
                       <label style={forms.group}>
-                        <span style={forms.label}>Qty</span>
+                        {index === 0 && <span style={forms.label}>Qty</span>}
                         <input
                           style={forms.input}
                           type="number"
@@ -316,7 +287,7 @@ function QuotesContent() {
                         />
                       </label>
                       <label style={forms.group}>
-                        <span style={forms.label}>Unit Price</span>
+                        {index === 0 && <span style={forms.label}>Unit Price</span>}
                         <input
                           style={forms.input}
                           type="number"
@@ -327,7 +298,7 @@ function QuotesContent() {
                         />
                       </label>
                       <label style={forms.group}>
-                        <span style={forms.label}>Total</span>
+                        {index === 0 && <span style={forms.label}>Total</span>}
                         <input
                           style={{ ...forms.input, color: 'var(--fg-dim)' }}
                           type="text"
@@ -335,7 +306,9 @@ function QuotesContent() {
                           value={currencyFmt(parsedLineItems[index]?.total || 0)}
                         />
                       </label>
-                      <button type="button" style={buttons.danger} onClick={() => removeLineItem(index)} disabled={lineItems.length === 1}>Remove</button>
+                      <button type="button" style={{ ...buttons.danger, padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => removeLineItem(index)} disabled={lineItems.length === 1}>
+                        <IconTrash size={14} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -358,8 +331,66 @@ function QuotesContent() {
               </div>
             </form>
           </div>
+        )}
+
+        {/* ── Quotes Table ── */}
+        <div className="panel-container" style={panel.compact}>
+          {quotes.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 48 }}>
+              <IconFileText size={48} />
+              <p style={{ ...typeography.muted, marginTop: 16, marginBottom: 16 }}>No quotes yet. Create your first quote to get started.</p>
+              <button style={buttons.primary} onClick={openNew}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IconPlus size={16} /> New Quote
+                </span>
+              </button>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }} className="table-wrapper">
+              <table style={table.table}>
+                <thead>
+                  <tr>
+                    <th style={table.th}>Quote #</th>
+                    <th style={table.th}>Deal</th>
+                    <th style={table.th}>Status</th>
+                    <th style={{ ...table.th, textAlign: 'right' }}>Total</th>
+                    <th style={table.th}>Valid Until</th>
+                    <th style={table.th}>Created</th>
+                    <th style={table.th}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quotes.map((quote) => (
+                    <tr key={quote.id} style={table.tr}>
+                      <td style={table.td}>
+                        <Link href={`/quotes/${quote.id}`} style={{ fontWeight: 600, textDecoration: 'none', color: 'var(--gold)' }}>
+                          {quote.number}
+                        </Link>
+                        <div style={typeography.small}>{quote.tenant?.name || '—'}</div>
+                      </td>
+                      <td style={table.td}>{quote.deal?.title || '—'}</td>
+                      <td style={table.td}>
+                        <span style={statusBadge(statusColor(quote.status))}>{quote.status}</span>
+                      </td>
+                      <td style={{ ...table.td, textAlign: 'right', fontWeight: 700, color: 'var(--gold)' }}>
+                        {currencyFmt(quote.total || 0)}
+                      </td>
+                      <td style={table.td}>{formatDate(quote.validUntil)}</td>
+                      <td style={table.td}>{formatDate(quote.createdAt)}</td>
+                      <td style={table.td}>
+                        <button style={{ ...buttons.danger, padding: '6px 8px', display: 'flex', alignItems: 'center', gap: 4 }} onClick={() => setConfirmDelete(quote)}>
+                          <IconTrash size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      )}
+      </div>
+
       <ConfirmDialog
         open={!!confirmDelete}
         title="Delete Quote?"
@@ -367,14 +398,10 @@ function QuotesContent() {
         onCancel={() => setConfirmDelete(null)}
         onConfirm={() => { performDelete(confirmDelete); setConfirmDelete(null) }}
       />
-    </div>
+    </ProtectedLayout>
   )
 }
 
 export default function QuotesPage() {
-  return (
-    <ProtectedLayout>
-      <QuotesContent />
-    </ProtectedLayout>
-  )
+  return <QuotesContent />
 }

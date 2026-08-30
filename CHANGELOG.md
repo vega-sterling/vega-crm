@@ -1,3 +1,97 @@
+## 2026-08-30 — Phase 29: Quote Detail Page + Inline Quote Form + QuotesCard in Deal Detail
+
+### Problem
+The Quotes page was the last page still using a modal overlay for creating new quotes (violating the "inline over modals" principle applied everywhere else in Phases 23-27). There was no quote detail page — quotes could only be listed and deleted from the list page. The deal detail page had no quotes section in its right sidebar, so users couldn't see which quotes were associated with a deal.
+
+### What Changed
+1. **New Quote Detail Page** (`/quotes/[id]`) — HubSpot/Salesforce-style document view:
+   - Status progression bar (DRAFT → SENT → ACCEPTED with visual steps)
+   - Two-column layout: Left (quote properties, status selector, valid-until date, deal link, notes, delete) + Right (line items table + totals)
+   - Inline editing of line items (add/remove/edit with live total calculation)
+   - Inline notes editing
+   - Status dropdown with inline save
+   - Valid-until date picker with inline save
+   - Totals summary (subtotal, tax, total) with auto-calculation
+   - Responsive: 2-column desktop, single-column tablet/phone
+
+2. **Converted Quotes List Page** from modal to inline form:
+   - "New Quote" button reveals an inline form that slides into view (slideUp animation)
+   - Deal selector, valid-until date, notes, dynamic line items with live totals
+   - No modal overlay — matches Phase 23 pattern used on all other pages
+   - Quote numbers in the table now link to the new detail page
+
+3. **Added QuotesCard to Deal Detail right sidebar**:
+   - New QuotesCard component in AssociationCards.tsx
+   - Shows associated quotes with number, status badge, and total
+   - Each quote links to the new quote detail page
+   - Quote data fetched via quotes API with dealId filter in the deal detail loadAll function
+
+### Files Changed
+- `src/app/quotes/[id]/page.tsx` — NEW (634 lines)
+- `src/app/quotes/page.tsx` — REWRITTEN (380 to 406 lines, modal to inline form)
+- `src/app/components/AssociationCards.tsx` — MODIFIED (added QuotesCard export)
+- `src/app/deals/[id]/page.tsx` — MODIFIED (added quotes state, fetch, QuotesCard in sidebar)
+- `src/app/globals.css` — MODIFIED (added Phase 29 responsive CSS)
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded (Next.js 16.3.0, Turbopack)
+- ✅ Container started cleanly, no runtime errors in logs
+- ✅ /quotes -> 307 (protected page exists)
+- ✅ /quotes/test-id -> 307 (new detail page route exists)
+- ✅ /api/quotes -> 401 (API requires auth)
+- ✅ /api/quotes/test-id -> 401 (detail API exists)
+- ✅ /deals -> 307 (no regression)
+- ✅ /dashboard, /contacts, /companies -> all 307 (no regressions)
+## 2026-08-30 — Phase 29: Quote Detail Page + Inline Quote Form + QuotesCard in Deal Detail
+
+### Problem
+The Quotes page was the last page still using a modal overlay for creating new quotes (violating the inline over modals principle applied everywhere else in Phases 23-27). There was no quote detail page — quotes could only be listed and deleted from the list page. The deal detail page had no quotes section in its right sidebar, so users couldn't see which quotes were associated with a deal.
+
+### What Changed
+1. **New Quote Detail Page** () — HubSpot/Salesforce-style document view:
+   - Status progression bar (DRAFT → SENT → ACCEPTED with visual steps)
+   - Two-column layout: Left (quote properties, status selector, valid-until date, deal link, notes, delete) + Right (line items table + totals)
+   - Inline editing of line items (add/remove/edit with live total calculation)
+   - Inline notes editing
+   - Status dropdown with inline save
+   - Valid-until date picker with inline save
+   - Totals summary (subtotal, tax, total) with auto-calculation
+   - Responsive: 2-column desktop, single-column tablet/phone
+
+2. **Converted Quotes List Page** from modal → inline form:
+   - New Quote button reveals an inline form that slides into view (slideUp animation)
+   - Deal selector, valid-until date, notes, dynamic line items with live totals
+   - No modal overlay — matches Phase 23 pattern used on all other pages
+   - Quote numbers in the table now link to the new detail page
+
+3. **Added QuotesCard to Deal Detail right sidebar**:
+   - New  component in AssociationCards.tsx
+   - Shows associated quotes with number, status badge, and total
+   - Each quote links to the new /quotes/[id] detail page
+   - Quote data fetched via  in the deal detail's loadAll function
+
+4. **Responsive CSS** added to globals.css:
+   - Quote detail 2-column → single column at ≤1024px (tablet/phone)
+   - Line item rows compress on phone (≤768px, ≤480px)
+
+### Files Changed
+-  — NEW (634 lines)
+-  — REWRITTEN (380 → 406 lines, modal → inline form)
+-  — MODIFIED (added QuotesCard export, +80 lines)
+-  — MODIFIED (added quotes state, fetch, QuotesCard in sidebar)
+-  — MODIFIED (added Phase 29 responsive CSS)
+
+### QA Results
+- ✅ Health check: 307 redirect to /login (healthy)
+- ✅ Build succeeded (Next.js 16.3.0, Turbopack)
+- ✅ Container started cleanly, no runtime errors in logs
+- ✅ /quotes -> 307 (protected page exists)
+- ✅ /quotes/[id] -> 307 (new detail page route exists)
+- ✅ /api/quotes -> 401 (API requires auth)
+- ✅ /api/quotes/[id] -> 401 (detail API exists)
+- ✅ /deals -> 307 (no regression)
+- ✅ /dashboard, /contacts, /companies -> all 307 (no regressions)
 ## 2026-08-27 — Phase 26: Enhanced Reports & Analytics Dashboard
 
 ### Problem

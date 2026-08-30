@@ -2,7 +2,7 @@
 
 // ============================================================================
 // AssociationCards — Collapsible cards for the right sidebar.
-// Shows associated contacts, deals, tasks, company link.
+// Shows associated contacts, deals, tasks, company link, quotes.
 // Each card: header with count badge + collapsible body.
 // ============================================================================
 
@@ -28,6 +28,14 @@ const STATUS_COLORS: Record<string, string> = {
   IN_PROGRESS: 'var(--blue)',
   COMPLETED: 'var(--emerald)',
   CANCELLED: 'var(--rust)',
+}
+
+const QUOTE_STATUS_COLORS: Record<string, string> = {
+  DRAFT: 'var(--fg-dim)',
+  SENT: 'var(--blue)',
+  ACCEPTED: 'var(--emerald)',
+  REJECTED: 'var(--rust)',
+  EXPIRED: 'var(--rust)',
 }
 
 // ── Collapsible card wrapper ──
@@ -103,13 +111,9 @@ export function ContactsCard({ contacts, companyId }: { contacts: Contact[]; com
               key={c.id}
               href={`/contacts/${c.id}`}
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
-                padding: '8px 10px',
-                borderRadius: 8,
-                textDecoration: 'none',
-                color: 'var(--fg)',
+                display: 'flex', flexDirection: 'column', gap: 2,
+                padding: '8px 10px', borderRadius: 8,
+                textDecoration: 'none', color: 'var(--fg)',
                 border: '1px solid var(--panel-border)',
                 transition: 'border-color 0.15s, background 0.15s',
               }}
@@ -148,13 +152,9 @@ export function DealsCard({ deals }: { deals: Deal[] }) {
               key={d.id}
               href={`/deals/${d.id}`}
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 4,
-                padding: '8px 10px',
-                borderRadius: 8,
-                textDecoration: 'none',
-                color: 'var(--fg)',
+                display: 'flex', flexDirection: 'column', gap: 4,
+                padding: '8px 10px', borderRadius: 8,
+                textDecoration: 'none', color: 'var(--fg)',
                 border: '1px solid var(--panel-border)',
                 transition: 'border-color 0.15s, background 0.15s',
               }}
@@ -193,11 +193,8 @@ export function TasksCard({ tasks }: { tasks: Task[] }) {
             <div
               key={t.id}
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 4,
-                padding: '8px 10px',
-                borderRadius: 8,
+                display: 'flex', flexDirection: 'column', gap: 4,
+                padding: '8px 10px', borderRadius: 8,
                 border: '1px solid var(--panel-border)',
               }}
             >
@@ -229,16 +226,11 @@ export function CompanyCard({ company }: { company?: { id: string; name: string 
         <Link
           href={`/companies/${company.id}`}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '8px 10px',
-            borderRadius: 8,
-            textDecoration: 'none',
-            color: 'var(--fg)',
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '8px 10px', borderRadius: 8,
+            textDecoration: 'none', color: 'var(--fg)',
             border: '1px solid var(--panel-border)',
-            fontWeight: 600,
-            fontSize: 14,
+            fontWeight: 600, fontSize: 14,
             transition: 'border-color 0.15s, background 0.15s',
           }}
           onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.background = 'var(--bg-soft)' }}
@@ -248,6 +240,54 @@ export function CompanyCard({ company }: { company?: { id: string; name: string 
         </Link>
       ) : (
         <p style={{ ...typeography.muted, fontSize: 13 }}>No company linked.</p>
+      )}
+    </CollapsibleCard>
+  )
+}
+
+// ── Quotes Card (for deal detail page) ──
+interface QuoteSummary {
+  id: string
+  number: string
+  status: string
+  total: number
+  createdAt: string
+}
+
+export function QuotesCard({ quotes }: { quotes: QuoteSummary[] }) {
+  const sorted = [...quotes].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  return (
+    <CollapsibleCard title="Quotes" count={sorted.length}>
+      {sorted.length === 0 ? (
+        <p style={{ ...typeography.muted, fontSize: 13 }}>No quotes yet.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {sorted.slice(0, 5).map((q) => (
+            <Link
+              key={q.id}
+              href={`/quotes/${q.id}`}
+              style={{
+                display: 'flex', flexDirection: 'column', gap: 4,
+                padding: '8px 10px', borderRadius: 8,
+                textDecoration: 'none', color: 'var(--fg)',
+                border: '1px solid var(--panel-border)',
+                transition: 'border-color 0.15s, background 0.15s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.background = 'var(--bg-soft)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--panel-border)'; e.currentTarget.style.background = 'transparent' }}
+            >
+              <span style={{ fontWeight: 600, fontSize: 14 }}>{q.number}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ ...statusBadge(QUOTE_STATUS_COLORS[q.status] || 'var(--fg-dim)'), fontSize: 11 }}>
+                  {q.status}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gold)' }}>
+                  ${q.total?.toLocaleString()}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
       )}
     </CollapsibleCard>
   )

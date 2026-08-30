@@ -1748,3 +1748,36 @@ input[type="checkbox"] {
 }
 
 /* Phase 28 CSS END */
+
+/* ────────────────────────────────────────────────
+   Phase 29 CSS — Quote Detail Page Responsive
+   ──────────────────────────────────────────────── */
+
+/* Quote detail 2-column → single column on tablet/phone */
+@media (max-width: 1024px) {
+  .quote-2col {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Line item row → horizontal scroll or stack on phone */
+@media (max-width: 768px) {
+  .line-item-row {
+    grid-template-columns: 1fr 60px 100px 100px 36px !important;
+    gap: 6px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .line-item-row {
+    grid-template-columns: 1fr 50px 80px 80px 32px !important;
+    gap: 4px !important;
+  }
+
+  /* Stack label above on very small screens */
+  .line-item-row label > span {
+    display: none !important;
+  }
+}
+
+/* Phase 29 CSS END */

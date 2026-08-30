@@ -28,7 +28,7 @@ import EmailThreadCard from '../../components/EmailThreadCard'
 import SummaryCard from '../../components/SummaryCard'
 import TasksTab from '../../components/TasksTab'
 import PropertyQuickEdit from '../../components/PropertyQuickEdit'
-import { CompanyCard, ContactsCard, TasksCard } from '../../components/AssociationCards'
+import { CompanyCard, ContactsCard, TasksCard, QuotesCard } from '../../components/AssociationCards'
 import { groupEmailsByThread } from '../../lib/emailThreads'
 import { apiFetch } from '../../lib/api'
 import { layout, panel, typeography, forms, buttons, statusBadge } from '../../lib/styles'
@@ -82,6 +82,7 @@ function DealDetailContent() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [emails, setEmails] = useState<EmailMessage[]>([])
+  const [quotes, setQuotes] = useState<{ id: string; number: string; status: string; total: number; createdAt: string }[]>([])
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -146,12 +147,13 @@ function DealDetailContent() {
         return
       }
 
-      const [activitiesRes, tasksRes, emailsRes, companiesRes, contactsRes] = await Promise.all([
+      const [activitiesRes, tasksRes, emailsRes, companiesRes, contactsRes, quotesRes] = await Promise.all([
         apiFetch<{ data: Activity[] }>(`/api/activities?dealId=${dealId}&limit=100`).catch(() => ({ data: [] as Activity[] })),
         apiFetch<{ data: Task[] }>(`/api/tasks?companyId=${dealRes.companyId}&limit=100`).catch(() => ({ data: [] as Task[] })),
         apiFetch<{ data: EmailMessage[] }>(`/api/email/messages?dealId=${dealId}&limit=50`).catch(() => ({ data: [] as EmailMessage[] })),
         apiFetch<{ data: Company[] }>('/api/companies').catch(() => ({ data: [] as Company[] })),
         apiFetch<{ data: Contact[] }>(`/api/contacts?companyId=${dealRes.companyId}&limit=100`).catch(() => ({ data: [] as Contact[] })),
+        apiFetch<{ data: any[] }>(`/api/quotes?dealId=${dealId}`).catch(() => ({ data: [] as any[] })),
       ])
 
       setActivities(activitiesRes.data || [])
@@ -159,6 +161,7 @@ function DealDetailContent() {
       setEmails(emailsRes.data || [])
       setCompanies(companiesRes.data || [])
       setContacts(contactsRes.data || [])
+      setQuotes(quotesRes.data || [])
 
       setForm({
         title: dealRes.title || '',
@@ -894,6 +897,9 @@ function DealDetailContent() {
 
             {/* Open Tasks */}
             <TasksCard tasks={tasks} />
+
+            {/* Quotes */}
+            <QuotesCard quotes={quotes} />
 
             {/* Recent Emails */}
             <div className="panel-container" style={{ ...panel.compact, padding: 0, overflow: 'hidden' }}>
