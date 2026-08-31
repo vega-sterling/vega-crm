@@ -1746,3 +1746,32 @@ The company detail page had a middle-column tab bar (Timeline | Contacts | Tasks
 
 ### Priority 1 Roadmap Status: COMPLETE
 All items shipped across Phases 1-30: 3-column layouts, inline note composer, quick action bar, timeline filter tabs, tasks tab with inline creation (company + contact), pinned notes.
+
+## 2026-08-31 — Phase 31: Inline Activity Editing (kill last prompt()/confirm() edit flows)
+
+### Problem
+Editing a note/call/meeting activity on the contact or company detail page popped a browser `prompt()` dialog ("Edit note:") — the exact kind of clunky native-dialog UX Bryan has been eliminating since Phase 23. It also couldnt handle multi-line notes well.
+## 2026-08-31 — Phase 31: Inline Activity Editing (kill last prompt() edit flows)
+
+### Problem
+Editing a note/call/meeting activity on the contact or company detail page popped a browser prompt() dialog ("Edit note:") — the exact kind of clunky native-dialog UX eliminated everywhere else since Phase 23. It also couldn't handle multi-line notes well.
+
+### What Changed
+1. src/app/components/ActivityCard.tsx (256 to ~290 lines):
+   - New optional prop: onEditSave (activity, newDescription) => Promise<Activity | void> | void
+   - When provided, the Edit button toggles an inline editor inside the card: textarea prefilled with description (autoFocus, rows=4, full-width), flat Save (gold) / Cancel buttons, 44px touch targets
+   - Legacy onEdit prop preserved for backward compatibility (unmodified pages keep working)
+2. src/app/contacts/[id]/page.tsx and src/app/companies/[id]/page.tsx:
+   - Replaced prompt()-based handleEditActivity with async handleEditActivitySave (PUT /api/activities/:id)
+   - All 4 ActivityCard call sites now pass onEditSave instead of onEdit
+   - Zero prompt() calls remain for activity editing; delete flow keeps its styled ConfirmDialog
+
+### QA Results
+- tsc --noEmit: exit 0 (zero type errors)
+- next build (docker node:22-slim): exit 0
+- Deployed: root 307 to /login, /login 200 OK
+- No errors in container logs post-deploy
+- Zero schema/DB changes
+
+### Roadmap note
+With this, the Priority 1 "Record Page UX" roadmap is fully complete (Phases 1-30) plus this polish item. Next candidates: deal detail page still uses confirm() for deletes (styled ConfirmDialog would be consistent); universal inbox has no SMS channel even though the SmsMessage model exists (unwired).

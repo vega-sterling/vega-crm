@@ -55,7 +55,6 @@ function ContactDetailContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>('ALL')
-  const [middleTab, setMiddleTab] = useState<'timeline' | 'tasks'>('timeline')
 
   const [submitting, setSubmitting] = useState(false)
   const [following, setFollowing] = useState(false)
@@ -151,15 +150,16 @@ function ContactDetailContent() {
     }
   }
 
-  const handleEditActivity = (activity: Activity) => {
-    const newDesc = prompt('Edit note:', activity.description || '')
-    if (newDesc === null) return
-    apiFetch<Activity>(`/api/activities/${activity.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ description: newDesc, subject: activity.subject }),
-    }).then(updated => {
+  const handleEditActivitySave = async (activity: Activity, newDescription: string) => {
+    try {
+      const updated = await apiFetch<Activity>(`/api/activities/${activity.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ description: newDescription, subject: activity.subject }),
+      })
       setActivities(prev => prev.map(a => a.id === updated.id ? updated : a))
-    }).catch(err => setError(err.message || 'Failed to update activity'))
+    } catch (err: any) {
+      setError(err.message || 'Failed to update activity')
+    }
   }
 
   // Property quick-edit save
@@ -262,29 +262,6 @@ function ContactDetailContent() {
 
         {/* ════════════════ MIDDLE COLUMN ════════════════ */}
         <div className="record-middle" style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-          {/* Tab Bar */}
-          <div className="tab-bar" style={{ display: 'flex', gap: 8, borderBottom: '1px solid var(--panel-border)', overflowX: 'auto' }}>
-            {(['timeline', 'tasks'] as const).map((tab) => (
-              <button
-                key={tab}
-                className="btn-touch"
-                onClick={() => setMiddleTab(tab)}
-                style={{
-                  background: 'transparent', border: 'none',
-                  borderBottom: middleTab === tab ? '2px solid var(--gold)' : '2px solid transparent',
-                  color: middleTab === tab ? 'var(--fg)' : 'var(--fg-dim)',
-                  padding: '10px 16px', fontWeight: 600, textTransform: 'capitalize',
-                  cursor: 'pointer', whiteSpace: 'nowrap',
-                }}
-              >
-                {tab}{tab === 'tasks' && tasks.length > 0 ? ` (${tasks.length})` : ''}
-              </button>
-            ))}
-          </div>
-
-          {/* Timeline Tab */}
-          {middleTab === 'timeline' && (
-            <>
           {/* Pinned Notes Section */}
           {pinnedActivity && (
             <div style={{ marginBottom: 0 }}>
@@ -298,7 +275,7 @@ function ContactDetailContent() {
                   users={users}
                   pinned={true}
                   onPin={handlePinToggle}
-                  onEdit={handleEditActivity}
+                  onEditSave={handleEditActivitySave}
                   onDelete={handleDeleteActivity}
                 />
               </div>
@@ -352,7 +329,7 @@ function ContactDetailContent() {
                       activity={item.data}
                       users={users}
                       onPin={handlePinToggle}
-                      onEdit={handleEditActivity}
+                      onEditSave={handleEditActivitySave}
                       onDelete={handleDeleteActivity}
                     />
                   )
@@ -372,20 +349,6 @@ function ContactDetailContent() {
               })
             )}
           </div>
-            </>
-          )}
-
-          {/* Tasks Tab */}
-          {middleTab === 'tasks' && (
-            <TasksTab
-              contactId={contactId}
-              tenantId={contact.tenantId}
-              users={users}
-              currentUserId={currentUser?.id}
-              tasks={tasks}
-              onTasksChanged={load}
-            />
-          )}
         </div>
 
         {/* ════════════════ RIGHT SIDEBAR ════════════════ */}

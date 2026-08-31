@@ -7,7 +7,7 @@
 // ============================================================================
 
 import { useState, useMemo } from 'react'
-import { panel, typeography, statusBadge, buttons } from '../lib/styles'
+import { panel, typeography, statusBadge, buttons, forms } from '../lib/styles'
 import ConfirmDialog from './ConfirmDialog'
 import type { Activity, User } from '../lib/types'
 
@@ -108,15 +108,19 @@ interface ActivityCardProps {
   pinned?: boolean
   onPin?: (id: string) => void
   onEdit?: (activity: Activity) => void
+  onEditSave?: (activity: Activity, newDescription: string) => Promise<Activity | void> | void
   onDelete?: (id: string) => void
   compact?: boolean
 }
 
 export default function ActivityCard({
-  activity, users = [], pinned = false, onPin, onEdit, onDelete, compact = false,
+  activity, users = [], pinned = false, onPin, onEdit, onEditSave, onDelete, compact = false,
 }: ActivityCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editDraft, setEditDraft] = useState('')
+  const [saving, setSaving] = useState(false)
   const a = activity
   const color = activityColor[a.type] || 'var(--fg-dim)'
   const icon = activityEmoji[a.type] || '📋'
@@ -125,6 +129,26 @@ export default function ActivityCard({
   const displayDesc = shouldTruncate && !expanded ? desc.slice(0, TRUNCATE_LIMIT) + '…' : desc
 
   const mentionNodes = useMemo(() => renderWithMentions(displayDesc, users), [displayDesc, users])
+
+  const startInlineEdit = () => {
+    setEditDraft(desc)
+    setExpanded(false)
+    setEditing(true)
+  }
+
+  const handleSave = async () => {
+    if (!onEditSave) return
+    setSaving(true)
+    try {
+      await onEditSave(a, editDraft)
+    } finally {
+      setSaving(false)
+      setEditing(false)
+    }
+  }
+
+  const showInlineEditButton = !!onEditSave
+  const showLegacyEditButton = !onEditSave && !!onEdit
 
   const cardStyle: React.CSSProperties = {
     ...panel.compact,
@@ -162,29 +186,57 @@ export default function ActivityCard({
         </div>
       </div>
 
-      {/* Description with expand/collapse + @mention highlighting */}
-      {desc && (
-        <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.5, color: 'var(--fg)', paddingLeft: 48 }}>
-          <p style={{ margin: 0, wordBreak: 'break-word' }}>{mentionNodes}</p>
-          {shouldTruncate && (
+      {/* Description with expand/collapse + @mention highlighting, OR inline editor */}
+      {editing ? (
+        <div style={{ marginTop: 10, paddingLeft: 48 }}>
+          <textarea
+            value={editDraft}
+            onChange={(e) => setEditDraft(e.target.value)}
+            rows={4}
+            autoFocus
+            style={{ ...forms.textarea, fontSize: 14, width: '100%' }}
+          />
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button
-              onClick={() => setExpanded(!expanded)}
-              style={{
-                ...buttons.small,
-                marginTop: 6,
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--gold)',
-                padding: 0,
-                cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: 500,
-              }}
+              onClick={handleSave}
+              disabled={saving}
+              style={{ ...buttons.primary, padding: '10px 16px', minHeight: 44, minWidth: 44, opacity: saving ? 0.6 : 1 }}
             >
-              {expanded ? 'Show less' : 'Show more'}
+              {saving ? 'Saving…' : 'Save'}
             </button>
-          )}
+            <button
+              onClick={() => setEditing(false)}
+              disabled={saving}
+              style={{ ...buttons.secondary, padding: '10px 16px', minHeight: 44, minWidth: 44 }}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
+      ) : (
+        desc && (
+          <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.5, color: 'var(--fg)', paddingLeft: 48 }}>
+            <p style={{ margin: 0, wordBreak: 'break-word' }}>{mentionNodes}</p>
+            {shouldTruncate && (
+              <button
+                onClick={() => setExpanded(!expanded)}
+                style={{
+                  ...buttons.small,
+                  marginTop: 6,
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--gold)',
+                  padding: 0,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 500,
+                }}
+              >
+                {expanded ? 'Show less' : 'Show more'}
+              </button>
+            )}
+          </div>
+        )
       )}
 
       {/* Action buttons */}
@@ -206,9 +258,9 @@ export default function ActivityCard({
             {pinned ? '📌 Pinned' : '📌 Pin'}
           </button>
         )}
-        {onEdit && (
+        {(showInlineEditButton || showLegacyEditButton) && (
           <button
-            onClick={() => onEdit(a)}
+            onClick={() => onEditSave ? startInlineEdit() : onEdit?.(a)}
             title="Edit"
             style={{
               ...buttons.small,

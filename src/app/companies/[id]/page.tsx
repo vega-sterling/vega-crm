@@ -161,16 +161,16 @@ function CompanyDetailContent() {
     }
   }
 
-  const handleEditActivity = (activity: Activity) => {
-    // Simple prompt-based edit for now (could be expanded to inline editor)
-    const newDesc = prompt('Edit note:', activity.description || '')
-    if (newDesc === null) return
-    apiFetch<Activity>(`/api/activities/${activity.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ description: newDesc, subject: activity.subject }),
-    }).then(updated => {
+  const handleEditActivitySave = async (activity: Activity, newDescription: string) => {
+    try {
+      const updated = await apiFetch<Activity>(`/api/activities/${activity.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ description: newDescription, subject: activity.subject }),
+      })
       setActivities(prev => prev.map(a => a.id === updated.id ? updated : a))
-    }).catch(err => setError(err.message || 'Failed to update activity'))
+    } catch (err: any) {
+      setError(err.message || 'Failed to update activity')
+    }
   }
 
   // Property quick-edit save
@@ -326,7 +326,7 @@ function CompanyDetailContent() {
                       users={users}
                       pinned={true}
                       onPin={handlePinToggle}
-                      onEdit={handleEditActivity}
+                      onEditSave={handleEditActivitySave}
                       onDelete={handleDeleteActivity}
                     />
                   </div>
@@ -376,7 +376,7 @@ function CompanyDetailContent() {
                           activity={item.data}
                           users={users}
                           onPin={handlePinToggle}
-                          onEdit={handleEditActivity}
+                          onEditSave={handleEditActivitySave}
                           onDelete={handleDeleteActivity}
                         />
                       )
