@@ -1720,3 +1720,29 @@ Built a full Command Palette (Cmd+K / Ctrl+K) that combines navigation, global s
 - ✅ All 12 API endpoints return 401 (auth required — correct)
 - ✅ /api/search returns 401 (endpoint intact, no regressions)
 - ✅ No regressions detected
+
+## 2026-08-31 — Phase 30: Tasks Tab on Contact Detail Page (P1 gap fix)
+
+### Problem
+The company detail page had a middle-column tab bar (Timeline | Contacts | Tasks) with full inline task creation via TasksTab, but the contact detail page had no Tasks tab — the TasksTab component was imported but never rendered (dead import). Tasks on contact pages were only visible read-only in the right sidebar, so users could not create or manage tasks in context of a contact without going through QuickActionBar or the global Tasks page.
+
+### What Changed
+**src/app/contacts/[id]/page.tsx** (367 → 387 lines):
+1. Added `middleTab` state (`'timeline' | 'tasks'`, default timeline) — mirrors company page pattern.
+2. Added a middle-column tab bar at top of `record-middle` (Timeline | Tasks with live count badge), styled identically to the company page tab bar: gold underline active state, `btn-touch` class for 44px+ touch targets, horizontal scroll on narrow screens.
+3. Wrapped existing pinned-note block, QuickActionBar, InlineNoteComposer, TimelineFilterTabs, and the activity timeline in the timeline tab conditional — zero changes to existing JSX content.
+4. When Tasks tab active, renders the existing `TasksTab` component with `contactId`, `tenantId`, `users`, `currentUserId`, `tasks`, `onTasksChanged={load}` — full inline task creation (title/priority/dueDate/assignee), checkbox complete toggle, and status dropdown, scoped to the contact.
+5. Removed the dead-import issue; TasksTab is now consumed on contact pages.
+
+### QA Results
+- ✅ Health check: 307 → /login (healthy)
+- ✅ TypeScript: `tsc --noEmit` passes with zero errors project-wide
+- ✅ Build succeeded (Next.js 16.3.0), container restarted cleanly
+- ✅ /login renders 200 OK
+- ✅ /contacts, /companies, /dashboard, /deals, /tasks, /inbox, /quotes, /reports → all 307 (no regressions)
+- ✅ /contacts/[id] → 307 (detail route intact)
+- ✅ No runtime errors in container logs post-deploy
+- ✅ Zero DB/schema changes — read/write through existing /api/tasks
+
+### Priority 1 Roadmap Status: COMPLETE
+All items shipped across Phases 1-30: 3-column layouts, inline note composer, quick action bar, timeline filter tabs, tasks tab with inline creation (company + contact), pinned notes.
