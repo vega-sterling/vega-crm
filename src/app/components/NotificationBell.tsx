@@ -30,6 +30,9 @@ const TYPE_ICONS: Record<string, string> = {
   LEAD_CAPTURED: "🎯",
   QUOTE_ACCEPTED: "✅",
   QUOTE_REJECTED: "❌",
+  TASK_DUE_SOON: "🕒",
+  DEAL_CLOSE_OVERDUE: "🚨",
+  DEAL_STALE: "💤",
 };
 
 export default function NotificationBell() {
@@ -68,7 +71,16 @@ export default function NotificationBell() {
       fetchNotifications();
     }, 60000); // 60 seconds
 
-    return () => clearInterval(interval);
+    // Every 5th poll cycle (~5 minutes) also re-run the reminder scan so
+    // open browsers periodically trigger the server-side generators.
+    const scanInterval = setInterval(() => {
+      triggerScan();
+    }, 300000); // 5 minutes
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(scanInterval);
+    };
   }, []);
 
   // Close dropdown when clicking outside
@@ -189,7 +201,8 @@ export default function NotificationBell() {
             position: "absolute",
             right: 0,
             top: "100%",
-            width: "360px",
+            width: "min(360px, calc(100vw - 24px))",
+            maxWidth: "calc(100vw - 24px)",
             maxHeight: "480px",
             overflowY: "auto",
             backgroundColor: "var(--panel)",

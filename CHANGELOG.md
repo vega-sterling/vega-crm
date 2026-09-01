@@ -1,4 +1,46 @@
-## 2026-08-30 — Phase 29: Quote Detail Page + Inline Quote Form + QuotesCard in Deal Detail
+## 2026-09-01 — Phase 32: Smart Activity Reminders and Notification Engine
+
+### Problem
+NotificationBell.tsx POSTs to `/api/notifications/check` but only `/api/notifications` had a POST handler, so the overdue-task scan 404'd silently and automated notifications never generated. There was also no server-side scheduler, meaning reminders only ever ran when a user happened to have the app open, and the notification generators covered only one scenario (overdue tasks) with no reminders for tasks due soon, deals past their expected close date, or stale deals. The dropdown panel used a fixed 360px width that overflowed small phone screens.
+
+### What Changed
+1. **Rewrote the notification lib into a full smart reminder engine** (`src/lib/notifications.ts`):
+   - Kept `createNotification`, `createNotifications`, `generateOverdueTaskNotifications` API-compatible (same signatures); overdue scan now explicitly skips tasks with null dueDate
+   - New `generateDueSoonTaskNotifications()` — tasks due within 24h (not completed, not CANCELLED), notifies assignee with type TASK_DUE_SOON
+   - New `generateOverdueCloseDateDealNotifications()` — open deals past their expectedCloseDate, notifies owner with type DEAL_CLOSE_OVERDUE
+   - New `generateStaleDealNotifications()` — open deals with no update for 14+ days (deals younger than 14 days skipped to avoid false positives), notifies owner with type DEAL_STALE
+   - All generators dedupe within 24h per user+type+entityId
+   - New `runNotificationScan()` — runs all four generators with per-generator try/catch (one failure can't kill the others), module-level in-memory lock so concurrent scans skip and return zero counts, logs a `[notifications] scan complete` summary line
+
+2. **New `/api/notifications/check` route** (`src/app/api/notifications/check/route.ts`) — POST with requireSession auth, calls `runNotificationScan`, returns `{ ok: true, generated }` with per-type counts. This fixes the 404.
+
+3. **Backwards-compat POST on the root notifications route** (`src/app/api/notifications/route.ts`) — GET and PATCH untouched; POST now calls `runNotificationScan` and returns `{ ok: true, generated }` with the total across all types.
+
+4. **New server-side reminder scheduler** (`src/instrumentation.ts`) — Next.js instrumentation hook, runs only in the Node.js runtime. First scan 60s after boot, then every 15 minutes via unref'd recursive timer so it never blocks shutdown. Global symbol flag prevents double registration on hot reload. Notifications now generate even when nobody is logged in.
+
+5. **NotificationBell UI upgrades** (`src/app/components/NotificationBell.tsx`):
+   - TYPE_ICONS entries: TASK_DUE_SOON 🕒, DEAL_CLOSE_OVERDUE 🚨, DEAL_STALE 💤
+   - Mobile-safe dropdown: `width: min(360px, calc(100vw - 24px))` + `maxWidth: calc(100vw - 24px)` so it never overflows a phone screen
+   - Every 5th poll cycle (~5 minutes) also calls triggerScan so open browsers re-scan periodically
+
+### Files Changed
+- `src/lib/notifications.ts` — REWRITTEN (107 → 268 lines)
+- `src/app/api/notifications/check/route.ts` — NEW
+- `src/app/api/notifications/route.ts` — MODIFIED (POST handler upgraded, GET/PATCH untouched)
+- `src/instrumentation.ts` — NEW
+- `src/app/components/NotificationBell.tsx` — MODIFIED
+- `CHANGELOG.md` — MODIFIED (this entry)
+
+### QA Results
+- ✅ Build succeeded (`docker compose build`, Next.js 16.3.0, TypeScript check clean after one fix: Deal relation include is `assignee` not `assignedTo`)
+- ✅ Container started: `docker ps` shows vega-crm Up, logs show "✓ Ready in 0ms" and "[notifications] scheduler started: first scan in 60s, then every 15m"
+- ✅ Scheduler fired ~60s after boot: `[notifications] scan complete {"TASK_OVERDUE":2,"TASK_DUE_SOON":0,"DEAL_CLOSE_OVERDUE":0,"DEAL_STALE":0}` — real counts against the live DB
+- ✅ GET https://earth.servers.onl → 307 (healthy)
+- ✅ POST /api/notifications/check → 401 (route now exists and is protected; the old bug was 404)
+- ✅ POST /api/notifications → 401 (backwards-compat handler intact)
+- ✅ GET /api/notifications → 401 (list API intact)
+- ✅ Regression sweep: /dashboard → 307, /contacts → 307, /companies → 307, /deals → 307, /tasks → 307
+- ✅ DB verification (additive only): `select type, count(*) from notifications group by type order by count desc` → TASK_OVERDUE 2; both rows newly created by the scan for two genuinely overdue tasks ("Get U.S. Bank online banking operational" due 7/31/2026, "Follow up with Coby Brown at OzarksGo" due 8/5/2026); no pre-existing rows modified or deleted; no Prisma or runtime errors in logs## 2026-08-30 — Phase 29: Quote Detail Page + Inline Quote Form + QuotesCard in Deal Detail
 
 ### Problem
 The Quotes page was the last page still using a modal overlay for creating new quotes (violating the "inline over modals" principle applied everywhere else in Phases 23-27). There was no quote detail page — quotes could only be listed and deleted from the list page. The deal detail page had no quotes section in its right sidebar, so users couldn't see which quotes were associated with a deal.

@@ -2,7 +2,9 @@
 // File: src/app/api/notifications/route.ts
 // Description: GET /api/notifications — list notifications for current user
 //              PATCH /api/notifications — mark notifications as read
-//              POST /api/notifications/check — scan for overdue tasks etc.
+//              POST /api/notifications — backwards-compat trigger for the
+//              full smart reminder scan (the canonical endpoint is now
+//              POST /api/notifications/check).
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -10,8 +12,8 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireSession, errorResponse } from '@/lib/session';
-import { generateOverdueTaskNotifications } from '@/lib/notifications';
+import { requireSession } from '@/lib/session';
+import { runNotificationScan } from '@/lib/notifications';
 
 /**
  * GET /api/notifications
@@ -68,14 +70,18 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
 }
 
 /**
- * POST /api/notifications/check
- * Triggers overdue task scan and other automated notification generators.
+ * POST /api/notifications
+ * Backwards-compat trigger for the smart reminder scan. Now runs the full
+ * scan (all generators) and returns ok plus generated as the total across
+ * all types. New callers should use POST /api/notifications/check.
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const session = await requireSession(req);
   if (session instanceof NextResponse) return session;
 
-  const overdueCount = await generateOverdueTaskNotifications();
+  const generated = await runNotificationScan();
 
-  return NextResponse.json({ generated: overdueCount });
+  const total = Object.values(generated).reduce((sum, n) => sum + n, 0);
+
+  return NextResponse.json({ ok: true, generated: total });
 }
