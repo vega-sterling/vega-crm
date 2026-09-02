@@ -1781,3 +1781,25 @@ input[type="checkbox"] {
 }
 
 /* Phase 29 CSS END */
+
+/* Phase 33 — User Activity Reports responsive styles                               */
+/* (Same desktop-table / mobile-cards pattern as the audit-logs page.)              */
+
+/* Desktop (>768px): show table, hide cards */
+.activity-table-desktop {
+  display: table !important;
+}
+.activity-cards-mobile {
+  display: none !important;
+}
+
+/* Phone (<768px): hide table, show cards */
+@media (max-width: 768px) {
+  .activity-table-desktop {
+    display: none !important;
+  }
+  .activity-cards-mobile {
+    display: block !important;
+  }
+}
+/* Phase 33 CSS END */

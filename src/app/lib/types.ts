@@ -394,3 +394,50 @@ export interface Booking {
   notes?: string | null
   createdAt: string
 }
+
+// ============================================================================
+// USER ACTIVITY REPORTS (Phase 33)
+// ============================================================================
+
+/** Daily action tally entry for the mini bar chart (last 14 days). */
+export interface ActivityDayCount {
+  date: string // UTC date key, YYYY-MM-DD
+  count: number
+}
+
+/** Top entity type worked on within the window. */
+export interface ActivityEntityCount {
+  entity: string
+  count: number
+}
+
+/** Per-user productivity metrics computed from audit_logs. */
+export interface UserActivityMetrics {
+  userId: string
+  name: string
+  email: string
+  globalRole: 'SUPER_ADMIN' | 'ADMIN' | 'USER'
+  totalActions: number
+  creates: number
+  updates: number
+  deletes: number
+  imports: number
+  exports: number
+  lastActiveAt: string | null // ISO timestamp, null if never active
+  activeDays: number // distinct dates with any action in window
+  actionsByDay: ActivityDayCount[]
+  topEntities: ActivityEntityCount[]
+}
+
+/** Response shape of GET /api/admin/activity. */
+export interface UserActivityReport {
+  data: {
+    users: UserActivityMetrics[]
+    totals: {
+      users: number
+      activeUsers: number
+      totalActions: number
+    }
+  }
+  pagination: { page: number; pageSize: number; total: number; pages: number }
+}

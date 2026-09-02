@@ -70,6 +70,7 @@ const navSections = [
       { label: 'API Keys', href: '/admin/api-keys' },
       { label: 'Data Management', href: '/admin/data' },
       { label: 'Audit Log', href: '/admin/audit-logs' },
+      { label: 'User Activity', href: '/admin/activity' },
       { label: 'Settings', href: '/settings' },
     ],
   },

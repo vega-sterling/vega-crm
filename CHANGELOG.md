@@ -1,3 +1,45 @@
+## 2026-09-02 — Phase 33: User Activity Reports
+
+### Problem
+The roadmap (Priority 7) called for per-user productivity visibility — "who did what, how much, when" — but the only window into user activity was the raw Audit Log Viewer, which lists individual entries with no per-user rollup. Admins had no way to see at a glance which users are productive, what kinds of actions they perform, how many days they are active, or how their activity trends over the last two weeks. The data to answer all of this already existed in `audit_logs`; it just needed to be aggregated and presented.
+
+### What Changed
+1. **New `/api/admin/activity` API** (`src/app/api/admin/activity/route.ts`):
+   - Admin-only (`requireAdmin`), tenant-scoped exactly like `/api/admin/audit-logs` — super admin sees all users, tenant admin sees only users in their accessible tenants (via `getAccessibleTenantIds` + `userTenant` lookup)
+   - Query params: `days` (7/30/90, default 30), `userId` (optional single-user filter, intersected with tenant visibility), `sort` (`actions` default or `lastActive`), `page`/`pageSize` (default 1/20, max 100)
+   - Per-user metrics computed from EXISTING `audit_logs` (no schema change, no new tables): totalActions, creates/updates/deletes/imports/exports, lastActiveAt (latest in window, falls back to latest overall), activeDays (distinct UTC dates), actionsByDay (last 14 days tally, clamped to window), topEntities (top 3 entity types by count)
+   - Returns `{ data: { users, totals: { users, activeUsers, totalActions } }, pagination }`; JS-side aggregation at current volumes; 500 wrapped in `errorResponse`
+
+2. **New `/admin/activity` page** (`src/app/admin/activity/page.tsx`):
+   - Client component with ProtectedLayout, Spinner, error state — conventions from the audit-logs page
+   - 7/30/90-day flat period toggle + By Activity / By Last Active sort toggle (styles.ts buttons, 44px touch targets)
+   - KPI cards row: Total Actions, Active Users, Avg Actions/User/Day, Most Active User
+   - Responsive table (desktop) / cards (phone <768px) reusing the audit-logs pattern exactly (`.activity-table-desktop` / `.activity-cards-mobile` classes; mobile cards reuse `.audit-card` styling)
+   - Each row/card: initials avatar, name, email, globalRole badge, total actions with creates/updates/deletes/imports/exports color-coded chips, active days, relative last-active time, inline 14-bar mini bar chart of actionsByDay (pure inline-styled divs, height proportional to count — no chart library)
+   - Clicking a row/card expands an INLINE detail section (no modals): topEntities breakdown with icons + full daily action chart with date labels
+
+3. **Shared types** (`src/app/lib/types.ts`): added `UserActivityMetrics`, `ActivityDayCount`, `ActivityEntityCount`, `UserActivityReport` — matching the API response shape
+
+4. **Nav** (`src/app/components/AppShell.tsx`): added 'User Activity' → `/admin/activity` right after 'Audit Log' in the Administration section
+
+5. **Responsive CSS** (`src/app/globals.css`): appended Phase 33 block — `.activity-table-desktop` / `.activity-cards-mobile` show/hide classes with the same <768px media query pattern as audit-logs
+
+### Files Changed
+- `src/app/api/admin/activity/route.ts` — NEW
+- `src/app/admin/activity/page.tsx` — NEW
+- `src/app/lib/types.ts` — MODIFIED (appended User Activity section)
+- `src/app/components/AppShell.tsx` — MODIFIED (one nav item added)
+- `src/app/globals.css` — MODIFIED (Phase 33 responsive block appended)
+- `CHANGELOG.md` — MODIFIED (this entry)
+
+### QA Results
+- ✅ Build succeeded (`docker compose build`, Next.js 16, TypeScript check clean — first try, no fixes needed)
+- ✅ Container deployed: `docker compose up -d`, `docker ps` shows vega-crm Up, logs show "✓ Ready in 0ms" and "[notifications] scheduler started" (Phase 32 scheduler intact)
+- ✅ GET https://earth.servers.onl → 307 (healthy)
+- ✅ GET /admin/activity → 307 (protected page redirects unauthenticated users)
+- ⚠️ GET /api/admin/activity → 403, not 401: this repo's `requireAdmin` helper returns 403 "Unauthorized — please log in." for unauthenticated requests — IDENTICAL to the existing `/api/admin/audit-logs` (verified: also 403). The route exists and is protected; 401 was never this codebase's convention.
+- ✅ Regression 307 checks all pass: /dashboard, /contacts, /companies, /deals, /tasks, /admin/audit-logs
+- ✅ Data-flow verification: ran a one-off read-only tsx script inside node:22-alpine (project volume mounted, same network) executing the SAME Prisma queries + aggregation the API uses against the live DB. Real results for the 30-day window (2026-08-03 → 2026-09-02): 5 users, 1 active in window, 21 total actions — Vega Sterling (SUPER_ADMIN): 21 actions (1 create, 2 updates, 2 deletes, 4 imports, 12 exports), 2 active days, last active 2026-08-12, top entities: companie ×6, api_key ×5, contact ×2; the other 4 users have no audit history. ("companie" is the entity value as actually logged by existing code — the report surfaces real data verbatim.)
 ## 2026-09-01 — Phase 32: Smart Activity Reminders and Notification Engine
 
 ### Problem
