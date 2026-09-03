@@ -75,7 +75,7 @@ The `SmsMessage` model has existed in the Prisma schema since the schema was fir
 ### Roadmap Status
 Priority 5 (Communication Features) advances substantially: email threads ✓ (prior), email templates ✓ (prior), SMS channel ✓ (tonight). Remaining P5: calendar integration polish, meeting availability slots.
 
-## 2026-09-02 — Phase 33: User Activity Reports## 2026-09-02 — Phase 33: User Activity Reports
+## 2026-09-02 — Phase 33: User Activity Reports
 
 ### Problem
 The roadmap (Priority 7) called for per-user productivity visibility — "who did what, how much, when" — but the only window into user activity was the raw Audit Log Viewer, which lists individual entries with no per-user rollup. Admins had no way to see at a glance which users are productive, what kinds of actions they perform, how many days they are active, or how their activity trends over the last two weeks. The data to answer all of this already existed in `audit_logs`; it just needed to be aggregated and presented.
