@@ -1,4 +1,81 @@
-## 2026-09-02 — Phase 33: User Activity Reports
+# Vega CRM — Changelog
+
+## 2026-09-03 — Phase 34: SMS Channel in the Universal Inbox (Twilio, per-tenant)
+
+### Problem
+The `SmsMessage` model has existed in the Prisma schema since the schema was first written, but zero code referenced it — no API, no UI, nothing. The universal inbox was email-only, despite the roadmap (Priority 5: Communication Features) calling for SMS in the communication stack. The dead model was a standing gap: the table existed in the live DB with zero rows and no way to fill them.
+
+### What Changed
+1. **`src/lib/sms.ts` — NEW** (SMS channel core, no SDK):
+   - Per-tenant settings loader (`sms.*` keys in `tenant_settings`: provider / twilio_account_sid / twilio_auth_token [encrypted] / twilio_from_number / webhook_secret [encrypted]) — same pattern as `outbound_email.*`
+   - `normalizePhone` / `phonesMatch` (last-10-digit tolerant matching) + `matchContactByPhone` (tenant-scoped contact resolution)
+   - `sendViaTwilio` — Twilio Messages API via plain `fetch` with Basic auth, 15s abort, 201 = success, errors converted to `{ok:false, error}` without leaking credentials
+   - `findTenantIdByFromNumber` — resolves inbound webhook traffic to the tenant that owns the `To` number (exact then loose match)
+
+2. **`src/app/api/sms/messages/route.ts` — NEW**: GET lists SMS messages, tenant-scoped via `getAccessibleTenantIds` (mirrors `/api/email/messages` exactly), optional `contactId` filter with access verification, paginated newest-first, contact summaries attached in one follow-up query (SmsMessage has no Prisma relation to Contact — resolved manually).
+
+3. **`src/app/api/sms/send/route.ts` — NEW**: POST sends an outbound SMS. Session-authenticated, tenant access verified, contact-tenant consistency check. Persists a `PENDING` SmsMessage BEFORE calling Twilio (nothing lost on failure), then updates to `SENT` + externalId on success or `FAILED` on error (502 with Twilio's message). Audit-logged (non-blocking). Refuses with 400 when the tenant has no complete Twilio config.
+
+4. **`src/app/api/sms/webhook/route.ts` — NEW** (public, unauthenticated by design — Twilio has no session):
+   - Parses Twilio's form-encoded payload, resolves tenant by `To` number (404 when no tenant owns it), validates `?secret=` against the tenant's stored `sms.webhook_secret` (403 on mismatch)
+   - Idempotent on `MessageSid` (Twilio retries must not duplicate rows)
+   - Creates `INBOUND` SmsMessage, matches the sender to a contact by phone within the tenant
+   - Responds 200 with empty TwiML `<Response/>`
+
+5. **`src/app/admin/tenants/SmsSettingsSection.tsx` — NEW**: Per-tenant "SMS (Twilio)" settings block on the admin tenants page — provider toggle (TWILIO/NONE), Account SID + From Number plain inputs, Auth Token + Webhook Secret as password inputs stored `isEncrypted` and never re-POSTed when masked. Displays the inbound webhook URL (`/api/sms/webhook?secret=...`) to paste into the Twilio console, with the "copy the secret before saving" warning since it masks after save. Flat buttons, `btn-touch` 44px targets, existing styles.ts patterns only.
+
+6. **`src/app/admin/tenants/page.tsx` — MODIFIED**: second expandable settings section per tenant row ("▸ SMS" button, gold active state), accordion-style — only one section (Email or SMS) expanded per tenant at a time.
+
+7. **`src/app/inbox/page.tsx` — MODIFIED** (422 → 676 lines): the universal inbox is now truly universal:
+   - Fetches `/api/email/messages` AND `/api/sms/messages` in parallel (`Promise.allSettled` — one channel failing can't blank the other)
+   - Merged, date-sorted unified list with channel filter (All / Email / SMS with counts), direction filter, unread filter (emails only — SMS is always-read), and search across both channels
+   - SMS rows: gold "💬 SMS" chip, direction badge (← In / → Out), status-aware color coding (SENT/DELIVERED emerald, PENDING gold, FAILED rust)
+   - SMS detail pane: status chip, From/To, contact link, body, and a reply box that routes to `/api/sms/send` (replies inbound messages to `fromNumber`, outbound to `toNumber`)
+   - All existing email behavior untouched (mark-read on select, reply, unread highlighting)
+   - Fully responsive: existing two-pane desktop / stacked + back-button mobile behavior preserved for both channels
+
+### Files Changed
+- `src/lib/sms.ts` — NEW
+- `src/app/api/sms/messages/route.ts` — NEW
+- `src/app/api/sms/send/route.ts` — NEW
+- `src/app/api/sms/webhook/route.ts` — NEW
+- `src/app/admin/tenants/SmsSettingsSection.tsx` — NEW
+- `src/app/admin/tenants/page.tsx` — MODIFIED
+- `src/app/inbox/page.tsx` — MODIFIED
+- `CHANGELOG.md` — MODIFIED (this entry)
+
+### Schema / DB
+**ZERO schema changes.** The `sms_messages` table already existed in the live production DB (verified via `\d sms_messages` before building). All writes go through the existing `tenant_settings` table for configuration. No migrations, no drops, purely additive code.
+
+### QA Results
+- ✅ TypeScript: `tsc --noEmit` zero errors (after fixing one subagent artifact: a corrupted `Authorization` header template literal and a redundant `disabled` prop causing TS2367)
+- ✅ `docker compose build` succeeded, container started clean, notification scheduler (Phase 32) still running
+- ✅ Health: GET / → 307 → /login (healthy); /login → 200
+- ✅ /inbox → 307 (protected page redirects unauthenticated)
+- ✅ /admin/tenants → 307 (protected)
+- ✅ GET /api/sms/messages (unauth) → 401 (session-guarded)
+- ✅ POST /api/sms/send (unauth) → 401 (session-guarded)
+- ✅ GET /api/sms/webhook → 405 (POST-only endpoint — correct)
+- ✅ POST /api/sms/webhook with no params → 400 "Missing 'To' parameter" (validation works)
+- ✅ Regressions: /dashboard, /contacts, /companies, /deals, /tasks, /reports, /quotes all 307; /api/tasks 401 — no regressions
+- ✅ Data-flow verification (read-only Prisma script in the docker network, live DB):
+  - `smsMessage.count()` → 0 rows (table queryable, currently empty — no Twilio configured yet, as expected)
+  - `findTenantIdByFromNumber` → null for an unconfigured number (correct 404 path)
+  - Contact phone matching: 3 real contacts with phones all self-match correctly; cross-tenant isolation verified (tenant A's contact not visible from tenant B's pool)
+  - `loadSmsSettings` returns the NONE/empty defaults shape correctly
+  - Messages-API join path (contact summary attach) executes without error
+- ⚠️ End-to-end send/receive NOT tested live — requires real Twilio credentials, which only Bryan can provide. The code path is verified to the DB boundary; Twilio API calls use standard Messages API v1 with Basic auth.
+
+### To activate (needs Bryan)
+1. Admin → Tenants → expand a tenant → "▸ SMS" → set provider TWILIO, paste Account SID, Auth Token, From Number, and invent a webhook secret → Save
+2. In the Twilio console, point the phone number's "when a message comes in" webhook to:
+   `https://earth.servers.onl/api/sms/webhook?secret=<YOUR_SECRET>`
+3. Inbound SMS will then auto-create INBOUND SmsMessage records matched to contacts by phone number
+
+### Roadmap Status
+Priority 5 (Communication Features) advances substantially: email threads ✓ (prior), email templates ✓ (prior), SMS channel ✓ (tonight). Remaining P5: calendar integration polish, meeting availability slots.
+
+## 2026-09-02 — Phase 33: User Activity Reports## 2026-09-02 — Phase 33: User Activity Reports
 
 ### Problem
 The roadmap (Priority 7) called for per-user productivity visibility — "who did what, how much, when" — but the only window into user activity was the raw Audit Log Viewer, which lists individual entries with no per-user rollup. Admins had no way to see at a glance which users are productive, what kinds of actions they perform, how many days they are active, or how their activity trends over the last two weeks. The data to answer all of this already existed in `audit_logs`; it just needed to be aggregated and presented.

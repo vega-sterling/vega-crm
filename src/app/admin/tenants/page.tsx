@@ -4,8 +4,8 @@
 // File: src/app/admin/tenants/page.tsx
 // Description: Tenant management page. Lists all tenants with inline create/edit.
 //              Phase 23: Converted from modal to inline form pattern.
-//              Per-tenant 'Outbound Email' settings section (settings API keys:
-//              outbound_email.provider / .from / .from_name).
+//              Per-tenant 'Outbound Email' and 'SMS (Twilio)' settings
+//              sections (settings API keys: outbound_email.* and sms.*).
 //              Requires SUPER_ADMIN access (enforced by API route).
 // ============================================================================
 
@@ -17,6 +17,7 @@ import { apiFetch } from "../../lib/api";
 import { layout, panel, typeography, forms, buttons, table } from "../../lib/styles";
 import type { Tenant } from "../../lib/types";
 import OutboundEmailSection from "./OutboundEmailSection";
+import SmsSettingsSection from "./SmsSettingsSection";
 
 const emptyForm = { name: "", slug: "", description: "" };
 
@@ -28,7 +29,7 @@ export default function TenantsPage() {
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [saving, setSaving] = useState(false);
-  const [expandedTenantId, setExpandedTenantId] = useState<string | null>(null);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -64,8 +65,9 @@ export default function TenantsPage() {
     }, 50);
   };
 
-  const toggleExpanded = (tenantId: string) => {
-    setExpandedTenantId((prev) => (prev === tenantId ? null : tenantId));
+  const toggleExpanded = (tenantId: string, section: "email" | "sms") => {
+    const key = `${tenantId}:${section}`;
+    setExpandedKey((prev) => (prev === key ? null : key));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -178,19 +180,34 @@ export default function TenantsPage() {
                             <button className="btn-touch" style={buttons.small} onClick={() => openEdit(t)}>Edit</button>
                             <button
                               className="btn-touch"
-                              style={{ ...buttons.small, ...(expandedTenantId === t.id ? { backgroundColor: "var(--gold)", color: "var(--bg)", borderColor: "var(--gold)" } : {}) }}
-                              onClick={() => toggleExpanded(t.id)}
-                              aria-expanded={expandedTenantId === t.id}
+                              style={{ ...buttons.small, ...(expandedKey === `${t.id}:email` ? { backgroundColor: "var(--gold)", color: "var(--bg)", borderColor: "var(--gold)" } : {}) }}
+                              onClick={() => toggleExpanded(t.id, "email")}
+                              aria-expanded={expandedKey === `${t.id}:email`}
                             >
-                              {expandedTenantId === t.id ? "▾ Hide Email" : "▸ Outbound Email"}
+                              {expandedKey === `${t.id}:email` ? "▾ Hide Email" : "▸ Email"}
+                            </button>
+                            <button
+                              className="btn-touch"
+                              style={{ ...buttons.small, ...(expandedKey === `${t.id}:sms` ? { backgroundColor: "var(--gold)", color: "var(--bg)", borderColor: "var(--gold)" } : {}) }}
+                              onClick={() => toggleExpanded(t.id, "sms")}
+                              aria-expanded={expandedKey === `${t.id}:sms`}
+                            >
+                              {expandedKey === `${t.id}:sms` ? "▾ Hide SMS" : "▸ SMS"}
                             </button>
                           </div>
                         </td>
                       </tr>
-                      {expandedTenantId === t.id && (
+                      {expandedKey === `${t.id}:email` && (
                         <tr key={`${t.id}-outbound`}>
                           <td style={{ padding: 0 }} colSpan={5}>
                             <OutboundEmailSection tenantId={t.id} tenantName={t.name} />
+                          </td>
+                        </tr>
+                      )}
+                      {expandedKey === `${t.id}:sms` && (
+                        <tr key={`${t.id}-sms`}>
+                          <td style={{ padding: 0 }} colSpan={5}>
+                            <SmsSettingsSection tenantId={t.id} tenantName={t.name} />
                           </td>
                         </tr>
                       )}
