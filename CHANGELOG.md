@@ -1,5 +1,44 @@
-# Vega CRM — Changelog
+## 2026-09-04 — Phase 35: Kill the last native confirm() dialogs on core record pages
 
+### Problem
+Contacts, companies, and deals pages (list + detail) still used browser-native `confirm()` for destructive actions — delete contact, delete company, delete deal, delete activity — while every other page has used the styled `ConfirmDialog` since Phase 23. Native dialogs are clunky, unstyled, and block the main thread — exactly the kind of UX Bryan has been eliminating. Additionally, the deals list export failure path surfaced a native `alert()` instead of the page's styled error banner.
+
+### What Changed
+**src/app/contacts/page.tsx + src/app/companies/page.tsx** (each +29 lines):
+- List-row delete now sets a `pendingDelete` state (the record object) instead of calling `window.confirm()`.
+- On confirm, the existing `handleDelete` runs unchanged; cancel clears `pendingDelete`.
+- Existing `<ConfirmDialog>` at bottom of each page now receives `open={!!pendingDelete}`, the record's name as `itemName`, and "Delete {Contact|Company}?" as title.
+
+**src/app/contacts/[id]/page.tsx + src/app/companies/[id]/page.tsx** (each +23 lines):
+- "Delete activity" and "Delete record" buttons no longer inline `confirm()`; they populate `pendingActivityDelete` / `pendingDelete`.
+- Single ConfirmDialog per page handles both cases (title/message set from state), confirming routes to the existing delete + redirect logic.
+
+**src/app/deals/[id]/page.tsx** (+36/−7 lines):
+- "Delete activity" and "Delete deal" buttons populate `pendingActivityDelete` / `pendingDelete` (deal title shown as itemName).
+- One ConfirmDialog instance handles both flows; deal delete still redirects to /deals on success.
+
+**src/app/deals/page.tsx** (1 line, by Vega directly):
+- Export-failure `alert()` replaced with the page's existing styled error banner (`setError` + auto-clear after 5s).
+
+### Pattern
+All pages follow the exact `pendingDelete`-state pattern already used by projects, templates, workflows, and admin pages since Phase 23 — zero new components, zero new dependencies, zero schema changes.
+
+### QA Results
+- ✅ `tsc --noEmit`: exit 0, zero type errors project-wide
+- ✅ Build succeeded (Next.js 16.3.0), container restarted clean: Ready in 0ms, notification scheduler started
+- ✅ Health: `/` → 307 /login; `/login` → 200
+- ✅ All 14 page routes return 307 unauthenticated (no regressions): contacts, companies, deals, tasks, dashboard, inbox, calendar, quotes, reports, projects, templates, workflows
+- ✅ Detail routes render: /contacts/[id], /companies/[id], /deals/[id] → 307 (auth redirect, expected)
+- ✅ /api/deals 401, /api/export 403, /api/auth/me 401 — all intact
+- ✅ `grep` across contacts/companies/deals: zero `confirm()`, zero `window.confirm()`, zero `alert()` remain
+- ✅ No error/warn lines in container logs post-deploy
+- ✅ Zero DB/schema changes
+
+### Remaining native-dialog inventory (future polish)
+- `alert()` error toasts in src/app/projects/[id]/page.tsx (10 instances — task/column/project failure paths) and contacts/companies list export failures
+- The ConfirmDialog component itself still uses `alert`-free inline styling (fine)
+
+## 2026-09-03 — Phase 34: SMS Channel in the Universal Inbox (Twilio, per-tenant)# Vega CRM — Changelog
 ## 2026-09-03 — Phase 34: SMS Channel in the Universal Inbox (Twilio, per-tenant)
 
 ### Problem

@@ -14,6 +14,7 @@ import ProtectedLayout from '../components/ProtectedLayout'
 import Spinner from '../components/Spinner'
 import RowActions from '../components/RowActions'
 import Pagination from '../components/Pagination'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { IconSearch, IconPlus, IconBuilding, IconMail, IconPhone } from '../components/Icons'
 import { apiFetch } from '../lib/api'
 import { layout, panel, typeography, forms, buttons, table } from '../lib/styles'
@@ -52,6 +53,10 @@ function CompaniesContent() {
   const [editingCompany, setEditingCompany] = useState<CompanyListItem | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState(emptyForm)
+
+  // ── Pending delete (ConfirmDialog state) ──
+  const [pendingDelete, setPendingDelete] = useState<CompanyListItem | null>(null)
+  const [exportError, setExportError] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -126,7 +131,13 @@ function CompaniesContent() {
   }
 
   const handleDelete = async (c: CompanyListItem) => {
-    if (!window.confirm(`Delete company "${c.name}"?`)) return
+    setPendingDelete(c)
+  }
+
+  const performDelete = async () => {
+    const c = pendingDelete
+    if (!c) return
+    setPendingDelete(null)
     try {
       await apiFetch(`/api/companies/${c.id}`, { method: 'DELETE' })
       setCompanies((prev) => prev.filter((x) => x.id !== c.id))
@@ -179,6 +190,7 @@ function CompaniesContent() {
           </div>
           <button className="btn-touch export-btn" style={{ ...buttons.secondary, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
             onClick={async () => {
+              setExportError('')
               try {
                 const res = await fetch('/api/export?entity=companies', { credentials: 'include' })
                 if (!res.ok) throw new Error('Export failed')
@@ -188,7 +200,7 @@ function CompaniesContent() {
                 a.href = url; a.download = `companies-export-${new Date().toISOString().slice(0,10)}.csv`
                 document.body.appendChild(a); a.click(); document.body.removeChild(a)
                 URL.revokeObjectURL(url)
-              } catch (err) { alert('Export failed: ' + (err as Error).message) }
+              } catch (err) { setExportError('Export failed: ' + (err as Error).message) }
             }}>
             ⬇ Export
           </button>
@@ -200,6 +212,10 @@ function CompaniesContent() {
 
       {error && (
         <div style={{ backgroundColor: 'rgba(184,80,74,0.12)', color: 'var(--rust)', border: '1px solid rgba(184,80,74,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>{error}</div>
+      )}
+
+      {exportError && (
+        <div style={{ backgroundColor: 'rgba(184,80,74,0.12)', color: 'var(--rust)', border: '1px solid rgba(184,80,74,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>{exportError}</div>
       )}
 
       {/* ── Toolbar: Search + Industry Filter + Sort ── */}
@@ -384,6 +400,15 @@ function CompaniesContent() {
             ))
           )}
       </div>
+
+      {/* ── Delete company confirmation ── */}
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="Delete Company?"
+        itemName={pendingDelete ? pendingDelete.name : undefined}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={performDelete}
+      />
     </div>
   )
 }

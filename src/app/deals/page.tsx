@@ -411,7 +411,7 @@ function DealsContent() {
                 a.href = url; a.download = `deals-export-${new Date().toISOString().slice(0,10)}.csv`
                 document.body.appendChild(a); a.click(); document.body.removeChild(a)
                 URL.revokeObjectURL(url)
-              } catch (err) { alert('Export failed: ' + (err as Error).message) }
+              } catch (err) { setError('Export failed: ' + (err as Error).message); setTimeout(() => setError(''), 5000) }
             }}>
             ⬇ Export
           </button>

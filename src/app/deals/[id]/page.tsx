@@ -23,6 +23,7 @@ import InlineNoteComposer from '../../components/InlineNoteComposer'
 import QuickActionBar from '../../components/QuickActionBar'
 import TimelineFilterTabs, { type TimelineFilter } from '../../components/TimelineFilterTabs'
 import ActivityCard from '../../components/ActivityCard'
+import ConfirmDialog from '../../components/ConfirmDialog'
 import PinnedNotes, { usePinnedNote } from '../../components/PinnedNotes'
 import EmailThreadCard from '../../components/EmailThreadCard'
 import SummaryCard from '../../components/SummaryCard'
@@ -91,6 +92,10 @@ function DealDetailContent() {
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>('ALL')
   const [middleTab, setMiddleTab] = useState<MiddleTab>('timeline')
   const [googleConnected, setGoogleConnected] = useState(false)
+
+  // ── Pending deletes (ConfirmDialog state) ──
+  const [confirmDeleteDeal, setConfirmDeleteDeal] = useState(false)
+  const [actionError, setActionError] = useState('')
 
   // Pinned notes hook
   const { pinnedId, pin, unpin } = usePinnedNote('deal', dealId)
@@ -262,13 +267,13 @@ function DealDetailContent() {
   }, [deal])
 
   const handleActivityDelete = async (id: string) => {
-    if (!confirm('Delete this activity? This cannot be undone.')) return
+    // Confirmation is handled by ConfirmDialog inside ActivityCard
     try {
       await apiFetch(`/api/activities/${id}`, { method: 'DELETE' })
       setActivities((prev) => prev.filter((a) => a.id !== id))
       if (pinnedId === id) unpin()
     } catch (err: any) {
-      alert('Failed to delete: ' + err.message)
+      setActionError('Failed to delete: ' + err.message)
     }
   }
 
@@ -326,19 +331,23 @@ function DealDetailContent() {
       setDeal(updated)
       setEditing(false)
     } catch (err: any) {
-      alert('Failed to save: ' + err.message)
+      setActionError('Failed to save: ' + err.message)
     } finally {
       setSubmitting(false)
     }
   }
 
   const handleDelete = async () => {
-    if (!confirm('Delete this deal? This cannot be undone.')) return
+    setConfirmDeleteDeal(true)
+  }
+
+  const performDeleteDeal = async () => {
+    setConfirmDeleteDeal(false)
     try {
       await apiFetch(`/api/deals/${dealId}`, { method: 'DELETE' })
       router.push('/deals')
     } catch (err: any) {
-      alert('Failed to delete: ' + err.message)
+      setActionError('Failed to delete: ' + err.message)
     }
   }
 
@@ -353,7 +362,7 @@ function DealDetailContent() {
       const stage = stages.find((s) => s.id === newStageId)
       if (stage) setForm((f) => ({ ...f, stageId: newStageId, probability: stage.probability }))
     } catch (err: any) {
-      alert('Failed to change stage: ' + err.message)
+      setActionError('Failed to change stage: ' + err.message)
     }
   }
 
@@ -367,7 +376,7 @@ function DealDetailContent() {
       setDeal(updated)
       setForm((f) => ({ ...f, status: newStatus }))
     } catch (err: any) {
-      alert('Failed to change status: ' + err.message)
+      setActionError('Failed to change status: ' + err.message)
     }
   }
 
@@ -521,6 +530,9 @@ function DealDetailContent() {
   return (
     <ProtectedLayout>
       <div style={{ ...layout.page, maxWidth: 1400 }}>
+        {actionError && (
+          <div style={{ backgroundColor: 'rgba(184,80,74,0.12)', color: 'var(--rust)', border: '1px solid rgba(184,80,74,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>{actionError}</div>
+        )}
         {/* ── Header ── */}
         <div className="page-header" style={{ ...layout.header, marginBottom: 24 }}>
           <div>
@@ -939,6 +951,16 @@ function DealDetailContent() {
           </div>
         </div>
       </div>
+
+      {/* ── Delete deal confirmation ── */}
+      <ConfirmDialog
+        open={confirmDeleteDeal}
+        title="Delete Deal?"
+        itemName={deal.title}
+        message="This permanently deletes the record and cannot be undone."
+        onCancel={() => setConfirmDeleteDeal(false)}
+        onConfirm={performDeleteDeal}
+      />
     </ProtectedLayout>
   )
 }

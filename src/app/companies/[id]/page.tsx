@@ -10,6 +10,7 @@ import QuickActionBar from '../../components/QuickActionBar'
 import TimelineFilterTabs, { type TimelineFilter } from '../../components/TimelineFilterTabs'
 import TasksTab from '../../components/TasksTab'
 import ActivityCard from '../../components/ActivityCard'
+import ConfirmDialog from '../../components/ConfirmDialog'
 import PropertyQuickEdit from '../../components/PropertyQuickEdit'
 import CustomFieldsSection from '../../components/CustomFieldsSection'
 import SummaryCard from '../../components/SummaryCard'
@@ -69,6 +70,9 @@ function CompanyDetailContent() {
     firstName: '', lastName: '', email: '', phone: '', title: '',
   })
   const [googleConnected, setGoogleConnected] = useState(false)
+
+  // ── Pending deletes (ConfirmDialog state) ──
+  const [confirmDeleteCompany, setConfirmDeleteCompany] = useState(false)
 
   // Pinned notes (localStorage)
   const { pinnedId, pin, unpin } = usePinnedNote('company', companyId)
@@ -151,7 +155,7 @@ function CompanyDetailContent() {
   }
 
   const handleDeleteActivity = async (id: string) => {
-    if (!confirm('Delete this activity?')) return
+    // Confirmation is handled by ConfirmDialog inside ActivityCard
     try {
       await apiFetch(`/api/activities/${id}`, { method: 'DELETE' })
       setActivities((prev) => prev.filter(a => a.id !== id))
@@ -283,7 +287,7 @@ function CompanyDetailContent() {
             <button
               className="btn-touch"
               style={{ ...buttons.danger, width: '100%' }}
-              onClick={() => { if (confirm('Delete this company?')) { apiFetch(`/api/companies/${companyId}`, { method: 'DELETE' }).then(() => window.location.href = '/companies') } }}
+              onClick={() => setConfirmDeleteCompany(true)}
             >Delete</button>
           </div>
         </div>
@@ -507,6 +511,21 @@ function CompanyDetailContent() {
           <TasksCard tasks={tasks} />
         </div>
       </div>
+
+      {/* ── Delete record confirmation ── */}
+      <ConfirmDialog
+        open={confirmDeleteCompany}
+        title="Delete Company?"
+        itemName={company.name}
+        message="This permanently deletes the record and cannot be undone."
+        onCancel={() => setConfirmDeleteCompany(false)}
+        onConfirm={() => {
+          setConfirmDeleteCompany(false)
+          apiFetch(`/api/companies/${companyId}`, { method: 'DELETE' })
+            .then(() => { window.location.href = '/companies' })
+            .catch((err: any) => setError(err.message || 'Failed to delete company'))
+        }}
+      />
 
     </div>
   )

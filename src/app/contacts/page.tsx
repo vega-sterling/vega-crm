@@ -15,6 +15,7 @@ import Spinner from '../components/Spinner'
 import Avatar from '../components/Avatar'
 import RowActions from '../components/RowActions'
 import Pagination from '../components/Pagination'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { IconSearch, IconMail, IconPhone, IconPlus } from '../components/Icons'
 import { apiFetch } from '../lib/api'
 import { layout, panel, typeography, forms, buttons, table } from '../lib/styles'
@@ -61,6 +62,10 @@ function ContactsContent() {
   const [editingContact, setEditingContact] = useState<ContactListItem | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState(emptyForm)
+
+  // ── Pending delete (ConfirmDialog state) ──
+  const [pendingDelete, setPendingDelete] = useState<ContactListItem | null>(null)
+  const [exportError, setExportError] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -136,7 +141,13 @@ function ContactsContent() {
   }
 
   const handleDelete = async (c: ContactListItem) => {
-    if (!window.confirm(`Delete contact "${c.firstName} ${c.lastName}"?`)) return
+    setPendingDelete(c)
+  }
+
+  const performDelete = async () => {
+    const c = pendingDelete
+    if (!c) return
+    setPendingDelete(null)
     try {
       await apiFetch(`/api/contacts/${c.id}`, { method: 'DELETE' })
       setContacts((prev) => prev.filter((x) => x.id !== c.id))
@@ -189,6 +200,7 @@ function ContactsContent() {
           </div>
           <button className="btn-touch export-btn" style={{ ...buttons.secondary, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
             onClick={async () => {
+              setExportError('')
               try {
                 const res = await fetch('/api/export?entity=contacts', { credentials: 'include' })
                 if (!res.ok) throw new Error('Export failed')
@@ -198,7 +210,7 @@ function ContactsContent() {
                 a.href = url; a.download = `contacts-export-${new Date().toISOString().slice(0,10)}.csv`
                 document.body.appendChild(a); a.click(); document.body.removeChild(a)
                 URL.revokeObjectURL(url)
-              } catch (err) { alert('Export failed: ' + (err as Error).message) }
+              } catch (err) { setExportError('Export failed: ' + (err as Error).message) }
             }}>
             ⬇ Export
           </button>
@@ -210,6 +222,10 @@ function ContactsContent() {
 
       {error && (
         <div style={{ backgroundColor: 'rgba(184,80,74,0.12)', color: 'var(--rust)', border: '1px solid rgba(184,80,74,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>{error}</div>
+      )}
+
+      {exportError && (
+        <div style={{ backgroundColor: 'rgba(184,80,74,0.12)', color: 'var(--rust)', border: '1px solid rgba(184,80,74,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>{exportError}</div>
       )}
 
       {/* ── Toolbar: Search + Company Filter + Sort ── */}
@@ -402,6 +418,15 @@ function ContactsContent() {
           ))
         )}
       </div>
+
+      {/* ── Delete contact confirmation ── */}
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="Delete Contact?"
+        itemName={pendingDelete ? `${pendingDelete.firstName} ${pendingDelete.lastName}` : undefined}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={performDelete}
+      />
     </div>
   )
 }

@@ -10,6 +10,7 @@ import QuickActionBar from '../../components/QuickActionBar'
 import TimelineFilterTabs, { type TimelineFilter } from '../../components/TimelineFilterTabs'
 import TasksTab from '../../components/TasksTab'
 import ActivityCard from '../../components/ActivityCard'
+import ConfirmDialog from '../../components/ConfirmDialog'
 import PropertyQuickEdit from '../../components/PropertyQuickEdit'
 import CustomFieldsSection from '../../components/CustomFieldsSection'
 import { LeadScoreBadge } from '../../components/LeadScoreBadge'
@@ -59,6 +60,9 @@ function ContactDetailContent() {
   const [submitting, setSubmitting] = useState(false)
   const [following, setFollowing] = useState(false)
   const [googleConnected, setGoogleConnected] = useState(false)
+
+  // ── Pending deletes (ConfirmDialog state) ──
+  const [confirmDeleteContact, setConfirmDeleteContact] = useState(false)
 
   // Pinned notes (localStorage)
   const { pinnedId, pin, unpin } = usePinnedNote('contact', contactId)
@@ -140,7 +144,7 @@ function ContactDetailContent() {
   }
 
   const handleDeleteActivity = async (id: string) => {
-    if (!confirm('Delete this activity?')) return
+    // Confirmation is handled by ConfirmDialog inside ActivityCard
     try {
       await apiFetch(`/api/activities/${id}`, { method: 'DELETE' })
       setActivities((prev) => prev.filter(a => a.id !== id))
@@ -255,7 +259,7 @@ function ContactDetailContent() {
             <button
               className="btn-touch"
               style={{ ...buttons.danger, width: '100%' }}
-              onClick={() => { if (confirm('Delete this contact?')) { apiFetch(`/api/contacts/${contactId}`, { method: 'DELETE' }).then(() => window.location.href = '/contacts') } }}
+              onClick={() => setConfirmDeleteContact(true)}
             >Delete</button>
           </div>
         </div>
@@ -358,6 +362,21 @@ function ContactDetailContent() {
           <TasksCard tasks={tasks} />
         </div>
       </div>
+
+      {/* ── Delete record confirmation ── */}
+      <ConfirmDialog
+        open={confirmDeleteContact}
+        title="Delete Contact?"
+        itemName={fullName}
+        message="This permanently deletes the record and cannot be undone."
+        onCancel={() => setConfirmDeleteContact(false)}
+        onConfirm={() => {
+          setConfirmDeleteContact(false)
+          apiFetch(`/api/contacts/${contactId}`, { method: 'DELETE' })
+            .then(() => { window.location.href = '/contacts' })
+            .catch((err: any) => setError(err.message || 'Failed to delete contact'))
+        }}
+      />
 
     </div>
   )
