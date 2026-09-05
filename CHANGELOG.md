@@ -1,3 +1,33 @@
+## 2026-09-05 — Phase 36: Toast notification system (kill last alert() calls)
+
+### Problem
+The projects pages still surfaced every failure with a native `alert()` — the last 15 in the app (project create/update/delete, task create/update/delete, column create/update/delete, save/archive project, subtask create/update/delete). Native alerts are blocking, unstyled, and hide the real server error. Phase 35's changelog flagged this exact inventory as future polish.
+
+### What Changed
+**src/app/components/Toast.tsx (new)**:
+- `ToastProvider` (React context + toast list state) and `useToast()` hook returning `showToast(message, opts?: {type?: 'success'|'error'|'info'; durationMs?: number})`.
+- Auto-dismiss 4s (per-toast override), click-to-dismiss, explicit ✕ button with 44px touch target, max 4 visible (oldest dropped first), timers tracked per-id and cleaned up on dismiss.
+- Visual: flat, `var(--panel-elevated)` background, `var(--panel-border)` border, 4px type-accent left edge (error #e5484d, success #30a46c, info var(--gold)), `var(--shadow-lg)` elevation, 14px text — all CSS variables so dark and light themes both work.
+- Accessibility: `role="status"`, `aria-live="polite"`, labeled dismiss button; type icon glyph alongside color (never color alone).
+- z-index 300 (above modals at 200). Slide-up entrance via `@keyframes toastEnter` / `.toast-enter`.
+
+**src/app/globals.css** (+36 lines):
+- `@keyframes toastEnter` + `.toast-enter` animation class; `.toast-viewport` desktop bottom-right; phone (<768px) full-width bottom-anchored 16px insets.
+
+**src/app/layout.tsx** (+3 lines):
+- `ToastProvider` mounted inside `AppProvider` in the root layout — least-invasive spot that covers every route (auth pages included), and it's above `AppShell`/`ProtectedLayout`, which both render early returns (loading/null) that would orphan a provider mounted below them.
+
+**src/app/projects/page.tsx** (+4/−3) and **src/app/projects/[id]/page.tsx** (+16/−13):
+- All 15 `alert()` catch blocks replaced with `toast(\`Failed to …: ${(e as Error).message}\`, {type:'error'})` — the real server error text from `ApiError` now surfaces to the user instead of a generic message.
+
+### Pattern
+- No new dependencies, no schema/DB changes, no API changes. Pure client-component addition following the ConfirmDialog precedent (flat buttons, panel container, CSS variables, inline styles).
+
+### QA Results
+- ✅ `tsc --noEmit` (docker node:22-slim): exit 0, zero type errors
+- ✅ `grep -rn 'alert(' src/app`: zero remaining `alert(` calls (only comment references)
+- ✅ Zero DB/schema changes; no containers deployed (tsc-only verification per task scope)
+
 ## 2026-09-04 — Phase 35: Kill the last native confirm() dialogs on core record pages
 
 ### Problem

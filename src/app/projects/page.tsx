@@ -7,6 +7,7 @@ import type { Project, User } from '../lib/types'
 import { layout, panel, typeography, buttons, forms } from '../lib/styles'
 import ProtectedLayout from '../components/ProtectedLayout'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
 
 const PROJECT_COLORS = [
   '#c9a96e', '#60a5fa', '#4ade80', '#a78bfa',
@@ -17,6 +18,7 @@ const PROJECT_ICONS = ['📋', '🚀', '🎨', '📦', '🔧', '📊', '🎯', '
 
 export default function ProjectsPage() {
   const router = useRouter()
+  const toast = useToast()
   const [projects, setProjects] = useState<Project[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [tenants, setTenants] = useState<{ id: string; name: string }[]>([])
@@ -78,7 +80,7 @@ export default function ProjectsPage() {
       setIcon('📋')
       router.push(`/projects/${project.id}`)
     } catch (e) {
-      alert('Failed to create project')
+      toast(`Failed to create project: ${(e as Error).message}`, { type: 'error' })
     } finally {
       setCreating(false)
     }
@@ -92,7 +94,7 @@ export default function ProjectsPage() {
       })
       fetchProjects()
     } catch (e) {
-      alert('Failed to update project')
+      toast(`Failed to update project: ${(e as Error).message}`, { type: 'error' })
     }
   }
 
@@ -105,7 +107,7 @@ export default function ProjectsPage() {
       await apiFetch(`/api/projects/${project.id}`, { method: 'DELETE' })
       fetchProjects()
     } catch (e) {
-      alert('Failed to delete project')
+      toast(`Failed to delete project: ${(e as Error).message}`, { type: 'error' })
     }
   }
 

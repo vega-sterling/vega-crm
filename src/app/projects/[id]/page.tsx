@@ -7,6 +7,7 @@ import type { Project, ProjectColumn, ProjectTask, Subtask, User, TaskComment } 
 import { layout, panel, typeography, buttons, forms, statusBadge } from '../../lib/styles'
 import ProtectedLayout from '../../components/ProtectedLayout'
 import ConfirmDialog from '../../components/ConfirmDialog'
+import { useToast } from '../../components/Toast'
 
 const PRIORITY_COLORS: Record<string, string> = {
   LOW: '#8b8d98',
@@ -63,6 +64,7 @@ export default function KanbanBoardPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
+  const toast = useToast()
 
   const [project, setProject] = useState<Project | null>(null)
   const [columns, setColumns] = useState<ProjectColumn[]>([])
@@ -275,7 +277,7 @@ export default function KanbanBoardPage() {
       setNewTaskTitle('')
       setAddingToColumn(null)
     } catch (e) {
-      alert('Failed to create task')
+      toast(`Failed to create task: ${(e as Error).message}`, { type: 'error' })
     }
   }
 
@@ -292,7 +294,7 @@ export default function KanbanBoardPage() {
         tasks: (col.tasks || []).filter(t => t.id !== task.id),
       })))
     } catch (e) {
-      alert('Failed to delete task')
+      toast(`Failed to delete task: ${(e as Error).message}`, { type: 'error' })
     }
   }
 
@@ -309,7 +311,7 @@ export default function KanbanBoardPage() {
       })))
       setSelectedTask(prev => prev ? { ...prev, ...updated } : prev)
     } catch (e) {
-      alert('Failed to update task')
+      toast(`Failed to update task: ${(e as Error).message}`, { type: 'error' })
     }
   }
 
@@ -355,7 +357,7 @@ export default function KanbanBoardPage() {
         setColumns([...columns, { ...column, tasks: [] }])
         setShowAddColumn(false)
       } catch (e) {
-        alert('Failed to create column')
+        toast(`Failed to create column: ${(e as Error).message}`, { type: 'error' })
       }
     }
   }
@@ -369,7 +371,7 @@ export default function KanbanBoardPage() {
       setColumns([...columns, { ...column, tasks: [] }])
       setShowAddColumn(false)
     } catch (e) {
-      alert('Failed to create column')
+      toast(`Failed to create column: ${(e as Error).message}`, { type: 'error' })
     }
   }
 
@@ -382,7 +384,7 @@ export default function KanbanBoardPage() {
       setColumns(prev => prev.map(col => col.id === columnId ? { ...col, ...updated } : col))
       setEditingColumn(null)
     } catch (e) {
-      alert('Failed to update column')
+      toast(`Failed to update column: ${(e as Error).message}`, { type: 'error' })
     }
   }
 
@@ -396,7 +398,7 @@ export default function KanbanBoardPage() {
       setColumns(columns.filter(c => c.id !== column.id))
       setEditingColumn(null)
     } catch (e) {
-      alert('Failed to delete column')
+      toast(`Failed to delete column: ${(e as Error).message}`, { type: 'error' })
     }
   }
 
@@ -429,7 +431,7 @@ export default function KanbanBoardPage() {
       setShowEditProject(false)
       fetchBoard()
     } catch (e) {
-      alert('Failed to save project')
+      toast(`Failed to save project: ${(e as Error).message}`, { type: 'error' })
     } finally {
       setSavingProject(false)
     }
@@ -444,7 +446,7 @@ export default function KanbanBoardPage() {
       setShowEditProject(false)
       fetchBoard()
     } catch (e) {
-      alert('Failed to archive project')
+      toast(`Failed to archive project: ${(e as Error).message}`, { type: 'error' })
     }
   }
 
@@ -463,7 +465,7 @@ export default function KanbanBoardPage() {
         } : prev)
       }
     } catch (e) {
-      alert('Failed to create subtask')
+      toast(`Failed to create subtask: ${(e as Error).message}`, { type: 'error' })
     }
   }
 
@@ -480,7 +482,7 @@ export default function KanbanBoardPage() {
         } : prev)
       }
     } catch (e) {
-      alert('Failed to update subtask')
+      toast(`Failed to update subtask: ${(e as Error).message}`, { type: 'error' })
     }
   }
 
@@ -498,7 +500,7 @@ export default function KanbanBoardPage() {
         } : prev)
       }
     } catch (e) {
-      alert('Failed to delete subtask')
+      toast(`Failed to delete subtask: ${(e as Error).message}`, { type: 'error' })
     }
   }
 

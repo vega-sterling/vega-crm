@@ -7,6 +7,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppProvider } from "./components/ThemeProvider";
+import { ToastProvider } from "./components/Toast";
 
 export const metadata: Metadata = {
   title: "Vega CRM",
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         backgroundImage: "var(--bg-gradient)",
         backgroundAttachment: "fixed",
       }}>
-        <AppProvider>{children}</AppProvider>
+        <AppProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </AppProvider>
       </body>
     </html>
   );

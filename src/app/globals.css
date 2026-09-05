@@ -1803,3 +1803,40 @@ input[type="checkbox"] {
   }
 }
 /* Phase 33 CSS END */
+
+/* ==========================================================================
+   Phase 36 — Toast notification system
+   Slide-up entrance for toasts rendered by src/app/components/Toast.tsx.
+   Viewport: bottom-right on desktop; full-width bottom-anchored with 16px
+   insets on phone.
+   ============================================================================ */
+
+@keyframes toastEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-enter {
+  animation: toastEnter 0.25s ease-out;
+}
+
+.toast-viewport {
+  left: auto;
+  right: 16px;
+  bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .toast-viewport {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+  }
+}
+/* Phase 36 CSS END */
