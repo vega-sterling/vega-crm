@@ -1840,3 +1840,67 @@ input[type="checkbox"] {
   }
 }
 /* Phase 36 CSS END */
+
+/* ============================================================================
+   Phase 37 — ConfirmDialog responsive bottom sheet (phone)
+   src/app/components/ConfirmDialog.tsx renders a centered modal on
+   tablet/desktop (inline styles). On phone (<768px) the CSS below docks it
+   to the bottom of the viewport as a bottom sheet, mirroring the deals
+   stage-move sheet: top-corner radius only, full width, stacked full-width
+   buttons with the destructive action on top (iOS action-sheet convention).
+   ============================================================================ */
+
+/* Drag handle is a phone-only affordance */
+.confirm-dialog-handle {
+  display: none;
+}
+
+@keyframes confirmSheetEnter {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .confirm-dialog-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .confirm-dialog-panel {
+    max-width: none;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+    padding: 12px 20px 28px;
+    animation: confirmSheetEnter 0.2s ease-out;
+  }
+
+  .confirm-dialog-handle {
+    display: block;
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--panel-border);
+    margin: 0 auto 14px;
+  }
+
+  .confirm-dialog-panel p {
+    font-size: 15px !important;
+  }
+
+  /* Stack full-width buttons; destructive confirm sits on top */
+  .confirm-dialog-actions {
+    flex-direction: column-reverse;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .confirm-dialog-actions .btn-touch {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px;
+  }
+}

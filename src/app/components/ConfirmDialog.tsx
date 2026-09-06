@@ -5,8 +5,16 @@
 // Description: Reusable confirmation dialog for delete and other destructive
 //              actions. Replaces native window.confirm() with a styled modal
 //              that matches the Vega CRM dark theme.
+//
+// Phase 37: Responsive — centered modal on tablet/desktop (>=768px); on phone
+// (<768px) it docks to the bottom as a bottom sheet (full width, top-corner
+// radius, drag handle, stacked full-width buttons — destructive on top per
+// iOS action-sheet convention). The responsive switch is pure CSS in
+// globals.css (.confirm-dialog-overlay / .confirm-dialog-panel), so no JS
+// matchMedia is needed. Escape key cancels; backdrop click cancels.
 // ============================================================================
 
+import { useEffect } from 'react'
 import { panel, typeography, buttons } from '../lib/styles'
 
 interface ConfirmDialogProps {
@@ -42,10 +50,21 @@ export default function ConfirmDialog({
   onCancel,
   onConfirm,
 }: ConfirmDialogProps) {
+  // Escape key cancels — keyboard users get the same out as a backdrop click.
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open, onCancel])
+
   if (!open) return null
 
   return (
     <div
+      className="confirm-dialog-overlay"
       onClick={onCancel}
       style={{
         position: 'fixed',
@@ -59,6 +78,10 @@ export default function ConfirmDialog({
       }}
     >
       <div
+        className="confirm-dialog-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         onClick={(e) => e.stopPropagation()}
         style={{
           ...panel.container,
@@ -67,6 +90,8 @@ export default function ConfirmDialog({
           boxShadow: 'var(--shadow-lg)',
         }}
       >
+        {/* Drag handle — phone bottom-sheet affordance (hidden on desktop via CSS) */}
+        <div className="confirm-dialog-handle" aria-hidden="true" />
         <h2 style={{ ...typeography.subtitle, marginTop: 0 }}>{title}</h2>
         <p style={{ ...typeography.muted, marginBottom: 24, fontSize: 14, lineHeight: 1.6 }}>
           {message || (itemName ? (
@@ -75,7 +100,7 @@ export default function ConfirmDialog({
             'Are you sure? This action cannot be undone.'
           ))}
         </p>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+        <div className="confirm-dialog-actions" style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
           <button className="btn-touch" style={buttons.secondary} onClick={onCancel}>
             {cancelLabel}
           </button>

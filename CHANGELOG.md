@@ -1,3 +1,29 @@
+## 2026-09-06 — Phase 37: ConfirmDialog responsive bottom sheet (phone)
+
+### Problem
+Roadmap Priority 2 (Responsive Design) says modals become bottom sheets on mobile. The deals stage-move picker already followed this pattern, but ConfirmDialog — the styled replacement for window.confirm() used on 19 pages (contacts, companies, deals, projects, quotes, settings, admin, workflows, templates, calendar, ActivityCard) — still rendered as a small centered modal on phones: cramped, tiny tap zones, bottom-of-thumb unreachable.
+
+### What Changed
+**src/app/components/ConfirmDialog.tsx** (+32 net):
+- Added className confirm-dialog-overlay (backdrop) and confirm-dialog-panel (sheet body); inline styles retained as the desktop/tablet fallback, so >=768px appearance is unchanged.
+- New drag-handle div (confirm-dialog-handle, aria-hidden) — a phone-only affordance hidden by CSS on larger screens.
+- Accessibility: role=dialog, aria-modal=true, aria-label={title} on the panel; Escape key now cancels via useEffect keydown listener (cleanup on unmount/close).
+
+**src/app/globals.css** (+64):
+- @keyframes confirmSheetEnter (translateY(100%) -> 0, 200ms ease-out), mirroring toastEnter.
+- @media (max-width: 768px): overlay aligns flex-end with no padding; panel docks full-width to viewport bottom, top-corner radius 16px only, no bottom border; body text 15px; actions stack full-width column-reverse (destructive confirm on top, cancel below — iOS action-sheet convention), 48px min-height, 16px font buttons.
+
+### Pattern
+- Pure CSS responsive switch (no JS matchMedia), existing CSS-variable system, no new dependencies, no schema/DB changes, one component touched — fixes phone UX across all 19 consuming pages at once.
+
+### QA Results
+- PASS: docker node:22-slim npx tsc --noEmit -> exit 0
+- PASS: docker compose build && up -> healthy; https://earth.servers.onl -> 307 to /login
+- PASS: /login 200; /dashboard /contacts /companies /deals /tasks /inbox /projects /quotes /settings all 307 (auth-gated, no regressions)
+- PASS: production CSS chunk serves confirm-dialog-overlay/panel/handle/actions + confirmSheetEnter
+- PASS: confirm-dialog-overlay compiled into running container SSR chunks (verified via docker exec grep in /app/.next)
+- Zero DB/schema changes; live data untouched.
+
 ## 2026-09-05 — Phase 36: Toast notification system (kill last alert() calls)
 
 ### Problem
