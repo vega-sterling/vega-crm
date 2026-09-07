@@ -837,6 +837,7 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 768px) {
   .bulk-action-bar {
     flex-direction: column !important;
+    flex-wrap: wrap !important;
     align-items: stretch !important;
     gap: 8px !important;
     top: 64px !important;
@@ -848,6 +849,10 @@ input:focus, select:focus, textarea:focus {
   .bulk-action-bar > div {
     width: 100% !important;
     justify-content: flex-start !important;
+  }
+  /* Buttons inside the bulk bar keep 44px tap targets when wrapping */
+  .bulk-action-bar button {
+    min-height: 44px;
   }
 }
 

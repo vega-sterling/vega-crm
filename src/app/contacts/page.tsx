@@ -6,6 +6,9 @@
 //              table/card grid toggle, pagination, and hover row actions.
 //              Phase 23: Inline create/edit form (no modal), matching Bryan's
 //              "inline actions over modals" design principle.
+//              Phase 38: HubSpot-style bulk actions — checkboxes in table and
+//              card views, contextual bulk action bar (Set Company, Archive,
+//              Activate, Export CSV, Delete), mirroring the deals pattern.
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
@@ -16,7 +19,8 @@ import Avatar from '../components/Avatar'
 import RowActions from '../components/RowActions'
 import Pagination from '../components/Pagination'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { IconSearch, IconMail, IconPhone, IconPlus } from '../components/Icons'
+import { IconSearch, IconMail, IconPhone, IconPlus, IconTrash } from '../components/Icons'
+import { useToast } from '../components/Toast'
 import { apiFetch } from '../lib/api'
 import { layout, panel, typeography, forms, buttons, table } from '../lib/styles'
 import type { Contact, Company, Tenant } from '../lib/types'
@@ -66,6 +70,14 @@ function ContactsContent() {
   // ── Pending delete (ConfirmDialog state) ──
   const [pendingDelete, setPendingDelete] = useState<ContactListItem | null>(null)
   const [exportError, setExportError] = useState('')
+
+  // ── Phase 38: Bulk action state (mirrors deals list) ──
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkAction, setBulkAction] = useState<'setCompany' | null>(null)
+  const [bulkCompanyId, setBulkCompanyId] = useState('')
+  const [bulkSubmitting, setBulkSubmitting] = useState(false)
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
+  const showToast = useToast()
 
   const load = useCallback(async () => {
     try {
@@ -119,6 +131,47 @@ function ContactsContent() {
     return filtered.slice(start, start + PAGE_SIZE)
   }, [filtered, page])
 
+  // ── Phase 38: selection helpers (mirrors deals list) ──
+  // Select-all applies to the current filtered page only
+  const pageIds = useMemo(() => paginated.map((c) => c.id), [paginated])
+  const selectedCount = pageIds.filter((id) => selectedIds.has(id)).length
+  const allSelected = pageIds.length > 0 && selectedCount === pageIds.length
+  const someSelected = selectedCount > 0 && selectedCount < pageIds.length
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (allSelected) pageIds.forEach((id) => next.delete(id))
+      else pageIds.forEach((id) => next.add(id))
+      return next
+    })
+  }
+
+  const clearSelection = () => {
+    setSelectedIds(new Set())
+    setBulkAction(null)
+    setBulkCompanyId('')
+  }
+
+  // Prune selection to visible (filtered) IDs when filters change — keeps the
+  // count honest for both table view (paginated) and card view (all filtered)
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev
+      const visible = new Set(filtered.map((c) => c.id))
+      const next = new Set([...prev].filter((id) => visible.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [filtered])
+
   const openNew = () => {
     setEditingContact(null)
     setForm({ ...emptyForm, tenantId: tenants[0]?.id || '' })
@@ -152,6 +205,64 @@ function ContactsContent() {
       await apiFetch(`/api/contacts/${c.id}`, { method: 'DELETE' })
       setContacts((prev) => prev.filter((x) => x.id !== c.id))
     } catch (err: any) { setError(err.message || 'Failed to delete contact') }
+  }
+
+  // ── Phase 38: Bulk action handlers (mirrors deals list) ──
+  const runBulk = async (body: Record<string, unknown>, successVerb: string) => {
+    setBulkSubmitting(true)
+    try {
+      const result = await apiFetch<{ updated: number }>('/api/contacts/bulk', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+      showToast(`✓ ${successVerb} ${result.updated} contact${result.updated !== 1 ? 's' : ''}`, { type: 'success' })
+      await load()
+      clearSelection()
+    } catch (err: any) {
+      showToast(`✗ ${err.message || 'Bulk action failed'}`, { type: 'error' })
+    } finally {
+      setBulkSubmitting(false)
+    }
+  }
+
+  const handleBulkSetCompany = () => {
+    if (!bulkCompanyId || selectedIds.size === 0) return
+    runBulk({ action: 'setCompany', contactIds: [...selectedIds], companyId: bulkCompanyId }, 'Moved')
+  }
+
+  const handleBulkArchive = () => runBulk({ action: 'archive', contactIds: [...selectedIds] }, 'Archived')
+
+  const handleBulkActivate = () => runBulk({ action: 'activate', contactIds: [...selectedIds] }, 'Activated')
+
+  const handleBulkDelete = () => {
+    setConfirmBulkDelete(false)
+    runBulk({ action: 'delete', contactIds: [...selectedIds] }, 'Deleted')
+  }
+
+  // Client-side CSV export of selected rows (not the admin-only /api/export)
+  const handleBulkExport = () => {
+    const selected = contacts.filter((c) => selectedIds.has(c.id))
+    if (selected.length === 0) return
+    const esc = (s?: string) => `"${(s || '').replace(/"/g, '""')}"`
+    const headers = ['Name', 'Title', 'Email', 'Phone', 'Mobile', 'Company', 'Created']
+    const rows = selected.map((c) => [
+      esc(`${c.firstName} ${c.lastName}`),
+      esc(c.title),
+      esc(c.email),
+      esc(c.phone),
+      esc(c.mobile),
+      esc(c.company?.name),
+      c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : '',
+    ].join(','))
+    const csv = [headers.join(','), ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vega-contacts-export-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    showToast(`✓ Exported ${selected.length} contact${selected.length !== 1 ? 's' : ''} to CSV`, { type: 'success' })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -251,6 +362,111 @@ function ContactsContent() {
         {filtered.length} {filtered.length === 1 ? 'contact' : 'contacts'}
       </div>
 
+      {/* ── Phase 38: BULK ACTION BAR — appears when contacts are selected ── */}
+      {selectedIds.size > 0 && (
+        <div
+          className="panel-container bulk-action-bar"
+          style={{
+            ...panel.compact,
+            position: 'sticky',
+            top: 72,
+            zIndex: 30,
+            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+            backgroundColor: 'var(--panel-elevated)',
+            borderColor: 'var(--gold)',
+            boxShadow: 'var(--shadow-md)',
+          }}
+        >
+          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--gold)', whiteSpace: 'nowrap' }}>
+            {selectedIds.size} selected
+          </span>
+
+          {/* Inline bulk action buttons */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button
+              className="btn-touch"
+              style={{ ...buttons.small, display: 'flex', alignItems: 'center', gap: 4 }}
+              onClick={() => { setBulkAction(bulkAction === 'setCompany' ? null : 'setCompany') }}
+            >
+              Set Company
+            </button>
+            <button
+              className="btn-touch"
+              style={{ ...buttons.small, display: 'flex', alignItems: 'center', gap: 4, opacity: bulkSubmitting ? 0.5 : 1 }}
+              disabled={bulkSubmitting}
+              onClick={handleBulkArchive}
+            >
+              Archive
+            </button>
+            <button
+              className="btn-touch"
+              style={{ ...buttons.small, display: 'flex', alignItems: 'center', gap: 4, opacity: bulkSubmitting ? 0.5 : 1 }}
+              disabled={bulkSubmitting}
+              onClick={handleBulkActivate}
+            >
+              Activate
+            </button>
+            <button
+              className="btn-touch"
+              style={{ ...buttons.small, display: 'flex', alignItems: 'center', gap: 4 }}
+              onClick={handleBulkExport}
+            >
+              Export Selected CSV
+            </button>
+            <button
+              className="btn-touch"
+              style={{ ...buttons.danger, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
+              onClick={() => setConfirmBulkDelete(true)}
+            >
+              <IconTrash size={14} /> Delete
+            </button>
+          </div>
+
+          {/* Inline Set Company controls */}
+          {bulkAction === 'setCompany' && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <select
+                className="form-select"
+                style={{ ...forms.select, width: 'auto', minWidth: 180, padding: '6px 10px', fontSize: 13 }}
+                value={bulkCompanyId}
+                onChange={(e) => setBulkCompanyId(e.target.value)}
+              >
+                <option value="">Select company…</option>
+                {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <button
+                className="btn-touch"
+                style={{ ...buttons.primary, padding: '6px 14px', fontSize: 13, opacity: (!bulkCompanyId || bulkSubmitting) ? 0.5 : 1 }}
+                disabled={!bulkCompanyId || bulkSubmitting}
+                onClick={handleBulkSetCompany}
+              >
+                {bulkSubmitting ? 'Moving…' : 'Apply'}
+              </button>
+              <button className="btn-touch" style={buttons.secondary} onClick={() => { setBulkAction(null); setBulkCompanyId('') }}>
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {/* Clear selection */}
+          <button
+            onClick={clearSelection}
+            style={{
+              background: 'transparent', border: 'none', color: 'var(--fg-dim)', cursor: 'pointer',
+              fontSize: 13, marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4,
+              padding: '4px 8px', borderRadius: 6,
+            }}
+            className="btn-touch"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* ── Inline Create/Edit Form ── */}
       {showForm && (
         <div id="inline-contact-form" className="panel-container" style={{ ...panel.container, marginBottom: 24, animation: 'slideUp 0.25s ease-out' }}>
@@ -313,6 +529,16 @@ function ContactsContent() {
           <table style={table.table}>
             <thead>
               <tr>
+                <th style={{ ...table.th, width: 44, paddingLeft: 16 }}>
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={(el) => { if (el) el.indeterminate = someSelected }}
+                    onChange={toggleSelectAll}
+                    style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--gold)' }}
+                    aria-label="Select all contacts on this page"
+                  />
+                </th>
                 <th style={table.th}>Name</th>
                 <th style={table.th}>Title</th>
                 <th style={table.th}>Email</th>
@@ -324,10 +550,21 @@ function ContactsContent() {
             </thead>
             <tbody>
               {paginated.length === 0 ? (
-                <tr><td colSpan={7} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center', padding: 32 }}>No contacts found.</td></tr>
+                <tr><td colSpan={8} style={{ ...table.td, color: 'var(--fg-dim)', textAlign: 'center', padding: 32 }}>No contacts found.</td></tr>
               ) : (
-                paginated.map((c) => (
-                  <tr key={c.id} className="vega-table-row" style={table.tr}>
+                paginated.map((c) => {
+                  const isSelected = selectedIds.has(c.id)
+                  return (
+                  <tr key={c.id} className="vega-table-row" style={{ ...table.tr, backgroundColor: isSelected ? 'rgba(184,146,74,0.08)' : 'transparent' }}>
+                    <td style={{ ...table.td, paddingLeft: 16 }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(c.id)}
+                        style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--gold)' }}
+                        aria-label={`Select ${c.firstName} ${c.lastName}`}
+                      />
+                    </td>
                     <td style={table.td}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <Avatar name={`${c.firstName} ${c.lastName}`} size={32} />
@@ -370,7 +607,8 @@ function ContactsContent() {
                       <RowActions onEdit={() => openEdit(c)} onDelete={() => handleDelete(c)} />
                     </td>
                   </tr>
-                ))
+                  )
+                })
               )}
             </tbody>
           </table>
@@ -391,11 +629,23 @@ function ContactsContent() {
         {filtered.length === 0 ? (
           <div className="panel-container" style={{ ...panel.container, gridColumn: '1 / -1', textAlign: 'center', color: 'var(--fg-dim)' }}>No contacts found.</div>
         ) : (
-          filtered.map((c) => (
+          filtered.map((c) => {
+            const isSelected = selectedIds.has(c.id)
+            return (
             <Link key={c.id} href={`/contacts/${c.id}`} style={{ textDecoration: 'none' }}>
-              <div className="panel-container" style={{ ...panel.container, height: '100%', cursor: 'pointer' }}>
+              <div className="panel-container" style={{ ...panel.container, height: '100%', cursor: 'pointer', backgroundColor: isSelected ? 'rgba(184,146,74,0.08)' : undefined, borderColor: isSelected ? 'var(--gold)' : undefined }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSelect(c.id) }} style={{ display: 'flex', alignItems: 'center', minWidth: 44, minHeight: 44 }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(c.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ width: 18, height: 18, cursor: 'pointer', accentColor: 'var(--gold)' }}
+                        aria-label={`Select ${c.firstName} ${c.lastName}`}
+                      />
+                    </span>
                     <Avatar name={`${c.firstName} ${c.lastName}`} size={36} />
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--fg)' }}>{c.firstName} {c.lastName}</div>
@@ -415,9 +665,20 @@ function ContactsContent() {
                 </div>
               </div>
             </Link>
-          ))
+            )
+          })
         )}
       </div>
+
+      {/* ── Phase 38: Bulk delete confirmation ── */}
+      <ConfirmDialog
+        open={confirmBulkDelete}
+        title={`Delete ${selectedIds.size} contact${selectedIds.size !== 1 ? 's' : ''} permanently?`}
+        message={`Delete ${selectedIds.size} contact${selectedIds.size !== 1 ? 's' : ''} permanently? Their activities and tasks will also be deleted. This action cannot be undone.`}
+        confirmLabel="Delete"
+        onCancel={() => setConfirmBulkDelete(false)}
+        onConfirm={handleBulkDelete}
+      />
 
       {/* ── Delete contact confirmation ── */}
       <ConfirmDialog

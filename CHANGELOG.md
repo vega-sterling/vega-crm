@@ -1,3 +1,43 @@
+## 2026-09-07 — Phase 38: Bulk Actions on Contacts & Companies Lists
+
+### Problem
+Only the deals list view had bulk actions. The contacts and companies list views — the two most-used record lists — still required per-row archive/delete/edit clicks, with no way to move contacts to another company, archive stale records, or clean up imports in bulk. HubSpot-style list management means select-all-page, a contextual action bar, and bulk-safe server endpoints.
+
+### What Changed
+**src/app/api/contacts/bulk/route.ts (new)**:
+- POST endpoint, zod schema (`action: setCompany | archive | activate | delete`, `contactIds` min 1, `companyId` cuid optional required for setCompany).
+- Mirrors deals/bulk security: requireSession, validateBody, getAccessibleTenantIds, tenant-scoped findMany before any updateMany/deleteMany — never acts on IDs outside accessible tenants.
+- setCompany verifies the target company is in an accessible tenant before applying; archive/activate set isActive; delete uses deleteMany on confirmed-accessible IDs only.
+
+**src/app/api/companies/bulk/route.ts (new)**:
+- Same pattern, actions `archive | activate | delete`. Delete carries a code comment warning: deleting companies CASCADES to contacts, activities, tasks, deals, emailMessages, calendarEvents, bookings — destructive by design.
+
+**src/app/contacts/page.tsx** (+~250 net):
+- 44px checkbox column in table view (header select-all-page with indeterminate state) and 18px checkboxes with 44px hit targets in card view; selected rows highlighted gold.
+- Bulk action bar (`panel-container bulk-action-bar`) above the list when any selection: Set Company (inline company select + Apply), Archive, Activate, Export Selected CSV (client-side Blob download, NOT /api/export), Delete (danger, ConfirmDialog: activities/tasks cascade warning).
+- Toast feedback on success/error via useToast(); selection pruned to filtered IDs when filters change.
+
+**src/app/companies/page.tsx** (+~180 net):
+- Same treatment minus Set Company; CSV headers Name,Industry,Website,Phone,Email,Created.
+- Bulk delete ConfirmDialog warns: "Deleting companies also permanently deletes their contacts, activities, tasks, and deals."
+
+**src/app/globals.css** (+4):
+- .bulk-action-bar under 768px: explicit flex-wrap, 8px gap, 44px min-height for wrapped buttons.
+
+### Pattern
+Mirrors Phase 6 deals bulk pattern exactly (sticky gold-bordered bar, buttons.small inline actions, client-side CSV export, ConfirmDialog for destructive action, tenant-scoped bulk API). Additive only — no schema changes, no existing API touched.
+
+### QA Results
+- PASS: docker node:22-slim npx tsc --noEmit → exit 0
+- PASS: docker compose build && docker compose up -d → all containers Up (vega-crm, vega-crm-db healthy, vega-crm-caddy)
+- PASS: curl https://earth.servers.onl → 307 https://earth.servers.onl/login
+- PASS: /contacts → 307; /companies → 307 (auth-gated, no regressions)
+- PASS: POST /api/contacts/bulk unauthenticated {"action":"archive","contactIds":["x"]} → 401 {"error":"Unauthorized — please log in."} (JSON, not 500)
+- PASS: POST /api/companies/bulk unauthenticated → 401 {"error":"Unauthorized — please log in."} (JSON, not 500)
+- PASS: GET /api/contacts/bulk and /api/companies/bulk → 405, matching the deals/bulk control — routes compiled and wired
+- PASS: docker logs vega-crm --tail 20 → clean Next.js 16.3.0 startup, notifications scheduler started, no runtime errors
+- Zero DB/schema changes; live data untouched; no git commit (parent orchestrator handles git)
+
 ## 2026-09-06 — Phase 37: ConfirmDialog responsive bottom sheet (phone)
 
 ### Problem
