@@ -325,6 +325,9 @@ function ContactsContent() {
             }}>
             ⬇ Export
           </button>
+          <Link href="/contacts/duplicates" className="btn-touch" style={{ ...buttons.secondary, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+            ⧉ Duplicates
+          </Link>
           <button className="btn-touch" style={{ ...buttons.primary, display: 'flex', alignItems: 'center', gap: 6 }} onClick={openNew}>
             <IconPlus size={16} /> New Contact
           </button>

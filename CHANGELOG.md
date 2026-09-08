@@ -1,3 +1,44 @@
+## 2026-09-08 — Phase 39: Duplicate Contact Detection + Merge
+
+### Problem
+Contacts accumulated duplicates from imports, manual entry and lead-form double-submits, with no way to find or reconcile them. HubSpot-style "manage duplicates" means a scan that surfaces likely duplicate pairs, a side-by-side choice of which record to keep, and a safe merge that deletes the duplicate while re-pointing every child record to the survivor — never cascading away history.
+
+### What Changed
+**src/app/api/contacts/duplicates/route.ts (new)**:
+- GET endpoint, read-only scan across accessible tenants (requireSession → getAccessibleTenantIds → tenant-scoped findMany). No mutations.
+- Groups exact email matches (case-insensitive, trimmed, non-null) as type 'email'; same first+last name (case-insensitive, trimmed) + same companyId as type 'name'.
+- Returns { data: [{ type, contacts }] } — groups of 2+, email groups first, capped at 50 groups. Archived contacts included (UI shows a badge). Name-groups identical in ID-set to an email group are deduped so the same pair is never reported twice.
+
+**src/app/api/contacts/merge/route.ts (new)**:
+- POST with zod { primaryId cuid, duplicateId cuid, refine primaryId !== duplicateId } via validateBody.
+- Single prisma.$transaction: load both contacts → verify same tenantId AND in accessible tenants (else 400, MergeError) → fill primary's null/empty fields from duplicate (email, phone, mobile, title, department) → notes appended with 'Merged:' marker when both present → tags union deduped, primary order first → re-point ALL seven contactId child relations duplicate→primary via updateMany BEFORE the delete: Activity, Task, Deal, EmailMessage, SequenceEnrollment, CalendarEvent, Booking (SequenceEnrollment.contactId is required+Cascade, so re-pointing must precede the delete or enrollments would be destroyed) → delete the duplicate (the ONLY deletion) → return { merged: true, primaryId, mergedContact } with fresh primary.
+- try/catch: MergeError → 400 JSON; anything else → 500 JSON "Merge failed — no changes were made". The transaction guarantees no partial state.
+
+**src/app/contacts/duplicates/page.tsx (new)**:
+- Client page under ProtectedLayout; header "Find & Merge Duplicate Contacts" + back link to /contacts; friendly empty-state card ("No duplicates found").
+- Each group = panel card: gold match badge ("Identical email" / "Same name + company") + info line, two contact cards (name, title, email, phone, company, createdAt, Archived badge when !isActive) in a 2-col grid (1-col on phone), each with a full-width 44px+ "Keep this one" primary button.
+- Keep click → ConfirmDialog ("Merge duplicate contacts?", full re-point + delete warning) → POST /api/contacts/merge → toast success → group removed from the list. Inline styles + CSS vars; loading via Spinner; errors via apiFetch/ApiError.
+
+**src/app/contacts/page.tsx** (+3):
+- "⧉ Duplicates" secondary header link to /contacts/duplicates, styled like the Export button (btn-touch, buttons.secondary), before "New Contact" — the header row already flex-wraps so it works on mobile.
+
+**src/app/globals.css** (+21):
+- .dup-pair-grid: 2 columns >=769px, 1 column on phone. .dup-keep-btn: 16px font on phone. Minimal phone-layout addition, no other rules touched.
+
+### Pattern
+Copies the Phase 38 contacts/bulk API pattern exactly (runtime nodejs, force-dynamic, requireSession → getAccessibleTenantIds, validateBody + zod, errorResponse JSON, tenant scoping before any mutation) and the contacts list page UI patterns (ProtectedLayout, apiFetch, useToast, ConfirmDialog for destructive confirm, inline styles from src/app/lib/styles.ts, CSS-variable theming). Additive only — no schema changes, no existing API behavior touched; the single permitted deletion (the duplicate contact) happens only inside the merge transaction.
+
+### QA Results
+- PASS: docker node:22-slim ./node_modules/.bin/tsc --noEmit → exit 0 (re-run after deploy: exit 0)
+- PASS: docker compose build && docker compose up -d → all containers Up (vega-crm Up, vega-crm-db healthy, vega-crm-caddy Up)
+- PASS: curl https://earth.servers.onl → 307 https://earth.servers.onl/login
+- PASS: curl https://earth.servers.onl/contacts/duplicates → 307 (auth-gated, route compiles and is wired)
+- PASS: POST /api/contacts/merge unauthenticated {"primaryId":"x","duplicateId":"y"} → 401 {"error":"Unauthorized — please log in."} (JSON, not 500)
+- PASS: GET /api/contacts/duplicates unauthenticated → 401 {"error":"Unauthorized — please log in."} (JSON, not 500)
+- PASS: /contacts → 307 (no regression from the header button patch)
+- PASS: docker logs vega-crm --tail 30 → clean Next.js 16.3.0 startup, notifications scheduler started, no runtime errors
+- Zero DB/schema changes; live data untouched; no git commit (parent orchestrator handles git)
+
 ## 2026-09-07 — Phase 38: Bulk Actions on Contacts & Companies Lists
 
 ### Problem
