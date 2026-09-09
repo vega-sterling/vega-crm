@@ -1,3 +1,34 @@
+## 2026-09-09 — Phase 40: Theme FOUC Fix + One-Click Header Theme Toggle
+
+### Problem
+The persisted light theme was applied only after React hydrated, so light-theme users saw a dark flash-of-unstyled-content on every page load (dark vars paint by default, then swap). And switching theme required navigating to Settings — no quick toggle while working.
+
+### What Changed
+**src/app/layout.tsx** (+9):
+- Added `suppressHydrationWarning` to the `<html>` element (the pre-paint script mutates data-theme before React hydrates; attribute changes there must not warn).
+- Added `<head>` with a single blocking inline `<script dangerouslySetInnerHTML>` that runs before first paint: reads localStorage 'vega-crm-theme', falls back to prefers-color-scheme (light/dark), defaults 'dark', then sets `document.documentElement.setAttribute('data-theme', t)`. var-based, no template literals, wrapped in try/catch. Body styles untouched.
+
+**src/app/components/ThemeProvider.tsx** (+9/-2 in mount effect):
+- Mount effect now reads theme from `document.documentElement.getAttribute('data-theme')` first (set by the blocking script, including the prefers-color-scheme fallback), falling back to localStorage 'vega-crm-theme', else default 'dark' — React state aligns with what actually painted. localStorage write key and the apply/persist effect unchanged; locale logic untouched; context API surface identical.
+
+**src/app/components/Icons.tsx** (+4):
+- `IconSun` (circle cx12 cy12 r4 + 8 short rays) and `IconMoon` (M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z), following the exact IconProps/Svg pattern.
+
+**src/app/components/AppShell.tsx** (+28/-2):
+- Theme toggle button in the header, immediately before NotificationBell: transparent bg, no border, color var(--fg), padding 4, 40×40, borderRadius 6, flex center. Renders IconMoon (size 20) when dark, IconSun (size 20) when light; aria-label/title 'Switch to light theme' / 'Switch to dark theme' per active theme; onClick toggleTheme(). Imports useApp from './ThemeProvider', IconSun/IconMoon merged into the existing './Icons' import.
+
+### Pattern
+The blocking pre-paint script is the standard next-themes-style FOUC elimination (inline script in head resolves theme before CSS paint; React reads the resulting attribute on mount instead of re-deriving it). The toggle button copies the existing header icon-button pattern (hamburger) at 40×40 — ≥44px effective touch target via 4px padding on the flex container. Additive only: no API/context surface changes, no packages, no DB involvement.
+
+### QA Results
+- PASS: docker node:22-slim ./node_modules/.bin/tsc --noEmit → exit 0 (re-run after deploy: exit 0, no drift)
+- PASS: docker compose build && docker compose up -d → vega-crm Up, vega-crm-db Up (healthy), vega-crm-caddy Up
+- PASS: curl -s -o /dev/null -w '%{http_code} %{redirect_url}' https://earth.servers.onl → 307 https://earth.servers.onl/login
+- PASS: curl -s https://earth.servers.onl/login | grep -o 'vega-crm-theme' | head -1 → vega-crm-theme (blocking script ships in served HTML)
+- PASS: curl -s https://earth.servers.onl/login | grep -c 'data-theme' → 1 (≥1, light-theme CSS present)
+- PASS: docker logs vega-crm --tail 20 → clean Next.js 16.3.0 startup ("Ready in 0ms", notifications scheduler started), no errors
+- Zero DB/schema changes; no git commit (parent orchestrator handles git)
+
 ## 2026-09-08 — Phase 39: Duplicate Contact Detection + Merge
 
 ### Problem

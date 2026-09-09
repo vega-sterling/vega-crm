@@ -19,7 +19,8 @@ import GlobalSearch from './GlobalSearch'
 import CommandPalette from './CommandPalette'
 import Breadcrumbs from './Breadcrumbs'
 import { RecentlyViewedTracker, RecentlyViewedDropdown, RecentlyViewedSidebar } from './RecentlyViewed'
-import { navIconMap, IconX, IconMenu, IconChevronRight } from './Icons'
+import { navIconMap, IconX, IconMenu, IconChevronRight, IconSun, IconMoon } from './Icons'
+import { useApp } from './ThemeProvider'
 
 const navSections = [
   { title: 'Overview', items: [
@@ -82,6 +83,7 @@ const COLLAPSE_KEY = 'vega-crm-sidebar-collapsed'
 export default function AppShell({ user, children }: { user: User; children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
+  const { theme, toggleTheme } = useApp()
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -367,7 +369,29 @@ export default function AppShell({ user, children }: { user: User; children: Rea
           {/* Recently Viewed — header dropdown */}
           <RecentlyViewedDropdown />
 
-          <NotificationBell />
+          {/* Theme toggle — one-click dark/light */}
+<button
+  onClick={toggleTheme}
+  style={{
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--fg)',
+    cursor: 'pointer',
+    padding: 4,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+  }}
+  aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+  title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+>
+  {theme === 'dark' ? <IconMoon size={20} /> : <IconSun size={20} />}
+</button>
+
+<NotificationBell />
           {/* User info + logout */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
             <span

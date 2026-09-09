@@ -29,9 +29,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
   const [locale, setLocaleState] = useState<Locale>("en");
 
-  // Load persisted preferences on mount
+  // Load persisted preferences on mount.
+  // Theme: trust the data-theme attribute set by the blocking pre-paint script in
+  // layout.tsx (it already resolved localStorage + prefers-color-scheme); fall back
+  // to localStorage, then 'dark'. This keeps React state in sync with what painted.
   useEffect(() => {
-    const savedTheme = localStorage.getItem("vega-crm-theme") as Theme | null;
+    const attrTheme = document.documentElement.getAttribute("data-theme");
+    const savedTheme =
+      attrTheme === "light" || attrTheme === "dark"
+        ? attrTheme
+        : (localStorage.getItem("vega-crm-theme") as Theme | null);
     const savedLocale = localStorage.getItem("vega-crm-locale") as Locale | null;
     if (savedTheme) setThemeState(savedTheme);
     if (savedLocale) setLocaleState(savedLocale);
