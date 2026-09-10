@@ -29,6 +29,8 @@ const ActivityUpdateSchema = z.object({
   emailCc: z.string().optional().nullable(),
   emailBody: z.string().optional().nullable(),
   externalId: z.string().optional().nullable(),
+  isPinned: z.boolean().optional(),
+  pinnedAt: z.coerce.date().optional().nullable(),
 });
 
 interface RouteContext {
@@ -94,6 +96,30 @@ export async function PUT(req: NextRequest, context: RouteContext): Promise<Next
     Object.entries(body).map(([key, value]) => [key, value === '' ? null : value])
   ) as Partial<typeof body>;
 
+  // ── Pinned notes: one pin per entity (HubSpot-style) ──
+  // When pinning, clear any other pinned activity that shares this activity's
+  // non-null contactId / companyId / dealId, so the pin is unique per record.
+  if (cleaned.isPinned === true) {
+    const entityFilters: Record<string, string>[] = [];
+    if (activity.contactId) entityFilters.push({ contactId: activity.contactId });
+    if (activity.companyId) entityFilters.push({ companyId: activity.companyId });
+    if (activity.dealId) entityFilters.push({ dealId: activity.dealId });
+
+    if (entityFilters.length > 0) {
+      await prisma.activity.updateMany({
+        where: {
+          isPinned: true,
+          id: { not: id },
+          OR: entityFilters,
+        },
+        data: { isPinned: false, pinnedAt: null },
+      });
+    }
+    cleaned.pinnedAt = new Date();
+  } else if (cleaned.isPinned === false) {
+    cleaned.pinnedAt = null;
+  }
+
   const updated = await prisma.activity.update({
     where: { id },
     data: {
@@ -101,6 +127,10 @@ export async function PUT(req: NextRequest, context: RouteContext): Promise<Next
       type: cleaned.type as ActivityType | undefined,
     },
   });
+
+  if (body.isPinned !== undefined) {
+    await logAudit({ userId: session.userId!, action: 'update', entity: 'activity', entityId: id, changes: { pinned: body.isPinned === true } });
+  }
 
   return NextResponse.json(updated);
 }

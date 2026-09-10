@@ -285,6 +285,10 @@ model Activity {
   scheduledAt DateTime?
   completedAt DateTime?
   
+  // Pinned notes (server-side, HubSpot-style, one per record)
+  isPinned   Boolean?  @default(false)
+  pinnedAt   DateTime?
+  
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -300,6 +304,7 @@ model Activity {
   @@index([type])
   @@index([createdAt])
   @@index([dealId])
+  @@index([isPinned])
   @@map("activities")
 }
 

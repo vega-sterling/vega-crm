@@ -23,6 +23,7 @@ import InlineNoteComposer from '../../components/InlineNoteComposer'
 import QuickActionBar from '../../components/QuickActionBar'
 import TimelineFilterTabs, { type TimelineFilter } from '../../components/TimelineFilterTabs'
 import ActivityCard from '../../components/ActivityCard'
+import { IconPin } from '../../components/Icons'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import PinnedNotes, { usePinnedNote } from '../../components/PinnedNotes'
 import EmailThreadCard from '../../components/EmailThreadCard'
@@ -97,8 +98,8 @@ function DealDetailContent() {
   const [confirmDeleteDeal, setConfirmDeleteDeal] = useState(false)
   const [actionError, setActionError] = useState('')
 
-  // Pinned notes hook
-  const { pinnedId, pin, unpin } = usePinnedNote('deal', dealId)
+  // Pinned notes hook (server-backed — hydrates from activity isPinned)
+  const { pinnedId, pin, unpin } = usePinnedNote('deal', dealId, activities)
 
   const [form, setForm] = useState<{
     title: string
@@ -806,7 +807,7 @@ function DealDetailContent() {
                 {pinnedActivity && timelineFilter === 'ALL' && (
                   <div style={{ marginBottom: 4 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <span style={{ fontSize: 16 }}>📌</span>
+                      <IconPin size={16} strokeWidth={2} style={{ color: 'var(--gold)' }} />
                       <span style={{ ...typeography.subtitle, margin: 0, fontSize: 15 }}>Pinned Note</span>
                     </div>
                     <div style={{ border: '2px solid var(--gold)', borderRadius: 12, overflow: 'hidden' }}>

@@ -219,6 +219,8 @@ export const ActivityScalarFieldEnum = {
   externalId: 'externalId',
   scheduledAt: 'scheduledAt',
   completedAt: 'completedAt',
+  isPinned: 'isPinned',
+  pinnedAt: 'pinnedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

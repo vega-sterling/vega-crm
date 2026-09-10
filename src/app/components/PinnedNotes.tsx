@@ -2,53 +2,69 @@
 
 // ============================================================================
 // PinnedNotes — Section at the top of the timeline showing pinned notes.
-// Uses localStorage to track pinned activity IDs per entity.
-// Only one note can be pinned at a time (HubSpot-style).
+// Server-backed (Phase 41): pin state lives on the Activity row
+// (isPinned/pinnedAt) and syncs across devices and users.
+// Only one note can be pinned at a time (HubSpot-style) — the API clears
+// other pins on the same record automatically.
 // ============================================================================
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { panel, typeography, statusBadge } from '../lib/styles'
 import type { Activity, User } from '../lib/types'
 import ActivityCard from './ActivityCard'
+import { IconPin } from './Icons'
+import { apiFetch } from '../lib/api'
 
 interface PinnedNotesProps {
-  entityId: string  // companyId or contactId
-  entityKey: string // 'company' or 'contact'
+  entityId: string  // companyId, contactId, or dealId
+  entityKey: string // 'company' | 'contact' | 'deal'
   activities: Activity[]
   users: User[]
   onUnpin: () => void
 }
 
-export function usePinnedNote(entityKey: string, entityId: string) {
-  const storageKey = `vega-crm-pinned-${entityKey}-${entityId}`
-
+export function usePinnedNote(entityKey: string, entityId: string, activities?: Activity[]) {
   const [pinnedId, setPinnedId] = useState<string | null>(null)
+  const pinnedIdRef = useRef<string | null>(null)
+  const setPinned = useCallback((id: string | null) => {
+    pinnedIdRef.current = id
+    setPinnedId(id)
+  }, [])
 
+  // Hydrate from server data on first load (or when server state arrives
+  // and we have no optimistic local state yet). A ref guards against
+  // clobbering optimistic updates made before/while activities load.
+  const hydratedRef = useRef(false)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(storageKey)
-      setPinnedId(stored)
-    } catch {
-      setPinnedId(null)
-    }
-  }, [storageKey])
+    if (hydratedRef.current) return
+    // Wait for a real (non-empty) activities load — the initial [] render
+    // must not count as hydration.
+    if (!activities || activities.length === 0) return
+    const serverPinned = activities.find(a => a.isPinned)?.id ?? null
+    hydratedRef.current = true
+    if (!pinnedIdRef.current) setPinned(serverPinned)
+  }, [activities, setPinned])
 
   const pin = useCallback((id: string) => {
-    try {
-      // Only one note pinned at a time — pinning a new one unpins the previous
-      localStorage.setItem(storageKey, id)
-      setPinnedId(id)
-    } catch {
-      // localStorage might be unavailable
-    }
-  }, [storageKey])
+    // Optimistic — server clears any other pin on the same record.
+    setPinned(id)
+    apiFetch(`/api/activities/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ isPinned: true }),
+    }).catch(() => {})
+  }, [setPinned])
 
   const unpin = useCallback(() => {
-    try {
-      localStorage.removeItem(storageKey)
-    } catch {}
-    setPinnedId(null)
-  }, [storageKey])
+    // Capture the old id before clearing so we can clear it server-side.
+    const prev = pinnedIdRef.current
+    setPinned(null)
+    if (prev) {
+      apiFetch(`/api/activities/${prev}`, {
+        method: 'PUT',
+        body: JSON.stringify({ isPinned: false }),
+      }).catch(() => {})
+    }
+  }, [setPinned])
 
   return { pinnedId, pin, unpin }
 }
@@ -56,7 +72,7 @@ export function usePinnedNote(entityKey: string, entityId: string) {
 export default function PinnedNotes({
   entityId, entityKey, activities, users, onUnpin,
 }: PinnedNotesProps) {
-  const { pinnedId, pin, unpin } = usePinnedNote(entityKey, entityId)
+  const { pinnedId, pin, unpin } = usePinnedNote(entityKey, entityId, activities)
 
   // Find the pinned activity
   const pinnedActivity = pinnedId ? activities.find(a => a.id === pinnedId) : null
@@ -86,7 +102,7 @@ export default function PinnedNotes({
         gap: 8,
         marginBottom: 8,
       }}>
-        <span style={{ fontSize: 16 }}>📌</span>
+        <IconPin size={16} strokeWidth={2} style={{ color: 'var(--gold)' }} />
         <span style={{ ...typeography.subtitle, margin: 0, fontSize: 15 }}>
           Pinned Note
         </span>

@@ -65,6 +65,8 @@ export interface Activity {
   callDuration?: number
   callOutcome?: string
   source?: string
+  isPinned?: boolean | null
+  pinnedAt?: string | null
   createdAt: string
   updatedAt?: string
   user?: { name: string }

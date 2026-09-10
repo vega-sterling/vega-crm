@@ -10,6 +10,7 @@ import QuickActionBar from '../../components/QuickActionBar'
 import TimelineFilterTabs, { type TimelineFilter } from '../../components/TimelineFilterTabs'
 import TasksTab from '../../components/TasksTab'
 import ActivityCard from '../../components/ActivityCard'
+import { IconPin } from '../../components/Icons'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import PropertyQuickEdit from '../../components/PropertyQuickEdit'
 import CustomFieldsSection from '../../components/CustomFieldsSection'
@@ -74,8 +75,8 @@ function CompanyDetailContent() {
   // ── Pending deletes (ConfirmDialog state) ──
   const [confirmDeleteCompany, setConfirmDeleteCompany] = useState(false)
 
-  // Pinned notes (localStorage)
-  const { pinnedId, pin, unpin } = usePinnedNote('company', companyId)
+  // Pinned notes (server-backed — hydrates from activity isPinned)
+  const { pinnedId, pin, unpin } = usePinnedNote('company', companyId, activities)
 
   const load = useCallback(async () => {
     try {
@@ -321,7 +322,7 @@ function CompanyDetailContent() {
               {pinnedActivity && (
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 16 }}>📌</span>
+                    <IconPin size={16} strokeWidth={2} style={{ color: 'var(--gold)' }} />
                     <span style={{ ...typeography.subtitle, margin: 0, fontSize: 15 }}>Pinned Note</span>
                   </div>
                   <div style={{ border: '2px solid var(--gold)', borderRadius: 12, overflow: 'hidden' }}>

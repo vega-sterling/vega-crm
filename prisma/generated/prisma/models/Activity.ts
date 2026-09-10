@@ -55,6 +55,8 @@ export type ActivityMinAggregateOutputType = {
   externalId: string | null
   scheduledAt: Date | null
   completedAt: Date | null
+  isPinned: boolean | null
+  pinnedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -80,6 +82,8 @@ export type ActivityMaxAggregateOutputType = {
   externalId: string | null
   scheduledAt: Date | null
   completedAt: Date | null
+  isPinned: boolean | null
+  pinnedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -105,6 +109,8 @@ export type ActivityCountAggregateOutputType = {
   externalId: number
   scheduledAt: number
   completedAt: number
+  isPinned: number
+  pinnedAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -140,6 +146,8 @@ export type ActivityMinAggregateInputType = {
   externalId?: true
   scheduledAt?: true
   completedAt?: true
+  isPinned?: true
+  pinnedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -165,6 +173,8 @@ export type ActivityMaxAggregateInputType = {
   externalId?: true
   scheduledAt?: true
   completedAt?: true
+  isPinned?: true
+  pinnedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -190,6 +200,8 @@ export type ActivityCountAggregateInputType = {
   externalId?: true
   scheduledAt?: true
   completedAt?: true
+  isPinned?: true
+  pinnedAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -302,6 +314,8 @@ export type ActivityGroupByOutputType = {
   externalId: string | null
   scheduledAt: Date | null
   completedAt: Date | null
+  isPinned: boolean | null
+  pinnedAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: ActivityCountAggregateOutputType | null
@@ -350,6 +364,8 @@ export type ActivityWhereInput = {
   externalId?: Prisma.StringNullableFilter<"Activity"> | string | null
   scheduledAt?: Prisma.DateTimeNullableFilter<"Activity"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableFilter<"Activity"> | Date | string | null
+  isPinned?: Prisma.BoolNullableFilter<"Activity"> | boolean | null
+  pinnedAt?: Prisma.DateTimeNullableFilter<"Activity"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
   company?: Prisma.XOR<Prisma.CompanyScalarRelationFilter, Prisma.CompanyWhereInput>
@@ -379,6 +395,8 @@ export type ActivityOrderByWithRelationInput = {
   externalId?: Prisma.SortOrderInput | Prisma.SortOrder
   scheduledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  isPinned?: Prisma.SortOrderInput | Prisma.SortOrder
+  pinnedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   company?: Prisma.CompanyOrderByWithRelationInput
@@ -411,6 +429,8 @@ export type ActivityWhereUniqueInput = Prisma.AtLeast<{
   externalId?: Prisma.StringNullableFilter<"Activity"> | string | null
   scheduledAt?: Prisma.DateTimeNullableFilter<"Activity"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableFilter<"Activity"> | Date | string | null
+  isPinned?: Prisma.BoolNullableFilter<"Activity"> | boolean | null
+  pinnedAt?: Prisma.DateTimeNullableFilter<"Activity"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
   company?: Prisma.XOR<Prisma.CompanyScalarRelationFilter, Prisma.CompanyWhereInput>
@@ -440,6 +460,8 @@ export type ActivityOrderByWithAggregationInput = {
   externalId?: Prisma.SortOrderInput | Prisma.SortOrder
   scheduledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  isPinned?: Prisma.SortOrderInput | Prisma.SortOrder
+  pinnedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ActivityCountOrderByAggregateInput
@@ -473,6 +495,8 @@ export type ActivityScalarWhereWithAggregatesInput = {
   externalId?: Prisma.StringNullableWithAggregatesFilter<"Activity"> | string | null
   scheduledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Activity"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Activity"> | Date | string | null
+  isPinned?: Prisma.BoolNullableWithAggregatesFilter<"Activity"> | boolean | null
+  pinnedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Activity"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Activity"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Activity"> | Date | string
 }
@@ -494,6 +518,8 @@ export type ActivityCreateInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   company: Prisma.CompanyCreateNestedOneWithoutActivitiesInput
@@ -523,6 +549,8 @@ export type ActivityUncheckedCreateInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -544,6 +572,8 @@ export type ActivityUpdateInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   company?: Prisma.CompanyUpdateOneRequiredWithoutActivitiesNestedInput
@@ -573,6 +603,8 @@ export type ActivityUncheckedUpdateInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -598,6 +630,8 @@ export type ActivityCreateManyInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -619,6 +653,8 @@ export type ActivityUpdateManyMutationInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -644,6 +680,8 @@ export type ActivityUncheckedUpdateManyInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -679,6 +717,8 @@ export type ActivityCountOrderByAggregateInput = {
   externalId?: Prisma.SortOrder
   scheduledAt?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
+  isPinned?: Prisma.SortOrder
+  pinnedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -708,6 +748,8 @@ export type ActivityMaxOrderByAggregateInput = {
   externalId?: Prisma.SortOrder
   scheduledAt?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
+  isPinned?: Prisma.SortOrder
+  pinnedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -733,6 +775,8 @@ export type ActivityMinOrderByAggregateInput = {
   externalId?: Prisma.SortOrder
   scheduledAt?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
+  isPinned?: Prisma.SortOrder
+  pinnedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -883,6 +927,10 @@ export type EnumActivitySourceFieldUpdateOperationsInput = {
   set?: $Enums.ActivitySource
 }
 
+export type NullableBoolFieldUpdateOperationsInput = {
+  set?: boolean | null
+}
+
 export type ActivityCreateNestedManyWithoutDealInput = {
   create?: Prisma.XOR<Prisma.ActivityCreateWithoutDealInput, Prisma.ActivityUncheckedCreateWithoutDealInput> | Prisma.ActivityCreateWithoutDealInput[] | Prisma.ActivityUncheckedCreateWithoutDealInput[]
   connectOrCreate?: Prisma.ActivityCreateOrConnectWithoutDealInput | Prisma.ActivityCreateOrConnectWithoutDealInput[]
@@ -942,6 +990,8 @@ export type ActivityCreateWithoutUserInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   company: Prisma.CompanyCreateNestedOneWithoutActivitiesInput
@@ -969,6 +1019,8 @@ export type ActivityUncheckedCreateWithoutUserInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1023,6 +1075,8 @@ export type ActivityScalarWhereInput = {
   externalId?: Prisma.StringNullableFilter<"Activity"> | string | null
   scheduledAt?: Prisma.DateTimeNullableFilter<"Activity"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableFilter<"Activity"> | Date | string | null
+  isPinned?: Prisma.BoolNullableFilter<"Activity"> | boolean | null
+  pinnedAt?: Prisma.DateTimeNullableFilter<"Activity"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
 }
@@ -1044,6 +1098,8 @@ export type ActivityCreateWithoutCompanyInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   contact?: Prisma.ContactCreateNestedOneWithoutActivitiesInput
@@ -1071,6 +1127,8 @@ export type ActivityUncheckedCreateWithoutCompanyInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1118,6 +1176,8 @@ export type ActivityCreateWithoutContactInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   company: Prisma.CompanyCreateNestedOneWithoutActivitiesInput
@@ -1145,6 +1205,8 @@ export type ActivityUncheckedCreateWithoutContactInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1192,6 +1254,8 @@ export type ActivityCreateWithoutDealInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   company: Prisma.CompanyCreateNestedOneWithoutActivitiesInput
@@ -1219,6 +1283,8 @@ export type ActivityUncheckedCreateWithoutDealInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1269,6 +1335,8 @@ export type ActivityCreateManyUserInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1290,6 +1358,8 @@ export type ActivityUpdateWithoutUserInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   company?: Prisma.CompanyUpdateOneRequiredWithoutActivitiesNestedInput
@@ -1317,6 +1387,8 @@ export type ActivityUncheckedUpdateWithoutUserInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1341,6 +1413,8 @@ export type ActivityUncheckedUpdateManyWithoutUserInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1365,6 +1439,8 @@ export type ActivityCreateManyCompanyInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1386,6 +1462,8 @@ export type ActivityUpdateWithoutCompanyInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   contact?: Prisma.ContactUpdateOneWithoutActivitiesNestedInput
@@ -1413,6 +1491,8 @@ export type ActivityUncheckedUpdateWithoutCompanyInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1437,6 +1517,8 @@ export type ActivityUncheckedUpdateManyWithoutCompanyInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1461,6 +1543,8 @@ export type ActivityCreateManyContactInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1482,6 +1566,8 @@ export type ActivityUpdateWithoutContactInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   company?: Prisma.CompanyUpdateOneRequiredWithoutActivitiesNestedInput
@@ -1509,6 +1595,8 @@ export type ActivityUncheckedUpdateWithoutContactInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1533,6 +1621,8 @@ export type ActivityUncheckedUpdateManyWithoutContactInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1557,6 +1647,8 @@ export type ActivityCreateManyDealInput = {
   externalId?: string | null
   scheduledAt?: Date | string | null
   completedAt?: Date | string | null
+  isPinned?: boolean | null
+  pinnedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1578,6 +1670,8 @@ export type ActivityUpdateWithoutDealInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   company?: Prisma.CompanyUpdateOneRequiredWithoutActivitiesNestedInput
@@ -1605,6 +1699,8 @@ export type ActivityUncheckedUpdateWithoutDealInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1629,6 +1725,8 @@ export type ActivityUncheckedUpdateManyWithoutDealInput = {
   externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPinned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  pinnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1656,6 +1754,8 @@ export type ActivitySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   externalId?: boolean
   scheduledAt?: boolean
   completedAt?: boolean
+  isPinned?: boolean
+  pinnedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   company?: boolean | Prisma.CompanyDefaultArgs<ExtArgs>
@@ -1685,6 +1785,8 @@ export type ActivitySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   externalId?: boolean
   scheduledAt?: boolean
   completedAt?: boolean
+  isPinned?: boolean
+  pinnedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   company?: boolean | Prisma.CompanyDefaultArgs<ExtArgs>
@@ -1714,6 +1816,8 @@ export type ActivitySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   externalId?: boolean
   scheduledAt?: boolean
   completedAt?: boolean
+  isPinned?: boolean
+  pinnedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   company?: boolean | Prisma.CompanyDefaultArgs<ExtArgs>
@@ -1743,11 +1847,13 @@ export type ActivitySelectScalar = {
   externalId?: boolean
   scheduledAt?: boolean
   completedAt?: boolean
+  isPinned?: boolean
+  pinnedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ActivityOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "type" | "tenantId" | "companyId" | "contactId" | "userId" | "dealId" | "subject" | "description" | "callDirection" | "callDuration" | "callOutcome" | "emailFrom" | "emailTo" | "emailCc" | "emailBody" | "source" | "externalId" | "scheduledAt" | "completedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["activity"]>
+export type ActivityOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "type" | "tenantId" | "companyId" | "contactId" | "userId" | "dealId" | "subject" | "description" | "callDirection" | "callDuration" | "callOutcome" | "emailFrom" | "emailTo" | "emailCc" | "emailBody" | "source" | "externalId" | "scheduledAt" | "completedAt" | "isPinned" | "pinnedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["activity"]>
 export type ActivityInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   company?: boolean | Prisma.CompanyDefaultArgs<ExtArgs>
   contact?: boolean | Prisma.Activity$contactArgs<ExtArgs>
@@ -1796,6 +1902,8 @@ export type $ActivityPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     externalId: string | null
     scheduledAt: Date | null
     completedAt: Date | null
+    isPinned: boolean | null
+    pinnedAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["activity"]>
@@ -2245,6 +2353,8 @@ export interface ActivityFieldRefs {
   readonly externalId: Prisma.FieldRef<"Activity", 'String'>
   readonly scheduledAt: Prisma.FieldRef<"Activity", 'DateTime'>
   readonly completedAt: Prisma.FieldRef<"Activity", 'DateTime'>
+  readonly isPinned: Prisma.FieldRef<"Activity", 'Boolean'>
+  readonly pinnedAt: Prisma.FieldRef<"Activity", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Activity", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Activity", 'DateTime'>
 }

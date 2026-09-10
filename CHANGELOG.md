@@ -1,4 +1,45 @@
-## 2026-09-09 — Phase 40: Theme FOUC Fix + One-Click Header Theme Toggle
+## 2026-09-10 — Phase 41: Server-Side Pinned Notes (DB-Backed, Team-Visible)
+
+### Problem
+Pinned notes were stored in localStorage (`vega-crm-pinned-{entityKey}-{entityId}`), so a pin was visible only on the device and browser that created it — other team members and other devices never saw it, and clearing browser data silently lost pins. As the last Priority-1 roadmap item, pins needed to live in the database like every other CRM object: one pinned note per record, HubSpot-style, synced across all users and devices.
+
+### What Changed
+**prisma/schema.prisma** (+5):
+- Activity model: added two purely additive columns — `isPinned Boolean? @default(false)` and `pinnedAt DateTime?` — plus `@@index([isPinned])`. Nothing removed; `prisma db push` applied them to the live DB with no data-loss warning.
+
+**src/app/api/activities/[id]/route.ts** (+30):
+- `ActivityUpdateSchema` gained `isPinned: z.boolean().optional()` and `pinnedAt: z.coerce.date().optional().nullable()`.
+- PUT handler enforces one-pin-per-entity: when `isPinned === true`, it first `updateMany`-clears (`isPinned: false, pinnedAt: null`) every other pinned activity sharing this activity's non-null `contactId`, `companyId`, or `dealId` (OR over non-null values only), then sets `pinnedAt: new Date()` on the pinned row. `isPinned === false` just clears that row's `pinnedAt`. Pin/unpin also writes an audit log (`action: 'update'`, `entity: 'activity'`, `changes: { pinned: true/false }`).
+
+**src/app/components/PinnedNotes.tsx** (rewritten internals):
+- `usePinnedNote(entityKey, entityId, activities?)` — signature preserved (third arg optional), localStorage removed. Hydrates `pinnedId` from `activities.find(a => a.isPinned)` once a non-empty activities list arrives (a `hydratedRef` guards against clobbering optimistic updates and against counting the initial `[]` render as hydration). `pin(id)` is optimistic: sets local state, then fire-and-forget `PUT /api/activities/{id} { isPinned: true }` via the existing `apiFetch` helper; the server un-pins the previous note on the same record. `unpin()` captures the old id via a ref (no side effects inside state updaters — StrictMode safe) and PUTs `{ isPinned: false }`.
+- Default `PinnedNotes` component unchanged in behavior; the 📌 emoji in its header was replaced with `IconPin` (size 16, gold).
+- Exports unchanged: default component, `usePinnedNote`, `usePinned` alias, so all three detail pages keep compiling.
+
+**src/app/components/Icons.tsx** (+2):
+- Added `IconPin` (Lucide pin: `M12 17v5` + the pushpin body) in the Action/UI Icons section next to `IconEdit`, following the exact `IconProps`/`Svg` pattern.
+
+**src/app/components/ActivityCard.tsx** (+7/-2):
+- Pin button now renders `IconPin` (size 15; filled/stroke-2.2 when pinned) + 'Pinned'/'Pin' label, replacing the banned 📌 emoji. Props/API untouched; gold left border and tinted background for pinned state kept. Button gets `inline-flex` alignment for icon+text.
+
+**src/app/contacts/[id]/page.tsx, src/app/companies/[id]/page.tsx, src/app/deals/[id]/page.tsx** (+1/-1 each):
+- Hook call now passes the loaded `activities` array: `usePinnedNote('contact', contactId, activities)` etc. — the only page-side change needed to hydrate pin state from server data. Timeline filtering, `handlePinToggle`, and `onPin` props untouched. Also replaced the leftover 📌 emoji in each page's "Pinned Note" section header with `IconPin` (size 16, gold) — imported from `../../components/Icons`.
+
+**src/app/lib/types.ts** (+2):
+- `Activity` interface gained `isPinned?: boolean | null` and `pinnedAt?: string | null`, matching the existing optional-field pattern. (The list endpoint uses Prisma `include`, so pinned state flows to the client automatically — no select changes needed.)
+
+### Pattern
+Optimistic-UI-over-server-truth: client state updates instantly, a fire-and-forget PUT persists it, and hydration prefers local optimistic state but falls back to `isPinned` from the server-loaded list. Server-side uniqueness (clear sibling pins in the same PUT transaction path) means every device and user converges on the same single pin per record without client coordination.
+
+### QA Results
+- PASS: `docker node:22-slim ./node_modules/.bin/tsc --noEmit` → exit 0 (after `prisma generate` regenerated the client with the new fields)
+- PASS: `prisma db push` → "Your database is now in sync", no data-loss prompt; verified live columns `isPinned` (boolean, default false) and `pinnedAt` (timestamp) plus `activities_isPinned_idx` in `\d activities`
+- PASS: `docker compose build && docker compose up -d` → deployed
+- PASS: `curl -s -o /dev/null -w '%{http_code} %{redirect_url}' https://earth.servers.onl` → 307 https://earth.servers.onl/login
+- Remaining smoke QA (pin/unpin round-trip across sessions): pending nightly QA
+- No git commit (parent orchestrator handles git)
+
+## 2026-09-09 — Phase 40: Theme FOUC Fix + One-Click Header Theme Toggle## 2026-09-09 — Phase 40: Theme FOUC Fix + One-Click Header Theme Toggle
 
 ### Problem
 The persisted light theme was applied only after React hydrated, so light-theme users saw a dark flash-of-unstyled-content on every page load (dark vars paint by default, then swap). And switching theme required navigating to Settings — no quick toggle while working.

@@ -9,6 +9,7 @@
 import { useState, useMemo } from 'react'
 import { panel, typeography, statusBadge, buttons, forms } from '../lib/styles'
 import ConfirmDialog from './ConfirmDialog'
+import { IconPin } from './Icons'
 import type { Activity, User } from '../lib/types'
 
 type ActivityType = Activity['type']
@@ -253,9 +254,13 @@ export default function ActivityCard({
               color: pinned ? 'var(--gold)' : 'var(--fg-dimmer)',
               cursor: 'pointer',
               fontSize: 13,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
             }}
           >
-            {pinned ? '📌 Pinned' : '📌 Pin'}
+            <IconPin size={15} strokeWidth={pinned ? 2.2 : 1.5} style={{ ...(pinned ? { fill: 'currentColor' } : {}) }} />
+            {pinned ? 'Pinned' : 'Pin'}
           </button>
         )}
         {(showInlineEditButton || showLegacyEditButton) && (
