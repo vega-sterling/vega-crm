@@ -13,7 +13,7 @@ import ProtectedLayout from '../components/ProtectedLayout'
 import Spinner from '../components/Spinner'
 import { apiFetch } from '../lib/api'
 import { layout, panel, typeography, forms, buttons, statusBadge } from '../lib/styles'
-import type { Task, Company, User, Tenant } from '../lib/types'
+import type { Task, Company, User, Tenant, ProjectTask } from '../lib/types'
 
 const formatDate = (d?: string) => {
   if (!d) return '—'
@@ -39,6 +39,9 @@ type TaskWithRels = Task & {
   assignee?: { id: string; name: string } | null
 }
 
+// A paused kanban card, surfaced here so parked work stays visible
+type PausedKanbanCard = ProjectTask & { projectName?: string }
+
 type SortMode = 'dueDate' | 'priority' | 'created'
 type ViewScope = 'my' | 'all'
 
@@ -60,6 +63,9 @@ function TasksContent() {
 
   // Bulk select
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // Paused kanban cards (parked in project boards)
+  const [pausedTasks, setPausedTasks] = useState<PausedKanbanCard[]>([])
 
   // New task form
   const [showNew, setShowNew] = useState(false)
@@ -93,13 +99,37 @@ function TasksContent() {
 
   useEffect(() => { load() }, [load])
 
+  // Load paused kanban cards across project boards (first 50 projects)
+  const loadPaused = useCallback(async () => {
+    try {
+      const projects = ((await apiFetch<{ data: any[] }>('/api/projects?limit=200')).data || []).slice(0, 50)
+      const boards = await Promise.all(
+        projects.map((p) => apiFetch<any>(`/api/projects/${p.id}`).catch(() => null))
+      )
+      const paused: PausedKanbanCard[] = []
+      boards.forEach((board, i) => {
+        if (!board) return
+        board.columns?.forEach((column: any) => {
+          (column.tasks || []).forEach((task: any) => {
+            if (task.isPaused) paused.push({ ...task, projectName: projects[i].name })
+          })
+        })
+      })
+      setPausedTasks(paused)
+    } catch {
+      setPausedTasks([])
+    }
+  }, [])
+
+  useEffect(() => { loadPaused() }, [loadPaused])
+
   // Filtered + sorted tasks
   const filtered = useMemo(() => {
     let result = [...tasks]
     if (scope === 'my' && currentUser) {
       result = result.filter((t) => t.assignedToId === currentUser.id)
     }
-    if (statusFilter) result = result.filter((t) => t.status === statusFilter)
+    if (statusFilter && statusFilter !== 'PAUSED') result = result.filter((t) => t.status === statusFilter)
     if (priorityFilter) result = result.filter((t) => t.priority === priorityFilter)
     if (companyFilter) result = result.filter((t) => t.companyId === companyFilter)
     // Sort
@@ -261,6 +291,72 @@ function TasksContent() {
     CANCELLED: 'Cancelled',
   }
 
+  // Paused kanban cards matching current scope/priority filters, newest-pause-first within priority
+  const pausedFiltered = useMemo(() => {
+    let result = pausedTasks
+    if (scope === 'my' && currentUser) result = result.filter((t) => t.assignedToId === currentUser.id)
+    if (priorityFilter) result = result.filter((t) => t.priority === priorityFilter)
+    const priorityOrder: Record<string, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
+    return [...result].sort((a, b) => {
+      const aTime = new Date(a.pausedAt || a.createdAt || '').getTime()
+      const bTime = new Date(b.pausedAt || b.createdAt || '').getTime()
+      return (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3) || aTime - bTime
+    })
+  }, [pausedTasks, scope, currentUser, priorityFilter])
+
+  const resumePausedTask = async (task: PausedKanbanCard) => {
+    try {
+      await apiFetch(`/api/projects/${task.projectId}/tasks/${task.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ isPaused: false, pausedReason: null }),
+      })
+      setPausedTasks((prev) => prev.filter((t) => t.id !== task.id))
+    } catch (err: any) {
+      setError(err.message || 'Failed to resume task')
+    }
+  }
+
+  const PausedCard = ({ card }: { card: PausedKanbanCard }) => (
+    <div className="panel-container" style={{
+      ...panel.compact,
+      opacity: 0.7,
+      borderLeft: '3px solid var(--fg-dim)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <span style={{ fontSize: 16, marginTop: 2 }}>⏸</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>{card.title}</div>
+          {card.pausedReason ? (
+            <div style={{ fontSize: 13, color: 'var(--fg-dim)', marginTop: 4 }}>{card.pausedReason}</div>
+          ) : (
+            <div style={{ fontSize: 12, color: 'var(--fg-dimmer)', marginTop: 4, fontStyle: 'italic' }}>No reason given</div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+            <span style={statusBadge('var(--fg-dim)')}>⏸ Paused</span>
+            <span style={statusBadge(priorityColor[card.priority] || 'var(--fg-dim)')}>{card.priority}</span>
+            <Link href={`/projects/${card.projectId}`} style={{ fontSize: 12, color: 'var(--fg-dim)', textDecoration: 'none' }}>
+              {card.projectName ? `📋 ${card.projectName}` : 'Project'}
+            </Link>
+            {card.pausedAt && (
+              <span style={{ fontSize: 12, color: 'var(--fg-dim)' }}>· since {formatDate(card.pausedAt)}</span>
+            )}
+            {card.assignee && (
+              <span style={{ fontSize: 12, color: 'var(--fg-dim)' }}>· {card.assignee.name}</span>
+            )}
+          </div>
+        </div>
+        <button
+          className="btn-touch"
+          onClick={() => resumePausedTask(card)}
+          style={{ ...buttons.secondary, fontSize: 12, padding: '6px 12px', whiteSpace: 'nowrap', color: 'var(--emerald)', borderColor: 'var(--emerald)' }}
+          title="Clear the paused flag — task returns to normal automation and reporting"
+        >
+          ▶ Resume
+        </button>
+      </div>
+    </div>
+  )
+
   return (
     <div style={layout.page}>
       <div style={layout.header}>
@@ -336,6 +432,7 @@ function TasksContent() {
           <option value="IN_PROGRESS">In Progress</option>
           <option value="COMPLETED">Completed</option>
           <option value="CANCELLED">Cancelled</option>
+          <option value="PAUSED">⏸ Paused (kanban)</option>
         </select>
         <select className="form-select" style={selectStyle} value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
           <option value="">All Priority</option>
@@ -374,10 +471,26 @@ function TasksContent() {
         </div>
       )}
 
-      <div style={{ color: 'var(--fg-dim)', fontSize: 13, marginBottom: 16 }}>
-        {filtered.length} {filtered.length === 1 ? 'task' : 'tasks'}
+      <div style={{ color: 'var(--fg-dim)', fontSize: 13, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+        {statusFilter !== 'PAUSED' && (
+          <>
+            <span>{filtered.length} {filtered.length === 1 ? 'task' : 'tasks'}</span>
+            {pausedTasks.length > 0 && (
+              <button
+                className="btn-touch"
+                onClick={() => setStatusFilter('PAUSED')}
+                title="Show paused kanban cards"
+                style={{ ...statusBadge('var(--fg-dim)'), cursor: 'pointer', fontSize: 11, padding: '2px 8px', border: 'none' }}
+              >
+                ⏸ {pausedTasks.length} paused
+              </button>
+            )}
+          </>
+        )}
       </div>
 
+      {statusFilter !== 'PAUSED' ? (
+      <>
       {/* ── Kanban Columns (desktop) / Stacked (phone) ── */}
       <div className="task-kanban task-kanban-desktop" style={{
         display: 'grid',
@@ -417,6 +530,23 @@ function TasksContent() {
           filtered.map((task) => <TaskCard key={task.id} task={task} />)
         )}
       </div>
+      </>
+      ) : (
+      <>
+      <div style={{ color: 'var(--fg-dim)', fontSize: 13, marginBottom: 16 }}>
+        {pausedFiltered.length} paused {pausedFiltered.length === 1 ? 'card' : 'cards'} — parked in place, excluded from automation and active reporting.
+      </div>
+      {pausedFiltered.length === 0 ? (
+        <div className="panel-container" style={{ ...panel.container, textAlign: 'center', color: 'var(--fg-dim)' }}>
+          No paused cards. Pause a board task from its project page to park it here.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {pausedFiltered.map((card) => <PausedCard key={card.id} card={card} />)}
+        </div>
+      )}
+      </>
+      )}
     </div>
   )
 }

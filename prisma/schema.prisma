@@ -409,6 +409,9 @@ model ProjectTask {
   createdById   String
   dueDate       DateTime?
   completedAt   DateTime?
+  isPaused      Boolean     @default(false) // Paused (on hold) flag
+  pausedAt      DateTime? // When pause started (set/cleared automatically)
+  pausedReason  String? // Why the task was paused
   labels        String[]    @default([])                  // Label names (e.g., "bug", "urgent")
   color         String?                                   // Card accent / cover color
   createdAt     DateTime    @default(now())

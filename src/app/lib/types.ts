@@ -164,6 +164,9 @@ export interface ProjectTask {
   createdById: string
   dueDate?: string | null
   completedAt?: string | null
+  isPaused: boolean
+  pausedAt?: string | null
+  pausedReason?: string | null
   labels: string[]
   color?: string | null
   createdAt: string

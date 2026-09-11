@@ -47,6 +47,9 @@ export type ProjectTaskMinAggregateOutputType = {
   createdById: string | null
   dueDate: Date | null
   completedAt: Date | null
+  isPaused: boolean | null
+  pausedAt: Date | null
+  pausedReason: string | null
   color: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -65,6 +68,9 @@ export type ProjectTaskMaxAggregateOutputType = {
   createdById: string | null
   dueDate: Date | null
   completedAt: Date | null
+  isPaused: boolean | null
+  pausedAt: Date | null
+  pausedReason: string | null
   color: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -83,6 +89,9 @@ export type ProjectTaskCountAggregateOutputType = {
   createdById: number
   dueDate: number
   completedAt: number
+  isPaused: number
+  pausedAt: number
+  pausedReason: number
   labels: number
   color: number
   createdAt: number
@@ -112,6 +121,9 @@ export type ProjectTaskMinAggregateInputType = {
   createdById?: true
   dueDate?: true
   completedAt?: true
+  isPaused?: true
+  pausedAt?: true
+  pausedReason?: true
   color?: true
   createdAt?: true
   updatedAt?: true
@@ -130,6 +142,9 @@ export type ProjectTaskMaxAggregateInputType = {
   createdById?: true
   dueDate?: true
   completedAt?: true
+  isPaused?: true
+  pausedAt?: true
+  pausedReason?: true
   color?: true
   createdAt?: true
   updatedAt?: true
@@ -148,6 +163,9 @@ export type ProjectTaskCountAggregateInputType = {
   createdById?: true
   dueDate?: true
   completedAt?: true
+  isPaused?: true
+  pausedAt?: true
+  pausedReason?: true
   labels?: true
   color?: true
   createdAt?: true
@@ -254,6 +272,9 @@ export type ProjectTaskGroupByOutputType = {
   createdById: string
   dueDate: Date | null
   completedAt: Date | null
+  isPaused: boolean
+  pausedAt: Date | null
+  pausedReason: string | null
   labels: string[]
   color: string | null
   createdAt: Date
@@ -296,6 +317,9 @@ export type ProjectTaskWhereInput = {
   createdById?: Prisma.StringFilter<"ProjectTask"> | string
   dueDate?: Prisma.DateTimeNullableFilter<"ProjectTask"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableFilter<"ProjectTask"> | Date | string | null
+  isPaused?: Prisma.BoolFilter<"ProjectTask"> | boolean
+  pausedAt?: Prisma.DateTimeNullableFilter<"ProjectTask"> | Date | string | null
+  pausedReason?: Prisma.StringNullableFilter<"ProjectTask"> | string | null
   labels?: Prisma.StringNullableListFilter<"ProjectTask">
   color?: Prisma.StringNullableFilter<"ProjectTask"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ProjectTask"> | Date | string
@@ -321,6 +345,9 @@ export type ProjectTaskOrderByWithRelationInput = {
   createdById?: Prisma.SortOrder
   dueDate?: Prisma.SortOrderInput | Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  isPaused?: Prisma.SortOrder
+  pausedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  pausedReason?: Prisma.SortOrderInput | Prisma.SortOrder
   labels?: Prisma.SortOrder
   color?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -349,6 +376,9 @@ export type ProjectTaskWhereUniqueInput = Prisma.AtLeast<{
   createdById?: Prisma.StringFilter<"ProjectTask"> | string
   dueDate?: Prisma.DateTimeNullableFilter<"ProjectTask"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableFilter<"ProjectTask"> | Date | string | null
+  isPaused?: Prisma.BoolFilter<"ProjectTask"> | boolean
+  pausedAt?: Prisma.DateTimeNullableFilter<"ProjectTask"> | Date | string | null
+  pausedReason?: Prisma.StringNullableFilter<"ProjectTask"> | string | null
   labels?: Prisma.StringNullableListFilter<"ProjectTask">
   color?: Prisma.StringNullableFilter<"ProjectTask"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ProjectTask"> | Date | string
@@ -374,6 +404,9 @@ export type ProjectTaskOrderByWithAggregationInput = {
   createdById?: Prisma.SortOrder
   dueDate?: Prisma.SortOrderInput | Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  isPaused?: Prisma.SortOrder
+  pausedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  pausedReason?: Prisma.SortOrderInput | Prisma.SortOrder
   labels?: Prisma.SortOrder
   color?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -401,6 +434,9 @@ export type ProjectTaskScalarWhereWithAggregatesInput = {
   createdById?: Prisma.StringWithAggregatesFilter<"ProjectTask"> | string
   dueDate?: Prisma.DateTimeNullableWithAggregatesFilter<"ProjectTask"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ProjectTask"> | Date | string | null
+  isPaused?: Prisma.BoolWithAggregatesFilter<"ProjectTask"> | boolean
+  pausedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ProjectTask"> | Date | string | null
+  pausedReason?: Prisma.StringNullableWithAggregatesFilter<"ProjectTask"> | string | null
   labels?: Prisma.StringNullableListFilter<"ProjectTask">
   color?: Prisma.StringNullableWithAggregatesFilter<"ProjectTask"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ProjectTask"> | Date | string
@@ -416,6 +452,9 @@ export type ProjectTaskCreateInput = {
   priority?: $Enums.TaskPriority
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -441,6 +480,9 @@ export type ProjectTaskUncheckedCreateInput = {
   createdById: string
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -458,6 +500,9 @@ export type ProjectTaskUpdateInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -483,6 +528,9 @@ export type ProjectTaskUncheckedUpdateInput = {
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -504,6 +552,9 @@ export type ProjectTaskCreateManyInput = {
   createdById: string
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -519,6 +570,9 @@ export type ProjectTaskUpdateManyMutationInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -538,6 +592,9 @@ export type ProjectTaskUncheckedUpdateManyInput = {
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -567,6 +624,9 @@ export type ProjectTaskCountOrderByAggregateInput = {
   createdById?: Prisma.SortOrder
   dueDate?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
+  isPaused?: Prisma.SortOrder
+  pausedAt?: Prisma.SortOrder
+  pausedReason?: Prisma.SortOrder
   labels?: Prisma.SortOrder
   color?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -590,6 +650,9 @@ export type ProjectTaskMaxOrderByAggregateInput = {
   createdById?: Prisma.SortOrder
   dueDate?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
+  isPaused?: Prisma.SortOrder
+  pausedAt?: Prisma.SortOrder
+  pausedReason?: Prisma.SortOrder
   color?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -608,6 +671,9 @@ export type ProjectTaskMinOrderByAggregateInput = {
   createdById?: Prisma.SortOrder
   dueDate?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
+  isPaused?: Prisma.SortOrder
+  pausedAt?: Prisma.SortOrder
+  pausedReason?: Prisma.SortOrder
   color?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -836,6 +902,9 @@ export type ProjectTaskCreateWithoutAssigneeInput = {
   priority?: $Enums.TaskPriority
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -859,6 +928,9 @@ export type ProjectTaskUncheckedCreateWithoutAssigneeInput = {
   createdById: string
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -886,6 +958,9 @@ export type ProjectTaskCreateWithoutCreatorInput = {
   priority?: $Enums.TaskPriority
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -909,6 +984,9 @@ export type ProjectTaskUncheckedCreateWithoutCreatorInput = {
   assignedToId?: string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -959,6 +1037,9 @@ export type ProjectTaskScalarWhereInput = {
   createdById?: Prisma.StringFilter<"ProjectTask"> | string
   dueDate?: Prisma.DateTimeNullableFilter<"ProjectTask"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableFilter<"ProjectTask"> | Date | string | null
+  isPaused?: Prisma.BoolFilter<"ProjectTask"> | boolean
+  pausedAt?: Prisma.DateTimeNullableFilter<"ProjectTask"> | Date | string | null
+  pausedReason?: Prisma.StringNullableFilter<"ProjectTask"> | string | null
   labels?: Prisma.StringNullableListFilter<"ProjectTask">
   color?: Prisma.StringNullableFilter<"ProjectTask"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ProjectTask"> | Date | string
@@ -990,6 +1071,9 @@ export type ProjectTaskCreateWithoutProjectInput = {
   priority?: $Enums.TaskPriority
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -1013,6 +1097,9 @@ export type ProjectTaskUncheckedCreateWithoutProjectInput = {
   createdById: string
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -1056,6 +1143,9 @@ export type ProjectTaskCreateWithoutColumnInput = {
   priority?: $Enums.TaskPriority
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -1079,6 +1169,9 @@ export type ProjectTaskUncheckedCreateWithoutColumnInput = {
   createdById: string
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -1122,6 +1215,9 @@ export type ProjectTaskCreateWithoutCommentsInput = {
   priority?: $Enums.TaskPriority
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -1146,6 +1242,9 @@ export type ProjectTaskUncheckedCreateWithoutCommentsInput = {
   createdById: string
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -1178,6 +1277,9 @@ export type ProjectTaskUpdateWithoutCommentsInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1202,6 +1304,9 @@ export type ProjectTaskUncheckedUpdateWithoutCommentsInput = {
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1218,6 +1323,9 @@ export type ProjectTaskCreateWithoutSubtasksInput = {
   priority?: $Enums.TaskPriority
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -1242,6 +1350,9 @@ export type ProjectTaskUncheckedCreateWithoutSubtasksInput = {
   createdById: string
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -1274,6 +1385,9 @@ export type ProjectTaskUpdateWithoutSubtasksInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1298,6 +1412,9 @@ export type ProjectTaskUncheckedUpdateWithoutSubtasksInput = {
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1317,6 +1434,9 @@ export type ProjectTaskCreateManyAssigneeInput = {
   createdById: string
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -1335,6 +1455,9 @@ export type ProjectTaskCreateManyCreatorInput = {
   assignedToId?: string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -1350,6 +1473,9 @@ export type ProjectTaskUpdateWithoutAssigneeInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1373,6 +1499,9 @@ export type ProjectTaskUncheckedUpdateWithoutAssigneeInput = {
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1393,6 +1522,9 @@ export type ProjectTaskUncheckedUpdateManyWithoutAssigneeInput = {
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1408,6 +1540,9 @@ export type ProjectTaskUpdateWithoutCreatorInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1431,6 +1566,9 @@ export type ProjectTaskUncheckedUpdateWithoutCreatorInput = {
   assignedToId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1451,6 +1589,9 @@ export type ProjectTaskUncheckedUpdateManyWithoutCreatorInput = {
   assignedToId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1469,6 +1610,9 @@ export type ProjectTaskCreateManyProjectInput = {
   createdById: string
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -1484,6 +1628,9 @@ export type ProjectTaskUpdateWithoutProjectInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1507,6 +1654,9 @@ export type ProjectTaskUncheckedUpdateWithoutProjectInput = {
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1527,6 +1677,9 @@ export type ProjectTaskUncheckedUpdateManyWithoutProjectInput = {
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1545,6 +1698,9 @@ export type ProjectTaskCreateManyColumnInput = {
   createdById: string
   dueDate?: Date | string | null
   completedAt?: Date | string | null
+  isPaused?: boolean
+  pausedAt?: Date | string | null
+  pausedReason?: string | null
   labels?: Prisma.ProjectTaskCreatelabelsInput | string[]
   color?: string | null
   createdAt?: Date | string
@@ -1560,6 +1716,9 @@ export type ProjectTaskUpdateWithoutColumnInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1583,6 +1742,9 @@ export type ProjectTaskUncheckedUpdateWithoutColumnInput = {
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1603,6 +1765,9 @@ export type ProjectTaskUncheckedUpdateManyWithoutColumnInput = {
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isPaused?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pausedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   labels?: Prisma.ProjectTaskUpdatelabelsInput | string[]
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1662,6 +1827,9 @@ export type ProjectTaskSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   createdById?: boolean
   dueDate?: boolean
   completedAt?: boolean
+  isPaused?: boolean
+  pausedAt?: boolean
+  pausedReason?: boolean
   labels?: boolean
   color?: boolean
   createdAt?: boolean
@@ -1688,6 +1856,9 @@ export type ProjectTaskSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   createdById?: boolean
   dueDate?: boolean
   completedAt?: boolean
+  isPaused?: boolean
+  pausedAt?: boolean
+  pausedReason?: boolean
   labels?: boolean
   color?: boolean
   createdAt?: boolean
@@ -1711,6 +1882,9 @@ export type ProjectTaskSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   createdById?: boolean
   dueDate?: boolean
   completedAt?: boolean
+  isPaused?: boolean
+  pausedAt?: boolean
+  pausedReason?: boolean
   labels?: boolean
   color?: boolean
   createdAt?: boolean
@@ -1734,13 +1908,16 @@ export type ProjectTaskSelectScalar = {
   createdById?: boolean
   dueDate?: boolean
   completedAt?: boolean
+  isPaused?: boolean
+  pausedAt?: boolean
+  pausedReason?: boolean
   labels?: boolean
   color?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ProjectTaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "projectId" | "columnId" | "tenantId" | "title" | "description" | "position" | "priority" | "assignedToId" | "createdById" | "dueDate" | "completedAt" | "labels" | "color" | "createdAt" | "updatedAt", ExtArgs["result"]["projectTask"]>
+export type ProjectTaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "projectId" | "columnId" | "tenantId" | "title" | "description" | "position" | "priority" | "assignedToId" | "createdById" | "dueDate" | "completedAt" | "isPaused" | "pausedAt" | "pausedReason" | "labels" | "color" | "createdAt" | "updatedAt", ExtArgs["result"]["projectTask"]>
 export type ProjectTaskInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   project?: boolean | Prisma.ProjectDefaultArgs<ExtArgs>
   column?: boolean | Prisma.ProjectColumnDefaultArgs<ExtArgs>
@@ -1786,6 +1963,9 @@ export type $ProjectTaskPayload<ExtArgs extends runtime.Types.Extensions.Interna
     createdById: string
     dueDate: Date | null
     completedAt: Date | null
+    isPaused: boolean
+    pausedAt: Date | null
+    pausedReason: string | null
     labels: string[]
     color: string | null
     createdAt: Date
@@ -2231,6 +2411,9 @@ export interface ProjectTaskFieldRefs {
   readonly createdById: Prisma.FieldRef<"ProjectTask", 'String'>
   readonly dueDate: Prisma.FieldRef<"ProjectTask", 'DateTime'>
   readonly completedAt: Prisma.FieldRef<"ProjectTask", 'DateTime'>
+  readonly isPaused: Prisma.FieldRef<"ProjectTask", 'Boolean'>
+  readonly pausedAt: Prisma.FieldRef<"ProjectTask", 'DateTime'>
+  readonly pausedReason: Prisma.FieldRef<"ProjectTask", 'String'>
   readonly labels: Prisma.FieldRef<"ProjectTask", 'String[]'>
   readonly color: Prisma.FieldRef<"ProjectTask", 'String'>
   readonly createdAt: Prisma.FieldRef<"ProjectTask", 'DateTime'>

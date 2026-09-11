@@ -40,6 +40,14 @@ function isOverdue(dueDate?: string | null): boolean {
   return new Date(dueDate) < new Date()
 }
 
+// Tooltip text for the ⏸ Paused badge: reason + when it was paused
+function pausedBadgeTooltip(task: ProjectTask): string {
+  const parts = ['Task is paused (parked in place — excluded from automation, stays in this column)']
+  if (task.pausedReason) parts.push(`Reason: ${task.pausedReason}`)
+  if (task.pausedAt) parts.push(`Since ${new Date(task.pausedAt).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`)
+  return parts.join(' • ')
+}
+
 function formatDate(dueDate?: string | null): string {
   if (!dueDate) return ''
   const d = new Date(dueDate)
@@ -100,6 +108,7 @@ export default function KanbanBoardPage() {
   // Inline add task
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null)
   const [newTaskTitle, setNewTaskTitle] = useState('')
+  const [hidePaused, setHidePaused] = useState(false)
 
   const fetchBoard = useCallback(async () => {
     try {
@@ -673,7 +682,23 @@ export default function KanbanBoardPage() {
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button
+            onClick={() => setHidePaused(!hidePaused)}
+            title={hidePaused ? 'Paused cards are hidden — click to show them' : 'Paused cards are shown dimmed — click to hide them'}
+            style={{
+              ...buttons.secondary,
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              backgroundColor: hidePaused ? 'var(--panel-elevated)' : undefined,
+              color: hidePaused ? 'var(--gold)' : undefined,
+              borderColor: hidePaused ? 'var(--gold)' : undefined,
+            }}
+          >
+            {hidePaused ? '👁 Show paused' : '⏸ Hide paused'}
+          </button>
           <button
             onClick={() => (showEditProject ? closeEditProject() : openEditProject())}
             style={showEditProject ? buttons.secondary : buttons.secondary}
@@ -815,7 +840,9 @@ export default function KanbanBoardPage() {
       }}>
         {columns.map((column) => {
           const tasks = column.tasks || []
+          const visibleTasks = hidePaused ? tasks.filter(t => !t.isPaused) : tasks
           const wipExceeded = column.wipLimit && tasks.length > column.wipLimit
+          const pausedHiddenCount = tasks.length - visibleTasks.length
           return (
             <div
               key={column.id}
@@ -904,7 +931,7 @@ export default function KanbanBoardPage() {
                   flexDirection: 'column',
                   gap: 8,
                 }}>
-                  {tasks.map(task => (
+                  {visibleTasks.map(task => (
                     <TaskCard
                       key={task.id}
                       task={task}
@@ -914,6 +941,11 @@ export default function KanbanBoardPage() {
                       onClick={() => { setSelectedTask(task); fetchComments(task.id) }}
                     />
                   ))}
+                  {hidePaused && pausedHiddenCount > 0 && (
+                    <div style={{ fontSize: 11, color: 'var(--fg-dimmer)', textAlign: 'center', padding: '2px 0' }}>
+                      ⏸ {pausedHiddenCount} paused {pausedHiddenCount === 1 ? 'card' : 'cards'} hidden
+                    </div>
+                  )}
 
                   {/* Add task inline */}
                   {addingToColumn === column.id ? (
@@ -1047,6 +1079,7 @@ function TaskCard({
   const overdue = isOverdue(task.dueDate)
   const completedSubtasks = task.subtasks?.filter(s => s.isCompleted).length ?? 0
   const totalSubtasks = task.subtasks?.length ?? 0
+  const paused = !!task.isPaused
 
   return (
     <div
@@ -1061,13 +1094,30 @@ function TaskCard({
         borderRadius: 8,
         padding: '10px 12px',
         cursor: 'grab',
-        opacity: isDragging ? 0.4 : 1,
+        opacity: isDragging ? 0.4 : paused ? 0.65 : 1,
+        filter: paused ? 'grayscale(0.5)' : undefined,
         transition: 'opacity .2s, border-color .2s',
       }}
     >
-      {/* Labels */}
-      {task.labels.length > 0 && (
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
+      {/* Labels + paused badge */}
+      {(task.labels.length > 0 || paused) && (
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6, alignItems: 'center' }}>
+          {paused && (
+            <span
+              title={pausedBadgeTooltip(task)}
+              style={{
+                backgroundColor: 'var(--fg-dim)',
+                color: 'var(--bg)',
+                borderRadius: 4,
+                padding: '1px 6px',
+                fontSize: 10,
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              ⏸ Paused
+            </span>
+          )}
           {task.labels.map(label => (
             <span
               key={label}
@@ -1091,12 +1141,30 @@ function TaskCard({
         fontSize: 13,
         fontWeight: 500,
         textDecoration: task.completedAt ? 'line-through' : 'none',
-        opacity: task.completedAt ? 0.6 : 1,
+        opacity: task.completedAt ? 0.6 : paused ? 0.8 : 1,
         marginBottom: 8,
         lineHeight: 1.4,
       }}>
         {task.title}
       </p>
+
+      {/* Paused reason (inline, where space allows) */}
+      {paused && task.pausedReason && (
+        <p
+          title={task.pausedReason}
+          style={{
+            fontSize: 11,
+            color: 'var(--fg-dim)',
+            fontStyle: 'italic',
+            margin: '0 0 8px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {task.pausedReason}
+        </p>
+      )}
 
       {/* Footer: priority, assignee, due date, subtasks */}
       <div style={{
@@ -1202,6 +1270,8 @@ function TaskDetailDrawer({
   const [showSubtaskInput, setShowSubtaskInput] = useState(false)
   const [editingField, setEditingField] = useState<string | null>(null)
   const [newComment, setNewComment] = useState('')
+  const [showPauseInput, setShowPauseInput] = useState(false)
+  const [pauseReason, setPauseReason] = useState('')
 
   // Sync local state when task changes
   useEffect(() => {
@@ -1211,7 +1281,18 @@ function TaskDetailDrawer({
     setAssignedToId(task.assignedToId || '')
     setDueDate(task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : '')
     setLabelsInput(task.labels.join(', '))
-  }, [task.id, task.title, task.description, task.priority, task.assignedToId, task.dueDate, task.labels])
+    if (!task.isPaused) { setShowPauseInput(false); setPauseReason('') }
+  }, [task.id, task.title, task.description, task.priority, task.assignedToId, task.dueDate, task.labels, task.isPaused])
+
+  const togglePaused = (reason?: string) => {
+    if (task.isPaused) {
+      onUpdate({ isPaused: false, pausedReason: null })
+    } else {
+      onUpdate({ isPaused: true, pausedReason: reason?.trim() || null })
+    }
+    setPauseReason('')
+    setShowPauseInput(false)
+  }
 
   const saveField = (field: string, value: unknown) => {
     if (field === 'title' && value === task.title) { setEditingField(null); return }
@@ -1271,14 +1352,102 @@ function TaskDetailDrawer({
       >
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <span style={typeography.small}>Task Details</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={typeography.small}>Task Details</span>
+            {task.isPaused && (
+              <span
+                title={pausedBadgeTooltip(task)}
+                style={{
+                  backgroundColor: 'var(--fg-dim)',
+                  color: 'var(--bg)',
+                  borderRadius: 4,
+                  padding: '2px 8px',
+                  fontSize: 10,
+                  fontWeight: 700,
+                }}
+              >
+                ⏸ Paused
+              </span>
+            )}
+          </div>
           <div style={{ display: 'flex', gap: 8 }}>
+            {!task.completedAt && (
+              task.isPaused ? (
+                <button
+                  onClick={() => togglePaused()}
+                  style={{ ...buttons.small, color: 'var(--emerald)', borderColor: 'var(--emerald)' }}
+                  title="Clear the paused flag — task returns to normal automation and reporting"
+                >
+                  ▶ Resume
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowPauseInput(!showPauseInput)}
+                  style={buttons.small}
+                  title="Park this task in place — hidden from automation and active reporting, but stays in its column"
+                >
+                  ⏸ Pause
+                </button>
+              )
+            )}
             <button onClick={onDelete} style={{ ...buttons.small, color: 'var(--rust)', borderColor: 'var(--rust)' }}>
               Delete
             </button>
             <button onClick={onClose} style={buttons.small}>✕</button>
           </div>
         </div>
+
+        {/* Pause reason input */}
+        {showPauseInput && !task.isPaused && (
+          <div style={{ ...panel.compact, marginBottom: 20, backgroundColor: 'var(--panel-elevated)' }}>
+            <label style={{ ...forms.label, marginBottom: 8 }}>Reason (optional, max 500 chars)</label>
+            <input
+              style={forms.input}
+              value={pauseReason}
+              onChange={e => setPauseReason(e.target.value.slice(0, 500))}
+              placeholder="e.g., Waiting on client response"
+              autoFocus
+              maxLength={500}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  togglePaused(pauseReason)
+                }
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button onClick={() => togglePaused(pauseReason)} style={{ ...buttons.primary, fontSize: 12, padding: '6px 12px' }}>
+                ⏸ Pause Task
+              </button>
+              <button onClick={() => { setShowPauseInput(false); setPauseReason('') }} style={buttons.small}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Paused status panel */}
+        {task.isPaused && (
+          <div style={{ ...panel.compact, marginBottom: 20, backgroundColor: 'var(--bg-soft)', borderColor: 'var(--fg-dim)' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>⏸</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>
+                  Paused{task.pausedAt && ` since ${new Date(task.pausedAt).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`}
+                </p>
+                {task.pausedReason ? (
+                  <p style={{ fontSize: 13, color: 'var(--fg-dim)', margin: '4px 0 0', whiteSpace: 'pre-wrap' }}>
+                    {task.pausedReason}
+                  </p>
+                ) : (
+                  <p style={{ fontSize: 12, color: 'var(--fg-dimmer)', margin: '4px 0 0', fontStyle: 'italic' }}>
+                    No reason given. Excluded from automation and active reporting until resumed.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Title */}
         <div style={{ marginBottom: 20 }}>
@@ -1299,7 +1468,7 @@ function TaskDetailDrawer({
                 fontWeight: 700,
                 cursor: 'text',
                 textDecoration: task.completedAt ? 'line-through' : 'none',
-                opacity: task.completedAt ? 0.6 : 1,
+                opacity: task.completedAt ? 0.6 : task.isPaused ? 0.75 : 1,
               }}
             >
               {task.title}

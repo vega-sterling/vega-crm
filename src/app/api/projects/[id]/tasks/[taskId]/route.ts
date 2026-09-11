@@ -25,6 +25,9 @@ const TaskUpdateSchema = z.object({
   dueDate: z.coerce.date().optional().nullable(),
   labels: z.array(z.string()).optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
+  isPaused: z.boolean().optional(),
+  pausedAt: z.coerce.date().optional().nullable(),
+  pausedReason: z.string().max(500).optional().nullable(),
 });
 
 interface RouteContext {
@@ -108,6 +111,20 @@ export async function PUT(req: NextRequest, context: RouteContext): Promise<Next
   if (body.labels !== undefined) updateData.labels = body.labels;
   if (body.color !== undefined) updateData.color = body.color || null;
 
+  // Pause handling — pausedAt is derived automatically from isPaused:
+  // set when pausing, cleared when resuming. pausedReason is optional.
+  // A completed task cannot be paused (a done task can't stand still).
+  if (body.isPaused !== undefined) {
+    if (body.isPaused && task.completedAt) {
+      return errorResponse('Cannot pause a completed task', 400);
+    }
+    updateData.isPaused = body.isPaused;
+    updateData.pausedAt = body.isPaused ? (body.pausedAt ?? new Date()) : null;
+  } else if (body.pausedAt !== undefined) {
+    updateData.pausedAt = body.pausedAt;
+  }
+  if (body.pausedReason !== undefined) updateData.pausedReason = body.pausedReason || null;
+
   // Handle column move + position reorder
   const movingColumn = body.columnId !== undefined && body.columnId !== task.columnId;
   const movingPosition = body.position !== undefined;
@@ -146,9 +163,11 @@ export async function PUT(req: NextRequest, context: RouteContext): Promise<Next
     updateData.columnId = body.columnId;
     updateData.position = body.position;
 
-    // Handle done column completion
+    // Handle done column completion — moving to a done column auto-clears pause
     if (newColumn.isDoneColumn && !task.completedAt) {
       updateData.completedAt = new Date();
+      updateData.isPaused = false;
+      updateData.pausedAt = null;
     } else if (!newColumn.isDoneColumn && task.completedAt) {
       updateData.completedAt = null;
     }
