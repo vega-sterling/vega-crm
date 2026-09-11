@@ -1,3 +1,42 @@
+## 2026-09-11 — Phase 42: v1 Public API — Deals, Tasks, Activities Endpoints (+ Phase 41 Pin QA Closed)
+
+### Problem
+The public REST API (x-api-key) only exposed companies and contacts — external integrations (Zapier, reporting tools, custom apps) could not pull deals, tasks, or activity history. Priority 7's 'API key management for integrations' needed a complete read surface. Separately, Phase 41's DB-backed pinned-notes had a pending smoke QA item: pin/unpin round-trip with server-side verification.
+
+### Phase 41 QA Closure (pin/unpin round-trip — ALL PASS)
+Minted an iron-session QA cookie via a throwaway script (docker node:22 + iron-session 8.0.4, async getIronSession) and ran the full round-trip against live data:
+- PASS: GET /api/dashboard/insights with QA cookie → 200 (session guards satisfied); 401 without.
+- PASS: PUT /api/activities/<id1> { isPinned: true } → 200; psql: id1 "isPinned"=true, "pinnedAt" set.
+- PASS: PUT /api/activities/<id2> { isPinned: true } (same contact) → 200; id2 pinned AND id1 auto-unpinned — one-pin-per-record enforced server-side.
+- PASS: PUT /api/activities/<id2> { isPinned: false } → 200; both rows unpinned. Net-zero production change; audit logs recorded all 3 transitions.
+
+### What Changed
+**src/app/api/v1/deals/route.ts (new)**
+- GET /api/v1/deals — scope read:deals. Paginated (page/limit, max 100), search on title, optional status filter (OPEN/WON/LOST, 400 on invalid), tenant-scoped like the companies route. Items include stage name, company name, contact name.
+
+**src/app/api/v1/tasks/route.ts (new)**
+- GET /api/v1/tasks — scope read:tasks. Paginated, search on title, optional status filter (400 on invalid). Items include contact/company/deal display names, dueDate, priority, status. (Task model has no dealId column — coded to verified live schema.)
+
+**src/app/api/v1/activities/route.ts (new)**
+- GET /api/v1/activities — scope read:activities. Paginated, search on subject, optional type filter (NOTE/CALL/EMAIL/MEETING/TASK, 400 on invalid). Items include contact/company names, createdAt. Newest first.
+
+All three follow the exact /api/v1/companies pattern: authenticateApiKey, tenant scoping, same pagination/error shape, same header-comment format. Scopes read:deals, read:tasks, read:activities already existed in ALL_SCOPES/SCOPE_GROUPS (src/lib/apiKeys.ts) and the admin scope picker renders dynamically — no changes needed there. README has no v1 endpoint list — docs item is a no-op.
+
+### Pattern
+Read-only external API surface grown by convention: copy the canonical companies route, swap model + filters + scope, keep pagination and error shapes identical so integration consumers see one consistent API. Live-schema verification (psql describe) before writing Prisma includes — the Task model differs from documentation assumptions.
+
+### QA Results
+- PASS: docker node:22-slim tsc --noEmit → exit 0
+- PASS: docker compose build && docker compose up -d → deployed; site 307 → /login
+- PASS: /api/v1/deals → 200, total 0 = psql COUNT(*)
+- PASS: /api/v1/tasks → 200, total 2 = psql COUNT(*); search+pagination verified (total 1, returned 1)
+- PASS: /api/v1/activities → 200, total 310 = psql COUNT(*)
+- PASS: 401 missing key; 403 key lacking scope
+- PASS: regression /api/v1/companies → 200, total 11 = psql COUNT(*)
+- PASS: docker logs vega-crm --tail 30 → clean
+- Three temporary QA API keys created and deleted (api_keys count = 0 verified); all QA scripts and temp files removed from server
+- Zero DB/schema changes; no git commit (parent orchestrator handles git)
+
 ## 2026-09-10 — Phase 41: Server-Side Pinned Notes (DB-Backed, Team-Visible)
 
 ### Problem
