@@ -1,3 +1,42 @@
+## 2026-09-12 — Phase 43: v1 Public API — Single-Record GET Endpoints (5 resources)
+
+### Problem
+The public REST API (x-api-key) exposed list endpoints for companies, contacts, deals, tasks, and activities (Phase 42), but integrations had no way to fetch a single record by ID — the standard `GET /v1/<resource>/<id>` pattern every REST API consumer expects (Stripe, HubSpot). Without it, external apps had to page through lists and filter client-side.
+
+### What Changed
+Five new dynamic routes, each an exact structural copy of the v1 list-endpoint pattern (authenticateApiKey → tenant scoping → Prisma findUnique → 404 envelope):
+
+- **src/app/api/v1/companies/[id]/route.ts (new)** — GET single company, scope read:companies. All company fields.
+- **src/app/api/v1/contacts/[id]/route.ts (new)** — GET single contact, scope read:contacts. All contact fields + company {id, name}.
+- **src/app/api/v1/deals/[id]/route.ts (new)** — GET single deal, scope read:deals. All deal fields + stage {id,name} + company {id,name} + contact {id,firstName,lastName} + assignee {id,name,email}.
+- **src/app/api/v1/tasks/[id]/route.ts (new)** — GET single task, scope read:tasks. All task fields + company, contact, assignee joins.
+- **src/app/api/v1/activities/[id]/route.ts (new)** — GET single activity, scope read:activities. All activity fields (call/email fields, source, externalId, scheduledAt, completedAt, isPinned, pinnedAt) + company, contact, deal {id,title} joins.
+
+Behavior (identical across all five):
+- Next.js 16 Promise params pattern (`await context.params`), runtime nodejs, force-dynamic.
+- Tenant scoping: key's tenantId when set; `__none__` guard for tenantless non-super-admin keys; super-admin keys (tenantId null) can fetch by id across all tenants.
+- 404 `{ error: '<Model> not found' }` on miss — tenant-scoped misses also 404 (no existence leak across tenants).
+- Response: the record object at top level (Stripe single-object convention), consistent with the list endpoints' envelope philosophy.
+
+### Pattern
+Single-record read surface grown by convention: copy the canonical v1 list route, swap `findMany` for `findUnique` with the same where-building, same auth, same error shape. Additive only — 5 new files, zero modifications to existing code, zero DB/schema changes.
+
+### QA Results (all against live production)
+- PASS: docker compose build app → success; container up; site health 307 → /login
+- PASS: GET /api/v1/companies/<real id> → 200, OzarksGo record with full fields
+- PASS: GET /api/v1/contacts/<real id> → 200, Coby Brown + joined company
+- PASS: GET /api/v1/tasks/<real id> → 200, real task + company, contact, assignee (Leon Zetekoff) joins
+- PASS: GET /api/v1/activities/<real id> → 200, real NOTE activity + call/email/pinned fields + joins
+- PASS: GET /api/v1/deals/<id> → 404 "Deal not found" (deals table currently empty — auth+route+query path exercised)
+- PASS: 401 "Missing x-api-key header" without key; 401 "Invalid or revoked API key" with bad key
+- PASS: Tenant isolation — key scoped to wrong tenant got 404 on the same real IDs (no cross-tenant leak)
+- PASS: Regression — /api/v1/companies list endpoint still 200 with correct data
+- PASS: QA temp API key minted with correct SHA-256 hash, lastUsedAt recorded (auth pipeline confirmed end-to-end), deleted after testing; api_keys count back to 0
+- Zero data changes; audit-able; no existing routes touched
+
+### Notes for next phase
+v1 public API read surface is now complete (5 list + 5 single-record endpoints). Next natural steps for Priority 7: POST/PUT write endpoints (scoped write:*) or v1 README/API reference doc.
+
 ## 2026-09-11 — Phase 42: v1 Public API — Deals, Tasks, Activities Endpoints (+ Phase 41 Pin QA Closed)
 
 ### Problem
