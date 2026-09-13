@@ -1,4 +1,38 @@
-## 2026-09-12 — Phase 43: v1 Public API — Single-Record GET Endpoints (5 resources)
+## 2026-09-13 — Phase 44: v1 Public API — Write Endpoints (POST companies/contacts/activities)
+
+### Problem
+The v1 public API (x-api-key) was read-only: 5 list + 5 single-record GET endpoints (Phases 42–43) with no way for external integrations to push data INTO the CRM — the core value of any CRM API (HubSpot, Salesforce, Stripe all lead with create endpoints). Zapier/webhook integrations had no write surface.
+
+### What Changed
+POST handlers added to 3 existing v1 list routes (additive — GET logic untouched):
+
+- **POST /api/v1/companies** (scope: write:companies) — create company. Zod-validated body: name (required, 1-200), industry/website/phone/email/address (≤500), description (≤5000). 201 with full created record + tenant summary.
+- **POST /api/v1/contacts** (scope: write:contacts) — create contact on a tenant-scoped company. firstName+lastName+companyId required; email/phone/mobile/title/department/notes optional. 201 + company join.
+- **POST /api/v1/activities** (scope: write:activities) — log CALL/EMAIL/NOTE/MEETING activity. subject+companyId required; contactId optional (validated against same company+tenant); call fields (direction/duration/outcome), email fields (from/to/body), scheduledAt, externalId, completed flag. 201 + company/contact joins.
+
+Cross-cutting behavior (identical on all three, Stripe conventions):
+- **Auth**: authenticateApiKey → 401 missing/invalid key, 403 insufficient scope, 400 invalid JSON, 422 validation (zod issues detail).
+- **Tenant resolution**: tenant-scoped keys ALWAYS write to their own tenant (body tenantId ignored — never trusted). Super-admin keys (tenantId null) must supply tenantId in body → 404 if tenant doesn't exist, 422 if omitted.
+- **Referential integrity**: companyId/contactId verified to exist within the effective tenant before create → 404 "Company not found"/"Contact not found" (no cross-tenant writes, no existence leak).
+- **Attribution**: userId = API key's creator (the human who minted the key) — activities appear in timelines under that user.
+- **Audit**: every create writes an audit_logs entry (action=create, entity, entityId) via logAudit — visible in /admin/audit-logs.
+- **source**: ActivitySource enum has no API value → schema default MANUAL applies (documented in route).
+
+### QA Results (all against live production)
+- PASS: docker compose build app → success; container up; site health 307 → /login
+- PASS: POST companies → 201, full record + tenant join; data verified in psql
+- PASS: POST contacts → 201 (real join to OzarksGo); bad companyId → 404
+- PASS: POST activities NOTE → 201; CALL with contactId + call fields + completed:true → completedAt set
+- PASS: 401 no key; 401 bad key; 400 invalid JSON; 422 validation failure (with zod details)
+- PASS: Cross-tenant guard — activity/contact create against other-tenant company → 404, no leak
+- PASS: Super-admin key — no tenantId → 422; bad tenantId → 404; valid tenantId → 201 in named tenant (Velanra)
+- PASS: Tenant key ignores body tenantId — created record landed in key's own tenant (psql-verified)
+- PASS: Audit trail — all 8 test creates logged to audit_logs (create/company/contact/activity)
+- PASS: Regression — GET /api/v1/companies list + single-record GET /api/v1/contacts/[id] still 200
+- PASS: Cleanup — all QA records (4 activities, 1 contact, 3 companies) and both temp API keys deleted; api_keys count back to 0; zero residue confirmed via psql
+
+### Notes for next phase
+v1 write surface started with the 3 highest-value resources. Next natural steps: POST /v1/deals and POST /v1/tasks (schemas already read-side complete), then PATCH/PUT update endpoints, or a public API reference doc (README) documenting all 16 endpoints.## 2026-09-12 — Phase 43: v1 Public API — Single-Record GET Endpoints (5 resources)
 
 ### Problem
 The public REST API (x-api-key) exposed list endpoints for companies, contacts, deals, tasks, and activities (Phase 42), but integrations had no way to fetch a single record by ID — the standard `GET /v1/<resource>/<id>` pattern every REST API consumer expects (Stripe, HubSpot). Without it, external apps had to page through lists and filter client-side.
