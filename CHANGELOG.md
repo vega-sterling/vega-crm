@@ -1,3 +1,39 @@
+## 2026-09-14 — Phase 45: v1 Public API — POST /v1/deals and /v1/tasks
+
+### Problem
+The v1 public API write surface (Phase 44) covered companies, contacts, and activities, but not the two workflow-critical resources — deals and tasks. Integrations could push leads in but couldn't open a pipeline deal or create a follow-up task, leaving the write surface incomplete (5 resources read, only 3 writable).
+
+### What Changed
+POST handlers added to the 2 existing v1 list routes (additive — GET logic untouched):
+
+- **POST /api/v1/deals** (scope: write:deals) — create deal. Zod body: title (required, 1-300), companyId (required), contactId (optional, same-company+tenant else 404), stageId (optional — defaults to tenant's first non-archived PipelineStage by position asc; 422 'No pipeline stages configured for tenant' if none), description (≤5000), value (float ≥0, default 0), currency (≤8, default USD), probability (int 0-100, optional), expectedCloseDate (ISO), leadSource (≤100), tenantId (super-admin only). Status derived from stage (mirrors internal route): won-stage → WON, lost-stage → LOST, else OPEN; actualCloseDate set when not OPEN; probability = body ?? stage.probability ?? 50. 201 with company/contact/stage/assignee/creator joins.
+- **POST /api/v1/tasks** (scope: write:tasks) — create task. Zod body: title (required, 1-200), companyId (required), contactId (optional, same-company+tenant else 404), description (≤5000), status (PENDING/IN_PROGRESS/COMPLETED/CANCELLED, default PENDING), priority (LOW/MEDIUM/HIGH/URGENT, default MEDIUM), dueDate (ISO, optional), tenantId (super-admin only). status=COMPLETED → completedAt set to now. 201 with company/contact/assignee/creator joins.
+
+Cross-cutting behavior (identical to Phase 44 conventions):
+- **Auth/tenant resolution**: authenticateApiKey → 401 missing/invalid key, 403 insufficient scope, 400 invalid JSON, 422 validation (zod issues detail). Tenant-scoped keys always write to their own tenant (body tenantId ignored); super-admin keys require body tenantId (422 omitted / 404 not found).
+- **Referential integrity**: companyId/contactId/stageId verified within effective tenant before create → 404 "Company not found"/"Contact not found"/"Stage not found" (no cross-tenant leak). Guards run BEFORE create.
+- **Attribution**: assignedToId and createdById both = API key creator (prisma.apiKey.findUnique createdBy) — deals/tasks land owned by the human who minted the key.
+- **Audit**: every create writes an audit_logs entry (create/deal, create/task) via logAudit.
+
+### QA Results (all against live production)
+- PASS: docker compose build app → success; container up; site health 307 → /login
+- PASS: POST deals minimal (title+companyId) → 201, stage defaulted to tenant's first stage (Lead), status OPEN, probability 10 inherited from stage, assignee=creator=key creator
+- PASS: POST deals with explicit won-stageId → 201, status WON, probability 100, actualCloseDate set
+- PASS: POST deals with value/currency/probability/expectedCloseDate/leadSource/contactId → 201, all fields round-trip exactly (12345.67 EUR, prob 88, leadSource, Coby Brown contact join)
+- PASS: POST deals bad companyId → 404; cross-tenant companyId → 404 "Company not found" (no leak)
+- PASS: POST deals missing title → 422 with zod details; invalid JSON → 400
+- PASS: read-only key (read:deals) → 403; no x-api-key → 401
+- PASS: POST tasks minimal → 201, status PENDING, priority MEDIUM
+- PASS: POST tasks status=COMPLETED → 201, completedAt set; URGENT + dueDate + contactId → all round-trip
+- PASS: POST tasks cross-company contactId → 404 "Contact not found"; missing title → 422
+- PASS: Super-admin key (tenantId NULL) — POST without tenantId → 422; with valid tenantId → 201 landing in that tenant (psql-verified tenantId)
+- PASS: psql verification — all 8 QA rows (4 deals, 4 tasks) present with correct tenantId/assignment; 8 create/deal + create/task audit_logs entries
+- PASS: Regression — GET /api/v1/deals and GET /api/v1/tasks still 200 with temp key
+- PASS: Cleanup — 4 QA deals, 4 QA tasks, 8 QA audit entries, and all 3 temp API keys deleted; counts back to pre-QA baseline (deals 0, tasks 2, api_keys 0, audit_logs 44); zero residue via psql
+
+### Notes for next phase
+v1 write surface now complete across all 5 resources (companies, contacts, activities, deals, tasks). Next natural steps: PATCH/PUT update endpoints (deals stage-move and task complete/uncomplete are the highest-value mutations), public API reference doc (README) documenting all 18 endpoints, or rate limiting on the api-keys surface.
+
 ## 2026-09-13 — Phase 44: v1 Public API — Write Endpoints (POST companies/contacts/activities)
 
 ### Problem
