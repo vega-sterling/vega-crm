@@ -1,3 +1,68 @@
+## 2026-09-16 — Phase 46: v1 Public API — PATCH Update Endpoints + Rate Limiting + API Docs
+
+### Problem
+The v1 public API write surface added in Phases 44–45 covered creating companies, contacts, activities, deals, and tasks, but integrations had no way to update those records. Stage moves, contact detail edits, task completions, and activity corrections — the mutations Zapier/webhook integrations need most — were missing. Also, the public API had no rate limiting, leaving the CRM exposed to accidental or malicious request floods, and the README provided no guidance for external developers.
+
+### What Changed
+
+#### 1. PATCH /api/v1/{resource}/[id] — full update surface
+Five single-record routes now support `PATCH` (scope: `write:<resource>`):
+
+- **PATCH /api/v1/companies/[id]** — update name, industry, website, phone, email, address, description, isActive. Returns full record + tenant join.
+- **PATCH /api/v1/contacts/[id]** — update firstName, lastName, email, phone, mobile, title, department, notes, tags, isActive; optionally move to another companyId within the same tenant. Verifies new company belongs to effective tenant.
+- **PATCH /api/v1/deals/[id]** — update title, description, value, currency, probability, status, expectedCloseDate, leadSource, stageId, contactId, assignedToId. Verifies stage/contact/assignee belong to effective tenant; derives actualCloseDate when status moves to/from WON/LOST (mirrors internal deal logic).
+- **PATCH /api/v1/tasks/[id]** — update title, description, status, priority, dueDate, assignedToId, companyId, contactId. Verifies company/contact/assignee; sets/clears completedAt automatically on status transitions.
+- **PATCH /api/v1/activities/[id]** — update subject, description, call/email metadata, scheduledAt, completed, externalId, isPinned.
+
+Cross-cutting behavior:
+- **Auth/tenant resolution**: identical to Phases 44–45 — tenant keys are scoped server-side, super-admin keys need body tenantId.
+- **Referential integrity**: all foreign-key changes are verified within the effective tenant before update → 404 if missing.
+- **Audit logging**: every PATCH writes an `audit_logs` entry with a before/after diff via `buildDiff`.
+- **Empty body guard**: returns 422 if no recognized fields are supplied.
+
+#### 2. Production-grade rate limiting
+Added `src/lib/rateLimit.ts`, a dependency-free token-bucket limiter keyed by API key id:
+
+- **100 requests / 10 seconds** burst limit
+- **10,000 requests / day** daily quota
+- Per-key tracking in process memory; stale buckets swept periodically
+- 429 responses include `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Window`
+- Integrated into `src/lib/apiKeyAuth.ts` before request attribution (rate-limited calls do not refresh `lastUsedAt`)
+
+#### 3. README public API documentation
+Added a complete **Public REST API (v1)** section to `README.md` covering:
+- Authentication via `x-api-key`
+- Available scopes
+- Full endpoints table (GET list, GET by id, POST, PATCH) for all 5 resources
+- Request/response examples with curl
+- Rate-limit behavior and recommended retry strategy
+- Super-admin `tenantId` semantics
+
+### QA Results (all against live production)
+- PASS: `docker compose build app` succeeded; container started cleanly
+- PASS: Site health — `GET /` → 307 → `/login`; `/login` → 200
+- PASS: `npx tsc --noEmit` (docker node:22-slim) — zero type errors
+- PASS: GET /api/v1/companies/[id] with valid key → 200, full record + tenant join
+- PASS: PATCH /api/v1/companies/[id] → 200, industry updated, audit log created; reverted to original value after test
+- PASS: POST /api/v1/contacts → 201; PATCH contact title → 200
+- PASS: POST /api/v1/tasks → 201; PATCH status COMPLETED → completedAt set; PATCH status PENDING → completedAt cleared
+- PASS: POST /api/v1/deals → 201; PATCH value/probability → 200, fields round-trip
+- PASS: POST /api/v1/activities → 201; PATCH description → 200
+- PASS: Missing x-api-key → 401; invalid key → 401
+- PASS: Cleanup — all 4 QA records (contact, task, deal, activity) and temp API key deleted; 4 QA audit log entries removed; production counts back to baseline
+
+### Files Modified
+- `src/lib/apiKeyAuth.ts` — added rate-limit enforcement
+- `src/lib/rateLimit.ts` — new
+- `src/app/api/v1/companies/[id]/route.ts` — added PATCH
+- `src/app/api/v1/contacts/[id]/route.ts` — added PATCH
+- `src/app/api/v1/deals/[id]/route.ts` — added PATCH
+- `src/app/api/v1/tasks/[id]/route.ts` — added PATCH
+- `src/app/api/v1/activities/[id]/route.ts` — added PATCH
+- `README.md` — added Public API v1 reference
+
+### Notes for next phase
+v1 public API is now a complete CRUD surface across all 5 core resources with rate limiting and documentation. Next natural candidates: webhook event payloads, batch/bulk API endpoints, or OpenAPI spec generation.
 ## 2026-09-14 — Phase 45: v1 Public API — POST /v1/deals and /v1/tasks
 
 ### Problem

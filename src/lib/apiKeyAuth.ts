@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from './db';
 import { verifyApiKey, hasScope } from './apiKeys';
+import { checkRateLimit, RATE_LIMIT, RATE_WINDOW_SECONDS } from './rateLimit';
 
 export interface ApiKeyContext {
   keyId: string;
@@ -93,7 +94,24 @@ export async function authenticateApiKey(
     );
   }
 
+  // Check rate limit (keyed by API key id — the caller is authenticated here,
+  // so the IP fallback only matters for callers without a valid key)
+  const rl = checkRateLimit(`key:${matchedKey.id}`);
+  if (!rl.allowed) {
+    const res = NextResponse.json(
+      { error: 'Rate limit exceeded', retryAfter: rl.retryAfter },
+      { status: 429 }
+    );
+    res.headers.set('Retry-After', String(rl.retryAfter));
+    res.headers.set('X-RateLimit-Limit', String(RATE_LIMIT));
+    res.headers.set('X-RateLimit-Remaining', '0');
+    res.headers.set('X-RateLimit-Window', String(RATE_WINDOW_SECONDS));
+    return res;
+  }
+
   // Update last used (fire-and-forget, don't block the request)
+  // Only reached when the request was allowed — rate-limited callers don't
+  // refresh lastUsedAt/lastUsedIp.
   const ip = req.headers.get('x-forwarded-for') || null;
   prisma.apiKey.update({
     where: { id: matchedKey.id },
