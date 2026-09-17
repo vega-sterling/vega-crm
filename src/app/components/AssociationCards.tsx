@@ -116,12 +116,13 @@ export function ContactsCard({ contacts, companyId }: { contacts: Contact[]; com
                 textDecoration: 'none', color: 'var(--fg)',
                 border: '1px solid var(--panel-border)',
                 transition: 'border-color 0.15s, background 0.15s',
+                minWidth: 0,
               }}
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.background = 'var(--bg-soft)' }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--panel-border)'; e.currentTarget.style.background = 'transparent' }}
             >
-              <span style={{ fontWeight: 600, fontSize: 14 }}>{c.firstName} {c.lastName}</span>
-              <span style={{ fontSize: 12, color: 'var(--fg-dim)' }}>{c.title || c.email || '—'}</span>
+              <span style={{ fontWeight: 600, fontSize: 14, wordBreak: 'break-word' }}>{c.firstName} {c.lastName}</span>
+              <span style={{ fontSize: 12, color: 'var(--fg-dim)', wordBreak: 'break-word' }}>{c.title || c.email || '—'}</span>
             </Link>
           ))}
           {contacts.length > 5 && (
@@ -157,11 +158,12 @@ export function DealsCard({ deals }: { deals: Deal[] }) {
                 textDecoration: 'none', color: 'var(--fg)',
                 border: '1px solid var(--panel-border)',
                 transition: 'border-color 0.15s, background 0.15s',
+                minWidth: 0,
               }}
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.background = 'var(--bg-soft)' }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--panel-border)'; e.currentTarget.style.background = 'transparent' }}
             >
-              <span style={{ fontWeight: 600, fontSize: 14 }}>{d.title}</span>
+              <span style={{ fontWeight: 600, fontSize: 14, wordBreak: 'break-word' }}>{d.title}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <span style={{ ...statusBadge('var(--gold)'), fontSize: 11 }}>
                   ${d.value?.toLocaleString()}
@@ -196,9 +198,10 @@ export function TasksCard({ tasks }: { tasks: Task[] }) {
                 display: 'flex', flexDirection: 'column', gap: 4,
                 padding: '8px 10px', borderRadius: 8,
                 border: '1px solid var(--panel-border)',
+                minWidth: 0,
               }}
             >
-              <span style={{ fontWeight: 600, fontSize: 14 }}>{t.title}</span>
+              <span style={{ fontWeight: 600, fontSize: 14, wordBreak: 'break-word' }}>{t.title}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <span style={{ ...statusBadge(PRIORITY_COLORS[t.priority] || 'var(--fg-dim)'), fontSize: 11 }}>
                   {t.priority}
@@ -232,11 +235,13 @@ export function CompanyCard({ company }: { company?: { id: string; name: string 
             border: '1px solid var(--panel-border)',
             fontWeight: 600, fontSize: 14,
             transition: 'border-color 0.15s, background 0.15s',
+            minWidth: 0,
+            wordBreak: 'break-word',
           }}
           onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.background = 'var(--bg-soft)' }}
           onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--panel-border)'; e.currentTarget.style.background = 'transparent' }}
         >
-          🏢 {company.name}
+          <span>🏢 {company.name}</span>
         </Link>
       ) : (
         <p style={{ ...typeography.muted, fontSize: 13 }}>No company linked.</p>
@@ -272,11 +277,12 @@ export function QuotesCard({ quotes }: { quotes: QuoteSummary[] }) {
                 textDecoration: 'none', color: 'var(--fg)',
                 border: '1px solid var(--panel-border)',
                 transition: 'border-color 0.15s, background 0.15s',
+                minWidth: 0,
               }}
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.background = 'var(--bg-soft)' }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--panel-border)'; e.currentTarget.style.background = 'transparent' }}
             >
-              <span style={{ fontWeight: 600, fontSize: 14 }}>{q.number}</span>
+              <span style={{ fontWeight: 600, fontSize: 14, wordBreak: 'break-word' }}>{q.number}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <span style={{ ...statusBadge(QUOTE_STATUS_COLORS[q.status] || 'var(--fg-dim)'), fontSize: 11 }}>
                   {q.status}

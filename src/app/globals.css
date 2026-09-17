@@ -405,11 +405,16 @@ input:focus, select:focus, textarea:focus {
 
   .record-left > .panel-container {
     flex: 1 1 300px;
+    min-width: 0;
   }
 
-  .record-left > div:last-child {
-    flex: 1 1 200px;
-    flex-direction: row !important;
+  .record-left > * {
+    min-width: 0;
+  }
+
+  .record-middle,
+  .record-right {
+    min-width: 0 !important;
   }
 }
 
@@ -592,6 +597,11 @@ input:focus, select:focus, textarea:focus {
   .record-right {
     position: static !important;
     grid-column: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .record-left > * {
+    min-width: 0;
   }
 
   /* Order: properties first, then timeline, then associations */

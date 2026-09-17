@@ -10,13 +10,13 @@ import QuickActionBar from '../../components/QuickActionBar'
 import TimelineFilterTabs, { type TimelineFilter } from '../../components/TimelineFilterTabs'
 import TasksTab from '../../components/TasksTab'
 import ActivityCard from '../../components/ActivityCard'
-import { IconPin } from '../../components/Icons'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import PropertyQuickEdit from '../../components/PropertyQuickEdit'
 import CustomFieldsSection from '../../components/CustomFieldsSection'
 import SummaryCard from '../../components/SummaryCard'
 import { ContactsCard, DealsCard, TasksCard } from '../../components/AssociationCards'
 import { usePinnedNote } from '../../components/PinnedNotes'
+import RecordPageShell, { PinnedNoteSection } from '../../components/RecordPageShell'
 import EmailThreadCard from '../../components/EmailThreadCard'
 import { apiFetch } from '../../lib/api'
 import { layout, panel, typeography, forms, buttons, table, statusBadge } from '../../lib/styles'
@@ -143,7 +143,7 @@ function CompanyDetailContent() {
   }, [unifiedTimeline, timelineFilter])
 
   // Pinned activity (if it exists in the current list)
-  const pinnedActivity = pinnedId ? activities.find(a => a.id === pinnedId) : null
+  const pinnedActivity: Activity | null = pinnedId ? (activities.find(a => a.id === pinnedId) ?? null) : null
   // Non-pinned activities for the main timeline
   const timelineItems = filteredTimeline.filter(item => !(item.kind === 'activity' && item.data.id === pinnedId))
 
@@ -210,230 +210,184 @@ function CompanyDetailContent() {
   }
 
   return (
-    <div style={layout.page}>
-      {/* Header */}
-      <div className="page-header" style={layout.header}>
-        <div>
-          <Link href="/companies" style={{ color: 'var(--fg-dim)', fontSize: 13 }}>← Companies</Link>
-          <h1 style={{ ...typeography.title, marginBottom: 4, marginTop: 8 }}>{company.name}</h1>
-          <div style={{ color: 'var(--fg-dim)', fontSize: 14 }}>
-            {company.industry || 'No industry'} · {company.tenant?.name || 'No tenant'} · {company._count?.contacts ?? contacts.length} contacts
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button className="btn-touch" style={buttons.secondary} onClick={() => { setShowAddContact(true); setActiveTab('contacts') }}>Add Contact</button>
-        </div>
-      </div>
-
-      {error && (
-        <div style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: 'var(--rust)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>
-          {error}
-          <button onClick={() => setError('')} style={{ float: 'right', background: 'none', border: 'none', color: 'var(--rust)', cursor: 'pointer' }}>✕</button>
-        </div>
-      )}
-
-      {/* 3-Column Layout */}
-      <div className="record-3col" style={{
-        display: 'grid',
-        gridTemplateColumns: '280px 1fr 320px',
-        gap: 20,
-        alignItems: 'start',
-      }}>
-        {/* ════════════════ LEFT SIDEBAR ════════════════ */}
-        <div className="record-left" style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 80 }}>
-          {/* Key Properties Card */}
-          <div id="company-properties" className="panel-container" style={panel.container}>
-            <h2 style={{ ...typeography.subtitle, marginTop: 0, marginBottom: 16 }}>Properties</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <PropertyQuickEdit label="Phone" value={company.phone} type="tel" onSave={(v) => handlePropertySave('phone', v)} />
-              <PropertyQuickEdit label="Email" value={company.email} type="email" onSave={(v) => handlePropertySave('email', v)} />
-              <PropertyQuickEdit label="Website" value={company.website} type="url" onSave={(v) => handlePropertySave('website', v)} />
-              <PropertyQuickEdit label="Industry" value={company.industry} onSave={(v) => handlePropertySave('industry', v)} />
-              <PropertyQuickEdit label="Address" value={company.address} onSave={(v) => handlePropertySave('address', v)} />
+    <RecordPageShell
+      header={
+        <div className="page-header" style={layout.header}>
+          <div>
+            <Link href="/companies" style={{ color: 'var(--fg-dim)', fontSize: 13 }}>← Companies</Link>
+            <h1 style={{ ...typeography.title, marginBottom: 4, marginTop: 8 }}>{company.name}</h1>
+            <div style={{ color: 'var(--fg-dim)', fontSize: 14 }}>
+              {company.industry || 'No industry'} · {company.tenant?.name || 'No tenant'} · {company._count?.contacts ?? contacts.length} contacts
             </div>
           </div>
-
-          {/* About section */}
-          {company.description && (
-            <div className="panel-container" style={panel.container}>
-              <h2 style={{ ...typeography.subtitle, marginTop: 0, marginBottom: 12 }}>About</h2>
-              <p style={{ color: 'var(--fg-dim)', fontSize: 14, lineHeight: 1.5 }}>{company.description}</p>
-            </div>
-          )}
-
-          {/* Custom Fields section */}
-          <CustomFieldsSection
-            entityId={companyId}
-            entityType="COMPANY"
-            tenantId={company.tenantId}
-          />
-
-          {/* AI Summary */}
-          <SummaryCard endpoint={`/api/companies/${companyId}/summary`} entityType="Company" />
-
-          {/* Action buttons */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button
-              className="btn-touch"
-              style={{ ...buttons.secondary, width: '100%' }}
-              onClick={() => setFollowing(!following)}
-            >
-              {following ? '✓ Following' : '+ Follow'}
-            </button>
-            <button
-              className="btn-touch"
-              style={{ ...buttons.secondary, width: '100%' }}
-              onClick={() => document.getElementById('company-properties')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-            >Edit Details</button>
-            <button
-              className="btn-touch"
-              style={{ ...buttons.danger, width: '100%' }}
-              onClick={() => setConfirmDeleteCompany(true)}
-            >Delete</button>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <button className="btn-touch" style={buttons.secondary} onClick={() => { setShowAddContact(true); setActiveTab('contacts') }}>Add Contact</button>
+          </div>
+        </div>
+      }
+      error={error}
+      onDismissError={() => setError('')}
+      left={<>
+        {/* Key Properties Card */}
+        <div id="company-properties" className="panel-container" style={panel.container}>
+          <h2 style={{ ...typeography.subtitle, marginTop: 0, marginBottom: 16 }}>Properties</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <PropertyQuickEdit label="Phone" value={company.phone} type="tel" onSave={(v) => handlePropertySave('phone', v)} />
+            <PropertyQuickEdit label="Email" value={company.email} type="email" onSave={(v) => handlePropertySave('email', v)} />
+            <PropertyQuickEdit label="Website" value={company.website} type="url" onSave={(v) => handlePropertySave('website', v)} />
+            <PropertyQuickEdit label="Industry" value={company.industry} onSave={(v) => handlePropertySave('industry', v)} />
+            <PropertyQuickEdit label="Address" value={company.address} onSave={(v) => handlePropertySave('address', v)} />
           </div>
         </div>
 
-        {/* ════════════════ MIDDLE COLUMN ════════════════ */}
-        <div className="record-middle" style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-          {/* Tab Bar */}
-          <div className="tab-bar" style={{ display: 'flex', gap: 8, borderBottom: '1px solid var(--panel-border)', overflowX: 'auto' }}>
-            {(['timeline', 'contacts', 'tasks'] as const).map((tab) => (
-              <button
-                key={tab}
-                className="btn-touch"
-                onClick={() => setActiveTab(tab)}
-                style={{
-                  background: 'transparent', border: 'none',
-                  borderBottom: activeTab === tab ? '2px solid var(--gold)' : '2px solid transparent',
-                  color: activeTab === tab ? 'var(--fg)' : 'var(--fg-dim)',
-                  padding: '10px 16px', fontWeight: 600, textTransform: 'capitalize',
-                  cursor: 'pointer', whiteSpace: 'nowrap',
-                }}
-              >
-                {tab}{tab === 'tasks' && tasks.length > 0 ? ` (${tasks.length})` : ''}
-              </button>
-            ))}
+        {/* About section */}
+        {company.description && (
+          <div className="panel-container" style={panel.container}>
+            <h2 style={{ ...typeography.subtitle, marginTop: 0, marginBottom: 12 }}>About</h2>
+            <p style={{ color: 'var(--fg-dim)', fontSize: 14, lineHeight: 1.5 }}>{company.description}</p>
           </div>
+        )}
 
-          {/* Timeline Tab */}
-          {activeTab === 'timeline' && (
-            <div>
-              {/* Pinned Notes Section */}
-              {pinnedActivity && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <IconPin size={16} strokeWidth={2} style={{ color: 'var(--gold)' }} />
-                    <span style={{ ...typeography.subtitle, margin: 0, fontSize: 15 }}>Pinned Note</span>
-                  </div>
-                  <div style={{ border: '2px solid var(--gold)', borderRadius: 12, overflow: 'hidden' }}>
-                    <ActivityCard
-                      activity={pinnedActivity}
-                      users={users}
-                      pinned={true}
-                      onPin={handlePinToggle}
-                      onEditSave={handleEditActivitySave}
-                      onDelete={handleDeleteActivity}
-                    />
-                  </div>
+        {/* Custom Fields section */}
+        <CustomFieldsSection
+          entityId={companyId}
+          entityType="COMPANY"
+          tenantId={company.tenantId}
+        />
+
+        {/* AI Summary */}
+        <SummaryCard endpoint={`/api/companies/${companyId}/summary`} entityType="Company" />
+
+        {/* Action buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button
+            className="btn-touch"
+            style={{ ...buttons.secondary, width: '100%' }}
+            onClick={() => setFollowing(!following)}
+          >
+            {following ? '✓ Following' : '+ Follow'}
+          </button>
+          <button
+            className="btn-touch"
+            style={{ ...buttons.secondary, width: '100%' }}
+            onClick={() => document.getElementById('company-properties')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+          >Edit Details</button>
+          <button
+            className="btn-touch"
+            style={{ ...buttons.danger, width: '100%' }}
+            onClick={() => setConfirmDeleteCompany(true)}
+          >Delete</button>
+        </div>
+      </>}
+      tabs={[
+        {
+          id: 'timeline',
+          label: 'Timeline',
+          content: <>
+            {/* Pinned Notes Section */}
+            <PinnedNoteSection
+              activity={pinnedActivity}
+              users={users}
+              onPinToggle={handlePinToggle}
+              onEditSave={handleEditActivitySave}
+              onDelete={handleDeleteActivity}
+            />
+
+            {/* Quick Action Bar */}
+            <QuickActionBar
+              companyId={companyId}
+              tenantId={company.tenantId}
+              users={users}
+              onActivityCreated={(a) => setActivities((prev) => [a, ...prev])}
+              onTaskCreated={() => load()}
+              googleConnected={googleConnected}
+              company={company}
+              contact={contacts.find((c) => c.id === activities.find(a => a.type === 'EMAIL')?.contactId) || null}
+              onEmailSent={() => load()}
+            />
+
+            {/* Inline Note Composer */}
+            <InlineNoteComposer
+              companyId={companyId}
+              tenantId={company.tenantId}
+              onCreated={(a) => setActivities((prev) => [a, ...prev])}
+              users={users}
+            />
+
+            {/* Timeline Filter Tabs */}
+            <TimelineFilterTabs active={timelineFilter} onChange={setTimelineFilter} counts={filterCounts} />
+
+            {/* Activity Timeline */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {timelineItems.length === 0 ? (
+                <div className="panel-container" style={panel.container}>
+                  <p style={{ color: 'var(--fg-dim)' }}>
+                    {timelineFilter === 'ALL' ? 'No activity logged yet.' : `No ${timelineFilter.toLowerCase()}s to show.`}
+                  </p>
                 </div>
-              )}
-
-              {/* Quick Action Bar */}
-              <QuickActionBar
-                companyId={companyId}
-                tenantId={company.tenantId}
-                users={users}
-                onActivityCreated={(a) => setActivities((prev) => [a, ...prev])}
-                onTaskCreated={() => load()}
-                googleConnected={googleConnected}
-                company={company}
-                contact={contacts.find((c) => c.id === activities.find(a => a.type === 'EMAIL')?.contactId) || null}
-                onEmailSent={() => load()}
-              />
-
-              {/* Inline Note Composer */}
-              <div style={{ marginTop: 16, marginBottom: 16 }}>
-                <InlineNoteComposer
-                  companyId={companyId}
-                  tenantId={company.tenantId}
-                  onCreated={(a) => setActivities((prev) => [a, ...prev])}
-                  users={users}
-                />
-              </div>
-
-              {/* Timeline Filter Tabs */}
-              <TimelineFilterTabs active={timelineFilter} onChange={setTimelineFilter} counts={filterCounts} />
-
-              {/* Activity Timeline */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {timelineItems.length === 0 ? (
-                  <div className="panel-container" style={panel.container}>
-                    <p style={{ color: 'var(--fg-dim)' }}>
-                      {timelineFilter === 'ALL' ? 'No activity logged yet.' : `No ${timelineFilter.toLowerCase()}s to show.`}
-                    </p>
-                  </div>
-                ) : (
-                  timelineItems.map((item) => {
-                    if (item.kind === 'activity') {
-                      return (
-                        <ActivityCard
-                          key={item.data.id}
-                          activity={item.data}
-                          users={users}
-                          onPin={handlePinToggle}
-                          onEditSave={handleEditActivitySave}
-                          onDelete={handleDeleteActivity}
-                        />
-                      )
-                    }
-                    // Email thread
+              ) : (
+                timelineItems.map((item) => {
+                  if (item.kind === 'activity') {
                     return (
-                      <EmailThreadCard
-                        key={`thread-${item.data.threadId}`}
-                        emails={item.data.emails}
-                        companyId={companyId}
-                        tenantId={company.tenantId}
-                        onReplied={load}
+                      <ActivityCard
+                        key={item.data.id}
+                        activity={item.data}
+                        users={users}
+                        onPin={handlePinToggle}
+                        onEditSave={handleEditActivitySave}
+                        onDelete={handleDeleteActivity}
                       />
                     )
-                  })
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Contacts Tab */}
-          {activeTab === 'contacts' && (
-            <div className="panel-container" style={panel.container}>
-              {/* Inline Add Contact Form */}
-              {showAddContact && (
-                <div style={{
-                  animation: 'slideUp 0.2s ease-out',
-                  marginBottom: 20,
-                  padding: 16,
-                  backgroundColor: 'var(--panel-elevated)',
-                  borderRadius: 12,
-                  border: '1px solid var(--panel-border)',
-                }}>
-                  <h3 style={{ ...typeography.subtitle, marginTop: 0, marginBottom: 16 }}>Add Contact</h3>
-                  <form onSubmit={handleAddContact} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    <div style={forms.row}>
-                      <label style={forms.group}><span style={forms.label}>First name</span><input className="form-input" style={forms.input} required autoFocus value={contactForm.firstName} onChange={(e) => setContactForm({ ...contactForm, firstName: e.target.value })} /></label>
-                      <label style={forms.group}><span style={forms.label}>Last name</span><input className="form-input" style={forms.input} required value={contactForm.lastName} onChange={(e) => setContactForm({ ...contactForm, lastName: e.target.value })} /></label>
-                    </div>
-                    <div style={forms.row}>
-                      <label style={forms.group}><span style={forms.label}>Email</span><input className="form-input" style={forms.input} type="email" value={contactForm.email} onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })} /></label>
-                      <label style={forms.group}><span style={forms.label}>Phone</span><input className="form-input" style={forms.input} value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} /></label>
-                    </div>
-                    <label style={forms.group}><span style={forms.label}>Title</span><input className="form-input" style={forms.input} value={contactForm.title} onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })} /></label>
-                    <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-                      <button type="button" className="btn-touch" style={buttons.secondary} onClick={() => setShowAddContact(false)}>Cancel</button>
-                      <button type="submit" className="btn-touch" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Save Contact'}</button>
-                    </div>
-                  </form>
-                </div>
+                  }
+                  // Email thread
+                  return (
+                    <EmailThreadCard
+                      key={`thread-${item.data.threadId}`}
+                      emails={item.data.emails}
+                      companyId={companyId}
+                      tenantId={company.tenantId}
+                      onReplied={load}
+                    />
+                  )
+                })
               )}
+            </div>
+          </>,
+        },
+        {
+          id: 'contacts',
+          label: 'Contacts',
+          content: <>
+            {/* Inline Add Contact Form */}
+            {showAddContact && (
+              <div style={{
+                animation: 'slideUp 0.2s ease-out',
+                marginBottom: 20,
+                padding: 16,
+                backgroundColor: 'var(--panel-elevated)',
+                borderRadius: 12,
+                border: '1px solid var(--panel-border)',
+              }}>
+                <h3 style={{ ...typeography.subtitle, marginTop: 0, marginBottom: 16 }}>Add Contact</h3>
+                <form onSubmit={handleAddContact} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={forms.row}>
+                    <label style={forms.group}><span style={forms.label}>First name</span><input className="form-input" style={forms.input} required autoFocus value={contactForm.firstName} onChange={(e) => setContactForm({ ...contactForm, firstName: e.target.value })} /></label>
+                    <label style={forms.group}><span style={forms.label}>Last name</span><input className="form-input" style={forms.input} required value={contactForm.lastName} onChange={(e) => setContactForm({ ...contactForm, lastName: e.target.value })} /></label>
+                  </div>
+                  <div style={forms.row}>
+                    <label style={forms.group}><span style={forms.label}>Email</span><input className="form-input" style={forms.input} type="email" value={contactForm.email} onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })} /></label>
+                    <label style={forms.group}><span style={forms.label}>Phone</span><input className="form-input" style={forms.input} value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} /></label>
+                  </div>
+                  <label style={forms.group}><span style={forms.label}>Title</span><input className="form-input" style={forms.input} value={contactForm.title} onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })} /></label>
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
+                    <button type="button" className="btn-touch" style={buttons.secondary} onClick={() => setShowAddContact(false)}>Cancel</button>
+                    <button type="submit" className="btn-touch" style={buttons.primary} disabled={submitting}>{submitting ? 'Saving...' : 'Save Contact'}</button>
+                  </div>
+                </form>
+              </div>
+            )}
 
+            <div className="panel-container" style={panel.container}>
               {contacts.length === 0 && !showAddContact ? (
                 <p style={{ color: 'var(--fg-dim)' }}>No contacts yet.</p>
               ) : (
@@ -466,22 +420,23 @@ function CompanyDetailContent() {
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 8,
+                        minWidth: 0,
                       }}>
-                        <Link href={`/contacts/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)', fontSize: 15, minHeight: 44, display: 'flex', alignItems: 'center' }}>
+                        <Link href={`/contacts/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)', fontSize: 15, minHeight: 44, display: 'flex', alignItems: 'center', wordBreak: 'break-word' }}>
                           {c.firstName} {c.lastName}
                         </Link>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           <div style={{ fontSize: 13, color: 'var(--fg-dim)', minHeight: 44, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                             <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, opacity: 0.7 }}>Email</span>
-                            <span style={{ color: 'var(--fg)' }}>{c.email || '—'}</span>
+                            <span style={{ color: 'var(--fg)', wordBreak: 'break-word' }}>{c.email || '—'}</span>
                           </div>
                           <div style={{ fontSize: 13, color: 'var(--fg-dim)', minHeight: 44, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                             <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, opacity: 0.7 }}>Phone</span>
-                            <span style={{ color: 'var(--fg)' }}>{c.phone || '—'}</span>
+                            <span style={{ color: 'var(--fg)', wordBreak: 'break-word' }}>{c.phone || '—'}</span>
                           </div>
                           <div style={{ fontSize: 13, color: 'var(--fg-dim)', minHeight: 44, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                             <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, opacity: 0.7 }}>Title</span>
-                            <span style={{ color: 'var(--fg)' }}>{c.title || '—'}</span>
+                            <span style={{ color: 'var(--fg)', wordBreak: 'break-word' }}>{c.title || '—'}</span>
                           </div>
                         </div>
                       </div>
@@ -490,10 +445,13 @@ function CompanyDetailContent() {
                 </>
               )}
             </div>
-          )}
-
-          {/* Tasks Tab */}
-          {activeTab === 'tasks' && (
+          </>,
+        },
+        {
+          id: 'tasks',
+          label: 'Tasks',
+          count: tasks.length,
+          content: (
             <TasksTab
               companyId={companyId}
               tenantId={company.tenantId}
@@ -502,33 +460,32 @@ function CompanyDetailContent() {
               tasks={tasks}
               onTasksChanged={load}
             />
-          )}
-        </div>
-
-        {/* ════════════════ RIGHT SIDEBAR ════════════════ */}
-        <div className="record-right" style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'sticky', top: 80 }}>
-          <ContactsCard contacts={contacts} companyId={companyId} />
-          <DealsCard deals={deals} />
-          <TasksCard tasks={tasks} />
-        </div>
-      </div>
-
-      {/* ── Delete record confirmation ── */}
-      <ConfirmDialog
-        open={confirmDeleteCompany}
-        title="Delete Company?"
-        itemName={company.name}
-        message="This permanently deletes the record and cannot be undone."
-        onCancel={() => setConfirmDeleteCompany(false)}
-        onConfirm={() => {
-          setConfirmDeleteCompany(false)
-          apiFetch(`/api/companies/${companyId}`, { method: 'DELETE' })
-            .then(() => { window.location.href = '/companies' })
-            .catch((err: any) => setError(err.message || 'Failed to delete company'))
-        }}
-      />
-
-    </div>
+          ),
+        },
+      ]}
+      activeTab={activeTab}
+      onTabChange={(id) => setActiveTab(id as 'timeline' | 'contacts' | 'tasks')}
+      right={<>
+        <ContactsCard contacts={contacts} companyId={companyId} />
+        <DealsCard deals={deals} />
+        <TasksCard tasks={tasks} />
+      </>}
+      footer={
+        <ConfirmDialog
+          open={confirmDeleteCompany}
+          title="Delete Company?"
+          itemName={company.name}
+          message="This permanently deletes the record and cannot be undone."
+          onCancel={() => setConfirmDeleteCompany(false)}
+          onConfirm={() => {
+            setConfirmDeleteCompany(false)
+            apiFetch(`/api/companies/${companyId}`, { method: 'DELETE' })
+              .then(() => { window.location.href = '/companies' })
+              .catch((err: any) => setError(err.message || 'Failed to delete company'))
+          }}
+        />
+      }
+    />
   )
 }
 
