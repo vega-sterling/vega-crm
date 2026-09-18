@@ -23,14 +23,14 @@ import InlineNoteComposer from '../../components/InlineNoteComposer'
 import QuickActionBar from '../../components/QuickActionBar'
 import TimelineFilterTabs, { type TimelineFilter } from '../../components/TimelineFilterTabs'
 import ActivityCard from '../../components/ActivityCard'
-import { IconPin } from '../../components/Icons'
 import ConfirmDialog from '../../components/ConfirmDialog'
-import PinnedNotes, { usePinnedNote } from '../../components/PinnedNotes'
+import { usePinnedNote } from '../../components/PinnedNotes'
 import EmailThreadCard from '../../components/EmailThreadCard'
 import SummaryCard from '../../components/SummaryCard'
 import TasksTab from '../../components/TasksTab'
 import PropertyQuickEdit from '../../components/PropertyQuickEdit'
-import { CompanyCard, ContactsCard, TasksCard, QuotesCard } from '../../components/AssociationCards'
+import RecordPageShell, { PinnedNoteSection } from '../../components/RecordPageShell'
+import { CompanyCard, ContactCard, TasksCard, QuotesCard } from '../../components/AssociationCards'
 import { groupEmailsByThread } from '../../lib/emailThreads'
 import { apiFetch } from '../../lib/api'
 import { layout, panel, typeography, forms, buttons, statusBadge } from '../../lib/styles'
@@ -198,16 +198,18 @@ function DealDetailContent() {
   const emailThreads = useMemo(() => groupEmailsByThread(emails), [emails])
 
   // ── Timeline filtering ──
+  // EMAIL counts threads (not raw messages) so the count matches what the
+  // timeline renders; ALL counts activities + threads.
   const timelineCounts = useMemo(() => {
     const counts: Record<TimelineFilter, number> = { ALL: 0, NOTE: 0, CALL: 0, EMAIL: 0, TASK: 0, MEETING: 0 }
     for (const a of activities) {
       counts.ALL++
       if (counts[a.type] !== undefined) counts[a.type]++
     }
-    counts.EMAIL += emails.length
-    counts.ALL += emails.length
+    counts.EMAIL += emailThreads.length
+    counts.ALL += emailThreads.length
     return counts
-  }, [activities, emails])
+  }, [activities, emailThreads])
 
   // ── Unified timeline items (activities + email threads) ──
   const filteredTimeline = useMemo(() => {
@@ -241,6 +243,9 @@ function DealDetailContent() {
   const handlePinToggle = (id: string) => {
     if (pinnedId === id) {
       unpin()
+      // Refresh so the underlying activity loses its gold border if it is
+      // still visible in the timeline.
+      loadAll()
     } else {
       pin(id)
     }
@@ -275,6 +280,19 @@ function DealDetailContent() {
       if (pinnedId === id) unpin()
     } catch (err: any) {
       setActionError('Failed to delete: ' + err.message)
+    }
+  }
+
+  // ── Inline activity edit (timeline + pinned note) ──
+  const handleEditActivitySave = async (activity: Activity, newDescription: string) => {
+    try {
+      await apiFetch(`/api/activities/${activity.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ description: newDescription }),
+      })
+      await loadAll()
+    } catch (err: any) {
+      setActionError('Failed to update activity: ' + err.message)
     }
   }
 
@@ -516,11 +534,11 @@ function DealDetailContent() {
   }
 
   // ── View Mode: HubSpot-style 3-column layout ──
-  const openTasks = tasks.filter((t) => t.status !== 'COMPLETED' && t.status !== 'CANCELLED')
   const dealCompany = deal.company
   const dealContact = deal.contact
   const dealStage = deal.stage
   const dealAssignee = deal.assignee
+  const dealContactEmail = contacts.find((c) => c.id === deal.contactId)?.email
 
   const weightedValue = (deal.value || 0) * (deal.probability || 0) / 100
 
@@ -530,95 +548,87 @@ function DealDetailContent() {
 
   return (
     <ProtectedLayout>
-      <div style={{ ...layout.page, maxWidth: 1400 }}>
-        {actionError && (
-          <div style={{ backgroundColor: 'rgba(184,80,74,0.12)', color: 'var(--rust)', border: '1px solid rgba(184,80,74,0.3)', borderRadius: 8, padding: 12, marginBottom: 24 }}>{actionError}</div>
-        )}
-        {/* ── Header ── */}
-        <div className="page-header" style={{ ...layout.header, marginBottom: 24 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-              <Link href="/deals" style={{ color: 'var(--fg-dim)', fontSize: 14, textDecoration: 'none' }}>← Deals</Link>
-            </div>
-            <h1 style={{ fontSize: 32, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>{deal.title}</h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
-              <span style={{ ...statusBadge(STATUS_COLORS[deal.status] || 'var(--blue)'), fontSize: 13 }}>
-                {deal.status}
-              </span>
-              <span style={{ ...statusBadge(dealStage?.color || 'var(--gold)'), fontSize: 13 }}>
-                {dealStage?.name || '—'}
-              </span>
-              <span style={{ fontSize: 24, fontWeight: 700, color: 'var(--gold)' }}>
-                {currencyFmt(deal.value, deal.currency)}
-              </span>
-              <span style={{ ...typeography.muted, fontSize: 13 }}>
-                {deal.probability}% prob · {currencyFmt(weightedValue, deal.currency)} weighted
-              </span>
-            </div>
-
-            {/* Stage progression bar */}
-            {stages.length > 0 && (
-              <div style={{ marginTop: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                  {stages.map((s, i) => {
-                    const isCurrent = s.id === deal.stageId
-                    const isPast = i < currentStageIndex
-                    const isWon = s.isWonStage && deal.status === 'WON'
-                    const isLost = s.isLostStage && deal.status === 'LOST'
-                    return (
-                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 4, flex: '1 1 auto', minWidth: 0 }}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            height: 28,
-                            minWidth: 60,
-                            padding: '0 10px',
-                            borderRadius: 6,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            whiteSpace: 'nowrap',
-                            backgroundColor: isCurrent || isWon ? (s.color || 'var(--gold)') + '20' : isPast ? 'var(--panel-elevated)' : 'var(--bg)',
-                            border: `1px solid ${isCurrent || isWon ? (s.color || 'var(--gold)') + '60' : isPast ? 'var(--panel-border-hot)' : 'var(--panel-border)'}`,
-                            color: isCurrent || isWon ? (s.color || 'var(--gold)') : isPast ? 'var(--fg)' : 'var(--fg-dim)',
-                            transition: 'all 0.2s',
-                          }}
-                        >
-                          {isWon ? '✓' : isLost ? '✕' : isPast ? '✓' : isCurrent ? '●' : ''} {s.name}
-                        </div>
-                        {i < stages.length - 1 && (
-                          <div style={{
-                            width: 12,
-                            height: 2,
-                            backgroundColor: isPast ? 'var(--panel-border-hot)' : 'var(--panel-border)',
-                            flexShrink: 0,
-                          }} />
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--fg-dim)' }}>
-                  {stageProgress}% through pipeline · {currentStageIndex >= 0 && currentStageIndex < stages.length - 1 ? `Next: ${stages[currentStageIndex + 1].name}` : 'Final stage'}
-                </div>
+      <RecordPageShell
+        error={actionError || undefined}
+        onDismissError={() => setActionError('')}
+        header={
+          <div className="page-header" style={{ ...layout.header, marginBottom: 0 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                <Link href="/deals" style={{ color: 'var(--fg-dim)', fontSize: 14, textDecoration: 'none' }}>← Deals</Link>
               </div>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn-touch" style={buttons.secondary} onClick={() => setEditing(true)}>✏️ Edit</button>
-          </div>
-        </div>
+              <h1 style={{ fontSize: 32, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>{deal.title}</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+                <span style={{ ...statusBadge(STATUS_COLORS[deal.status] || 'var(--blue)'), fontSize: 13 }}>
+                  {deal.status}
+                </span>
+                <span style={{ ...statusBadge(dealStage?.color || 'var(--gold)'), fontSize: 13 }}>
+                  {dealStage?.name || '—'}
+                </span>
+                <span style={{ fontSize: 24, fontWeight: 700, color: 'var(--gold)' }}>
+                  {currencyFmt(deal.value, deal.currency)}
+                </span>
+                <span style={{ ...typeography.muted, fontSize: 13 }}>
+                  {deal.probability}% prob · {currencyFmt(weightedValue, deal.currency)} weighted
+                </span>
+              </div>
 
-        {/* ── 3-column layout ── */}
-        <div className="record-3col" style={{
-          display: 'grid',
-          gap: 16,
-          gridTemplateColumns: '280px 1fr 320px',
-          alignItems: 'start',
-        }}>
-          {/* ── LEFT: Properties ── */}
-          <div className="record-left" style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 88 }}>
+              {/* Stage progression bar */}
+              {stages.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                    {stages.map((s, i) => {
+                      const isCurrent = s.id === deal.stageId
+                      const isPast = i < currentStageIndex
+                      const isWon = s.isWonStage && deal.status === 'WON'
+                      const isLost = s.isLostStage && deal.status === 'LOST'
+                      return (
+                        <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 4, flex: '1 1 auto', minWidth: 0 }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              height: 28,
+                              minWidth: 60,
+                              padding: '0 10px',
+                              borderRadius: 6,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              whiteSpace: 'nowrap',
+                              backgroundColor: isCurrent || isWon ? (s.color || 'var(--gold)') + '20' : isPast ? 'var(--panel-elevated)' : 'var(--bg)',
+                              border: `1px solid ${isCurrent || isWon ? (s.color || 'var(--gold)') + '60' : isPast ? 'var(--panel-border-hot)' : 'var(--panel-border)'}`,
+                              color: isCurrent || isWon ? (s.color || 'var(--gold)') : isPast ? 'var(--fg)' : 'var(--fg-dim)',
+                              transition: 'all 0.2s',
+                            }}
+                          >
+                            {isWon ? '✓' : isLost ? '✕' : isPast ? '✓' : isCurrent ? '●' : ''} {s.name}
+                          </div>
+                          {i < stages.length - 1 && (
+                            <div style={{
+                              width: 12,
+                              height: 2,
+                              backgroundColor: isPast ? 'var(--panel-border-hot)' : 'var(--panel-border)',
+                              flexShrink: 0,
+                            }} />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div style={{ marginTop: 6, fontSize: 12, color: 'var(--fg-dim)' }}>
+                    {stageProgress}% through pipeline · {currentStageIndex >= 0 && currentStageIndex < stages.length - 1 ? `Next: ${stages[currentStageIndex + 1].name}` : 'Final stage'}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn-touch" style={buttons.secondary} onClick={() => setEditing(true)}>✏️ Edit</button>
+            </div>
+          </div>
+        }
+        left={
+          <>
             {/* AI Summary Card */}
             <SummaryCard
               endpoint={`/api/deals/${dealId}/summary`}
@@ -724,68 +734,31 @@ function DealDetailContent() {
                 placeholder="Add a description…"
               />
             </div>
-          </div>
-
-          {/* ── MIDDLE: Timeline / Tasks tab ── */}
-          <div className="record-middle" style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-            {/* Tab switcher: Timeline | Tasks */}
-            <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--panel-border)' }}>
-              <button
-                className="btn-touch"
-                style={{
-                  padding: '10px 20px',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  background: 'transparent',
-                  border: 'none',
-                  borderBottom: middleTab === 'timeline' ? '2px solid var(--gold)' : '2px solid transparent',
-                  color: middleTab === 'timeline' ? 'var(--gold)' : 'var(--fg-dim)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}
-                onClick={() => setMiddleTab('timeline')}
-              >
-                📋 Timeline
-              </button>
-              <button
-                className="btn-touch"
-                style={{
-                  padding: '10px 20px',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  background: 'transparent',
-                  border: 'none',
-                  borderBottom: middleTab === 'tasks' ? '2px solid var(--gold)' : '2px solid transparent',
-                  color: middleTab === 'tasks' ? 'var(--gold)' : 'var(--fg-dim)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}
-                onClick={() => setMiddleTab('tasks')}
-              >
-                ✓ Tasks ({tasks.length})
-              </button>
-            </div>
-
-            {middleTab === 'timeline' ? (
+          </>
+        }
+        tabs={[
+          {
+            id: 'timeline',
+            label: 'Timeline',
+            content: (
               <>
-                {/* Inline note composer */}
-                <InlineNoteComposer
-                  companyId={deal.companyId}
-                  tenantId={deal.tenantId}
-                  dealId={dealId}
-                  contactId={deal.contactId || undefined}
-                  onCreated={handleNoteCreated}
+                {/* Pinned Notes Section */}
+                <PinnedNoteSection
+                  activity={pinnedActivity ?? null}
                   users={users}
+                  onPinToggle={handlePinToggle}
+                  onEditSave={handleEditActivitySave}
+                  onDelete={handleActivityDelete}
                 />
 
-                {/* Quick action bar */}
+                {/* Quick Action Bar */}
                 <QuickActionBar
                   companyId={deal.companyId}
                   tenantId={deal.tenantId}
                   dealId={dealId}
                   contactId={deal.contactId || undefined}
                   contactName={dealContact ? `${dealContact.firstName} ${dealContact.lastName}` : undefined}
-                  contactEmail={contacts.find((c) => c.id === deal.contactId)?.email}
+                  contactEmail={dealContactEmail}
                   users={users}
                   onActivityCreated={handleActivityCreated}
                   onTaskCreated={handleTaskCreated}
@@ -796,31 +769,22 @@ function DealDetailContent() {
                   onEmailSent={() => loadAll()}
                 />
 
-                {/* Timeline filter tabs */}
+                {/* Inline Note Composer */}
+                <InlineNoteComposer
+                  companyId={deal.companyId}
+                  tenantId={deal.tenantId}
+                  dealId={dealId}
+                  contactId={deal.contactId || undefined}
+                  onCreated={handleNoteCreated}
+                  users={users}
+                />
+
+                {/* Timeline Filter Tabs */}
                 <TimelineFilterTabs
                   active={timelineFilter}
                   onChange={setTimelineFilter}
                   counts={timelineCounts}
                 />
-
-                {/* Pinned note */}
-                {pinnedActivity && timelineFilter === 'ALL' && (
-                  <div style={{ marginBottom: 4 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <IconPin size={16} strokeWidth={2} style={{ color: 'var(--gold)' }} />
-                      <span style={{ ...typeography.subtitle, margin: 0, fontSize: 15 }}>Pinned Note</span>
-                    </div>
-                    <div style={{ border: '2px solid var(--gold)', borderRadius: 12, overflow: 'hidden' }}>
-                      <ActivityCard
-                        activity={pinnedActivity}
-                        users={users}
-                        pinned={true}
-                        onPin={handlePinToggle}
-                        onDelete={handleActivityDelete}
-                      />
-                    </div>
-                  </div>
-                )}
 
                 {/* Unified activity + email thread timeline */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -841,6 +805,8 @@ function DealDetailContent() {
                             emails={item.data.emails}
                             onReplied={loadAll}
                             tenantId={deal.tenantId}
+                            companyId={deal.companyId}
+                            contactId={deal.contactId || undefined}
                           />
                         )
                       }
@@ -851,6 +817,7 @@ function DealDetailContent() {
                           users={users}
                           pinned={pinnedId === item.data.id}
                           onPin={handlePinToggle}
+                          onEditSave={handleEditActivitySave}
                           onDelete={handleActivityDelete}
                         />
                       )
@@ -858,8 +825,13 @@ function DealDetailContent() {
                   )}
                 </div>
               </>
-            ) : (
-              /* Tasks tab with inline creation */
+            ),
+          },
+          {
+            id: 'tasks',
+            label: 'Tasks',
+            count: tasks.length,
+            content: (
               <TasksTab
                 companyId={deal.companyId}
                 tenantId={deal.tenantId}
@@ -868,45 +840,18 @@ function DealDetailContent() {
                 tasks={tasks}
                 onTasksChanged={handleTasksChanged}
               />
-            )}
-          </div>
-
-          {/* ── RIGHT: Associated records (reusable components) ── */}
-          <div className="record-right" style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 88 }}>
+            ),
+          },
+        ]}
+        activeTab={middleTab}
+        onTabChange={(id) => setMiddleTab(id as MiddleTab)}
+        right={
+          <>
             {/* Company */}
             <CompanyCard company={dealCompany} />
 
             {/* Contact */}
-            {dealContact && (
-              <div className="panel-container" style={{ ...panel.compact, padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--panel-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 12, color: 'var(--fg-dimmer)' }}>▶</span>
-                  <span style={{ fontSize: 14, fontWeight: 600 }}>Contact</span>
-                </div>
-                <div style={{ padding: '12px 16px' }}>
-                  <Link
-                    href={`/contacts/${dealContact.id}`}
-                    style={{
-                      display: 'flex', flexDirection: 'column', gap: 2,
-                      padding: '8px 10px', borderRadius: 8,
-                      textDecoration: 'none', color: 'var(--fg)',
-                      border: '1px solid var(--panel-border)',
-                      fontWeight: 600, fontSize: 14,
-                      transition: 'border-color 0.15s, background 0.15s',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.background = 'var(--bg-soft)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--panel-border)'; e.currentTarget.style.background = 'transparent' }}
-                  >
-                    <span>{dealContact.firstName} {dealContact.lastName}</span>
-                    {contacts.find((c) => c.id === deal.contactId)?.email && (
-                      <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--fg-dim)' }}>
-                        {contacts.find((c) => c.id === deal.contactId)?.email}
-                      </span>
-                    )}
-                  </Link>
-                </div>
-              </div>
-            )}
+            <ContactCard contact={dealContact} email={dealContactEmail} />
 
             {/* Open Tasks */}
             <TasksCard tasks={tasks} />
@@ -949,18 +894,18 @@ function DealDetailContent() {
                 )}
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Delete deal confirmation ── */}
-      <ConfirmDialog
-        open={confirmDeleteDeal}
-        title="Delete Deal?"
-        itemName={deal.title}
-        message="This permanently deletes the record and cannot be undone."
-        onCancel={() => setConfirmDeleteDeal(false)}
-        onConfirm={performDeleteDeal}
+          </>
+        }
+        footer={
+          <ConfirmDialog
+            open={confirmDeleteDeal}
+            title="Delete Deal?"
+            itemName={deal.title}
+            message="This permanently deletes the record and cannot be undone."
+            onCancel={() => setConfirmDeleteDeal(false)}
+            onConfirm={performDeleteDeal}
+          />
+        }
       />
     </ProtectedLayout>
   )

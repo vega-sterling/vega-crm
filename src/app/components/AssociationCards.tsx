@@ -250,6 +250,37 @@ export function CompanyCard({ company }: { company?: { id: string; name: string 
   )
 }
 
+// ── Contact Card (for deal page) ──
+export function ContactCard({ contact, email }: { contact?: { id: string; firstName: string; lastName: string } | null; email?: string | null }) {
+  return (
+    <CollapsibleCard title="Contact" count={contact ? 1 : undefined}>
+      {contact ? (
+        <Link
+          href={`/contacts/${contact.id}`}
+          style={{
+            display: 'flex', flexDirection: 'column', gap: 2,
+            padding: '8px 10px', borderRadius: 8,
+            textDecoration: 'none', color: 'var(--fg)',
+            border: '1px solid var(--panel-border)',
+            fontWeight: 600, fontSize: 14,
+            transition: 'border-color 0.15s, background 0.15s',
+            minWidth: 0,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.background = 'var(--bg-soft)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--panel-border)'; e.currentTarget.style.background = 'transparent' }}
+        >
+          <span style={{ wordBreak: 'break-word' }}>{contact.firstName} {contact.lastName}</span>
+          {email && (
+            <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--fg-dim)', wordBreak: 'break-word' }}>{email}</span>
+          )}
+        </Link>
+      ) : (
+        <p style={{ ...typeography.muted, fontSize: 13 }}>No contact linked.</p>
+      )}
+    </CollapsibleCard>
+  )
+}
+
 // ── Quotes Card (for deal detail page) ──
 interface QuoteSummary {
   id: string
