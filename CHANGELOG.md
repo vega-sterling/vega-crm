@@ -1,3 +1,31 @@
+## 2026-09-19 — Nightly Record Page UX Hardening
+
+### Problem
+Priority 1 record-page UX was functionally complete (HubSpot-style 3-column layout, inline note composer, quick actions, timeline filters, pinned notes, tasks tab) but still had rough edges: the quick-action bar used emoji icons instead of the app's SVG icon set, inline task creation didn't pre-select the current user as assignee, and the note composer felt cramped when focused.
+
+### What Changed
+1. **QuickActionBar** (`src/app/components/QuickActionBar.tsx`)
+   - Replaced emoji icons (📞 ☑️ ✉️ 🤝) with the matching SVG set (`IconPhone`, `IconCheckSquare`, `IconMail`, `IconCalendar`) for visual consistency with the rest of the app.
+   - Added `currentUserId` prop; the inline +*Create Task** form now pre-selects the signed-in user as assignee — one less click per task.
+2. **InlineNoteComposer** (`src/app/components/InlineNoteComposer.tsx`)
+   - Increased focused/unfocused padding (`22px` / `18px`) so the note box has more breathing room and matches the 56px+ spacing design bar.
+3. **Record pages** — companies, contacts, and deals already passed the signed-in user to `QuickActionBar`; this change just makes the shared component respect it everywhere.
+
+### QA Results (live production)
+- PASS: `docker run --rm -v /root/vega-crm:/app -w /app node:22-slim npx tsc --noEmit` — zero type errors
+- PASS: `docker compose build app` succeeded
+- PASS: `docker compose up -d` restarted cleanly
+- PASS: `GET /` → 307 → `/login` → 200
+- PASS: `/dashboard`, `/companies`, `/contacts`, `/deals`, `/tasks` all return 200
+- No data changes, no schema changes, no Tailwind/UI libraries introduced.
+
+### Files Modified
+- `src/app/components/QuickActionBar.tsx`
+- `src/app/components/InlineNoteComposer.tsx`
+
+### Notes for tomorrow
+Next night: continue Priority 1 polish (association cards, timeline card spacing, mobile bottom-sheet consistency) or begin Priority 2 responsive hardening with real-device viewport tests.
+
 ## 2026-09-16 — Phase 46: v1 Public API — PATCH Update Endpoints + Rate Limiting + API Docs
 
 ### Problem

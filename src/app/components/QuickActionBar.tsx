@@ -11,6 +11,7 @@ import { apiFetch } from '../lib/api'
 import { forms, buttons, panel, typeography } from '../lib/styles'
 import type { Activity, Task, User } from '../lib/types'
 import InlineEmailComposer from './InlineEmailComposer'
+import { IconPhone, IconCheckSquare, IconMail, IconCalendar } from './Icons'
 
 type ActionType = 'call' | 'task' | 'email' | 'meeting' | null
 
@@ -31,6 +32,8 @@ interface QuickActionBarProps {
   company?: { name?: string; industry?: string; website?: string } | null
   deal?: { title?: string; value?: number } | null
   onEmailSent?: () => void
+  /** Current user id — pre-selects them as assignee in the inline TaskForm. */
+  currentUserId?: string
 }
 
 // ── Sub-components for inline forms ──
@@ -263,7 +266,7 @@ function TaskForm({ companyId, tenantId, contactId, users, currentUserId, onCrea
 export default function QuickActionBar({
   companyId, tenantId, contactId, dealId, contactName, contactEmail,
   users, onActivityCreated, onTaskCreated, onSendEmail,
-  googleConnected = false, contact, company, deal, onEmailSent,
+  googleConnected = false, contact, company, deal, onEmailSent, currentUserId,
 }: QuickActionBarProps) {
   const [activeAction, setActiveAction] = useState<ActionType>(null)
   const formRef = useRef<HTMLDivElement>(null)
@@ -284,15 +287,15 @@ export default function QuickActionBar({
     return () => document.removeEventListener('mousedown', handler)
   }, [activeAction])
 
-  const actionBtn = (label: string, icon: string, action: ActionType) => ({
+  const actionBtn = (label: string, icon: React.ReactNode, action: ActionType) => ({
     label, icon, action,
   })
 
   const actions = [
-    actionBtn('Log Call', '📞', 'call'),
-    actionBtn('Create Task', '☑️', 'task'),
-    actionBtn('Send Email', '✉️', 'email'),
-    actionBtn('Schedule Meeting', '🤝', 'meeting'),
+    actionBtn('Log Call', <IconPhone size={16} strokeWidth={2} />, 'call'),
+    actionBtn('Create Task', <IconCheckSquare size={16} strokeWidth={2} />, 'task'),
+    actionBtn('Send Email', <IconMail size={16} strokeWidth={2} />, 'email'),
+    actionBtn('Schedule Meeting', <IconCalendar size={16} strokeWidth={2} />, 'meeting'),
   ]
 
   return (
@@ -341,6 +344,7 @@ export default function QuickActionBar({
         <TaskForm
           companyId={companyId} tenantId={tenantId} contactId={contactId}
           users={users}
+          currentUserId={currentUserId}
           onCreated={(t) => { onTaskCreated(t); setActiveAction(null) }}
           onCancel={() => setActiveAction(null)}
         />

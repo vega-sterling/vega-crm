@@ -67,7 +67,7 @@ export default function InlineNoteComposer({ companyId, tenantId, contactId, dea
       className="panel-container"
       style={{
         ...panel.container,
-        padding: focused ? 20 : 16,
+        padding: focused ? 22 : 18,
         transition: 'padding 0.15s',
       }}
     >
