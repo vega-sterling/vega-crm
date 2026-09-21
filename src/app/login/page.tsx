@@ -151,6 +151,7 @@ export default function LoginPage() {
                 <input
                   type="email"
                   required
+                  className="form-input"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   style={{
@@ -179,6 +180,7 @@ export default function LoginPage() {
                 <input
                   type="password"
                   required
+                  className="form-input"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   style={{
@@ -212,6 +214,7 @@ export default function LoginPage() {
                 inputMode="numeric"
                 maxLength={6}
                 required
+                className="form-input"
                 value={totpCode}
                 onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
                 placeholder="000000"

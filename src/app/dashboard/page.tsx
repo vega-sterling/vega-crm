@@ -410,7 +410,7 @@ function ActivityFeedItem({ a }: { a: DashboardData['recentActivities'][0] }) {
   const ActivityIcon = activityIconMap[a.type] || IconActivity
   return (
     <Link href={a.company ? `/companies/${a.company.id}` : '#'} style={{ textDecoration: 'none' }}>
-      <div className="vega-table-row" style={{
+      <div className="vega-table-row activity-feed-row" style={{
         display: 'flex', gap: 12, padding: '12px 0',
         borderBottom: '1px solid var(--panel-border)',
         borderRadius: 6,
@@ -446,7 +446,7 @@ function MyTaskItem({ task, onToggle }: {
 }) {
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED'
   return (
-    <div style={{
+    <div className="my-task-row" style={{
       display: 'flex', gap: 10, padding: '10px 0',
       borderBottom: '1px solid var(--panel-border)',
       alignItems: 'flex-start',
@@ -455,7 +455,8 @@ function MyTaskItem({ task, onToggle }: {
         type="checkbox"
         checked={task.status === 'COMPLETED'}
         onChange={() => onToggle(task.id)}
-        style={{ marginTop: 3, cursor: 'pointer', width: 18, height: 18, accentColor: 'var(--gold)' }}
+        className="task-checkbox"
+        style={{ marginTop: 3, cursor: 'pointer', width: 22, height: 22, accentColor: 'var(--gold)' }}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
         <Link href={`/tasks`} style={{
@@ -525,11 +526,11 @@ function QuickActionPanel({ router }: { router: ReturnType<typeof useRouter> }) 
     { label: 'Send Email', icon: IconMail, href: '/inbox' },
   ]
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="quick-actions-grid" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {actions.map((a) => (
         <button
           key={a.label}
-          className="btn-touch"
+          className="btn-touch quick-actions-btn"
           onClick={() => router.push(a.href)}
           style={{
             ...buttons.secondary,

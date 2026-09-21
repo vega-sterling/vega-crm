@@ -234,14 +234,16 @@ function TasksContent() {
             type="checkbox"
             checked={selectedIds.has(task.id)}
             onChange={() => handleSelect(task.id)}
-            style={{ marginTop: 3, cursor: 'pointer', width: 18, height: 18, accentColor: 'var(--gold)' }}
+            className="task-checkbox"
+            style={{ marginTop: 3, cursor: 'pointer', width: 22, height: 22, accentColor: 'var(--gold)' }}
           />
           {/* Complete checkbox */}
           <input
             type="checkbox"
             checked={task.status === 'COMPLETED'}
             onChange={() => handleToggleSingle(task.id)}
-            style={{ marginTop: 3, cursor: 'pointer', width: 18, height: 18, accentColor: 'var(--emerald)' }}
+            className="task-checkbox"
+            style={{ marginTop: 3, cursor: 'pointer', width: 22, height: 22, accentColor: 'var(--emerald)' }}
             title="Mark complete"
           />
           <div style={{ flex: 1, minWidth: 0 }}>

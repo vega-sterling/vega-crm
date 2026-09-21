@@ -257,7 +257,7 @@ export default function TasksTab({ companyId, contactId, tenantId, users, curren
 
               {/* Status dropdown */}
               <select
-                className="form-select"
+                className="form-select task-status-select"
                 style={{
                   ...forms.select,
                   width: 'auto',

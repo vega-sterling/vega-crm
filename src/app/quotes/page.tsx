@@ -347,7 +347,7 @@ function QuotesContent() {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }} className="table-wrapper">
-              <table style={table.table}>
+              <table style={table.table} className="quotes-table">
                 <thead>
                   <tr>
                     <th style={table.th}>Quote #</th>
@@ -362,22 +362,22 @@ function QuotesContent() {
                 <tbody>
                   {quotes.map((quote) => (
                     <tr key={quote.id} style={table.tr}>
-                      <td style={table.td}>
+                      <td style={table.td} data-label="Quote #">
                         <Link href={`/quotes/${quote.id}`} style={{ fontWeight: 600, textDecoration: 'none', color: 'var(--gold)' }}>
                           {quote.number}
                         </Link>
                         <div style={typeography.small}>{quote.tenant?.name || '—'}</div>
                       </td>
-                      <td style={table.td}>{quote.deal?.title || '—'}</td>
-                      <td style={table.td}>
+                      <td style={table.td} data-label="Deal">{quote.deal?.title || '—'}</td>
+                      <td style={table.td} data-label="Status">
                         <span style={statusBadge(statusColor(quote.status))}>{quote.status}</span>
                       </td>
-                      <td style={{ ...table.td, textAlign: 'right', fontWeight: 700, color: 'var(--gold)' }}>
+                      <td style={{ ...table.td, textAlign: 'right', fontWeight: 700, color: 'var(--gold)' }} data-label="Total">
                         {currencyFmt(quote.total || 0)}
                       </td>
-                      <td style={table.td}>{formatDate(quote.validUntil)}</td>
-                      <td style={table.td}>{formatDate(quote.createdAt)}</td>
-                      <td style={table.td}>
+                      <td style={table.td} data-label="Valid Until">{formatDate(quote.validUntil)}</td>
+                      <td style={table.td} data-label="Created">{formatDate(quote.createdAt)}</td>
+                      <td style={table.td} data-label="">
                         <button style={{ ...buttons.danger, padding: '6px 8px', display: 'flex', alignItems: 'center', gap: 4 }} onClick={() => setConfirmDelete(quote)}>
                           <IconTrash size={14} />
                         </button>

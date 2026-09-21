@@ -1939,3 +1939,200 @@ input[type="checkbox"] {
     font-size: 16px;
   }
 }
+
+/* ============================================================================
+   NIGHTLY 2026-09-21 — Priority 2: Responsive Design Hardening (whole app)
+   + Priority 3: Responsive dashboard polish (tablet/phone).
+   Additive-only: new rules + a few tightened existing selectors.
+   Breakpoint conventions unchanged: tablet 768-1024px, phone <768px,
+   small phone <480px. Touch targets 44px+, form text 16px on phone.
+   ============================================================================ */
+
+/* ── 1. Record pages: harden the 3→2→1 column behavior ── */
+
+/* Tablet: keep sticky sidebars from colliding with the fixed header and
+   avoid mid-scroll overlap when the middle column is long. */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* 2-col layout: right sidebar stays sticky but clears the 64px header */
+  .record-right {
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Desktop: same scroll containment so very long association lists don't
+   push the page footer / overlap the sticky timeline column. */
+@media (min-width: 1025px) {
+  .record-right {
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Phone: single-column stacking — the left sidebar cards stack vertically
+   again (tablet's horizontal flex-wrap can squeeze property cards). */
+@media (max-width: 768px) {
+  .record-left {
+    flex-direction: column !important;
+  }
+
+  /* Association cards & timeline: long emails/URLs must wrap, not overflow */
+  .record-right,
+  .record-middle {
+    min-width: 0;
+  }
+
+  /* Tab bar and timeline filter rows: momentum scroll, no page-level x-overflow */
+  .tab-bar,
+  .timeline-filter-tabs {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  /* Association card link rows: 44px tap targets */
+  .record-right a,
+  .record-right .panel-container button {
+    min-height: 44px;
+  }
+
+  /* Per-task status dropdown in TasksTab: stop the fixed 130px inline width
+     from crowding — go full width under the task content. */
+  .task-status-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-top: 8px;
+    font-size: 16px !important;
+  }
+}
+
+/* ── 2. Dashboard polish (Priority 3) ── */
+
+/* Tablet: KPI cards stay 2-up with roomier padding; sales metrics 3-up
+   already exist (Phase 20). Quick actions become a 2x3 grid. */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .quick-actions-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+}
+
+/* Phone: quick actions stay a single column of full-width 48px buttons;
+   recent-activity and my-tasks rows get proper tap targets. */
+@media (max-width: 768px) {
+  .activity-feed-row {
+    min-height: 56px;
+  }
+
+  .my-task-row {
+    min-height: 56px;
+    padding: 12px 0 !important;
+  }
+
+  .quick-actions-btn {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  /* Task checkboxes (dashboard, tasks list): ≥22px visual, 44px hit area
+     via a transparent pseudo-element so adjacent checkboxes don't overlap. */
+  .task-checkbox {
+    position: relative;
+  }
+  .task-checkbox::before {
+    content: '';
+    position: absolute;
+    inset: -11px;
+  }
+}
+
+/* ── 3. Tables → cards on phone where still missing ── */
+
+/* Quotes list table — card layout on phone (pattern: custom-fields-table) */
+@media (max-width: 768px) {
+  .quotes-table thead {
+    display: none;
+  }
+  .quotes-table tr {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    background: var(--panel);
+  }
+  .quotes-table td {
+    padding: 6px 0 !important;
+    border: none !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .quotes-table td::before {
+    content: attr(data-label);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--fg-dim);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+}
+
+/* ── 4. Navigation / AppShell phone hardening ── */
+
+@media (max-width: 768px) {
+  /* Off-canvas sidebar fills the viewport height with its own scroll */
+  .sidebar {
+    height: 100vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Header: 56px row, tighter gaps so search keeps usable width */
+  .app-header {
+    gap: 8px !important;
+    padding: 0 10px !important;
+  }
+
+  /* Nav links: 44px touch targets inside the drawer */
+  .vega-nav-link {
+    min-height: 44px;
+  }
+
+  /* Pagination buttons: comfortable tap size on phone */
+  .vega-page-btn {
+    min-width: 44px !important;
+    height: 44px !important;
+  }
+}
+
+/* Small phone: hide the ⌘K trigger entirely — GlobalSearch is the entry */
+@media (max-width: 480px) {
+  .cmdk-trigger {
+    display: none !important;
+  }
+}
+
+/* ── 5. Inbox two-pane hardening on phone ── */
+
+@media (max-width: 768px) {
+  .inbox-container {
+    min-height: 0;
+  }
+  .inbox-list {
+    max-height: none !important;
+    width: 100% !important;
+    border-right: none !important;
+  }
+  .inbox-detail {
+    max-height: none !important;
+  }
+}
+
+/* 2026-09-21 responsive hardening END */

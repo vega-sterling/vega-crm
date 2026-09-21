@@ -1,3 +1,44 @@
+## 2026-09-21 — Nightly Priority 2: Responsive Design Hardening + Dashboard Polish
+
+### Problem
+The app already had a responsive skeleton (3→2→1 column record layout, mobile hamburger + off-canvas sidebar, bottom-sheet modals, `.btn-touch` 44px targets, table→card switches on contacts/companies/deals lists), but an audit found real gaps on tablet/phone: the record pages' sticky right sidebar never scroll-contained (long association lists could overlap the middle column), the TasksTab per-task status dropdown kept a fixed 130px inline width that crowded phone rows, the quotes list table had no phone card layout, the tasks page and dashboard used 18px checkboxes (below the 22px used elsewhere), the login inputs missed the `.form-input` 16px/44px phone rules, the inbox two-pane kept desktop `max-height` constraints on phone, the ⌘K header trigger wasted scarce phone header width, and the dashboard's Quick Actions panel had no tablet reflow.
+
+### What Changed
+All changes additive-only — no data, schema, or API changes; no Tailwind or UI libraries; existing CSS variables and inline-style patterns throughout.
+
+1. **globals.css** — new "NIGHTLY 2026-09-21" responsive section (~200 lines):
+   - Record pages: `.record-right` gains `max-height: calc(100vh - 96px)` + own scroll on tablet and desktop (no more overlap with the long middle column); `.record-left` stacks vertically again on phone; `.tab-bar`/`.timeline-filter-tabs` get `overscroll-behavior-x: contain`; association-card links get 44px min-height; `.task-status-select` goes full-width 16px on phone.
+   - Dashboard polish: `.quick-actions-grid` becomes a 2-column grid on tablet; full-width 48px/16px `.quick-actions-btn` on phone; `.activity-feed-row`/`.my-task-row` get 56px min-height; `.task-checkbox` gains a 44px hit-area pseudo-element.
+   - Quotes table → stacked labeled cards on phone (same pattern as `custom-fields-table`).
+   - AppShell: off-canvas `.sidebar` gets its own scroll + 100vh height; nav links 44px min-height; pagination buttons 44px; ⌘K trigger hidden <480px (GlobalSearch remains).
+   - Inbox: phone removes the desktop 70vh `max-height` panes; list goes full width (the existing `:has()` rules handle list/detail switching).
+2. **Quotes page** (`src/app/quotes/page.tsx`) — added `quotes-table` class + `data-label` attributes on `<td>`s to power the phone card layout.
+3. **TasksTab** (`src/app/components/TasksTab.tsx`) — per-task status select gets `task-status-select` class for the phone override.
+4. **Tasks page** (`src/app/tasks/page.tsx`) — checkboxes bumped 18px→22px with `task-checkbox` class (44px hit area on phone).
+5. **Dashboard** (`src/app/dashboard/page.tsx`) — `QuickActionPanel`, `ActivityFeedItem`, `MyTaskItem` get responsive class hooks; task checkbox 18px→22px.
+6. **Login** (`src/app/login/page.tsx`) — email/password/TOTP inputs get `form-input` class so the existing phone rules (16px font, 44px height) apply — prevents iOS zoom-on-focus.
+7. **New QA script** (`qa/responsive-qa.sh`) — mints a session cookie, discovers one real record per entity from the APIs, and curls `/`, `/login`, `/dashboard`, `/companies`, `/contacts`, `/deals`, `/tasks`, `/inbox`, `/quotes`, `/activities`, plus one company/contact/deal record page, expecting 200s (`/` accepts 200 or 307). Also verifies the new responsive rules are present in the served stylesheet.
+
+### QA Results (live production, post-deploy)
+- PASS: `docker run --rm -v /root/vega-crm:/app -w /app node:22-slim npx tsc --noEmit` — zero type errors
+- PASS: `docker compose build app` succeeded; `docker compose up -d` restarted cleanly
+- PASS: `qa/responsive-qa.sh` — 14/14 checks (all 13 routes 200, new CSS rules live in `/_next/static/chunks/*.css`)
+- Verified live: `.task-status-select{width:100%!important;...}` present in the served production stylesheet
+
+### Files Modified
+- `src/app/globals.css`
+- `src/app/dashboard/page.tsx`
+- `src/app/login/page.tsx`
+- `src/app/tasks/page.tsx`
+- `src/app/quotes/page.tsx`
+- `src/app/components/TasksTab.tsx`
+- `qa/responsive-qa.sh` (new)
+
+### Notes for Bryan
+- Contacts/companies/deals lists already had table→card switching (`list-table-view`/`list-card-view`) — no change needed there.
+- The ⌘K command palette is still fully available on phone via the GlobalSearch input; only the header trigger button is hidden <480px.
+- Real-device viewport spot-check (iPhone Safari / Android Chrome) recommended next maintenance window; curl-based QA verifies routes and CSS presence, not paint behavior.
+
 ## 2026-09-19 — Nightly Record Page UX Hardening
 
 ### Problem
